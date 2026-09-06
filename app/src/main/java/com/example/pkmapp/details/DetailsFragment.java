@@ -5,6 +5,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,12 +27,15 @@ import com.example.pkmapp.record.MoneyParser;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Calendar;
 
 public final class DetailsFragment extends Fragment {
     private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
     private final LedgerDataListener listener = this::render;
     private FragmentDetailsBinding binding;
     private TransactionListAdapter transactionAdapter;
+    private final Calendar selectedMonth = Calendar.getInstance();
 
     @Nullable
     @Override
@@ -46,6 +51,7 @@ public final class DetailsFragment extends Fragment {
                 "借钱统计", "借入、借出和联系人资料将在数据功能阶段接入。"));
         binding.detailsAddRecordButton.setOnClickListener(
                 view -> ((MainActivity) requireActivity()).showDestination(AppDestination.RECORD));
+        binding.detailsMonthPickerButton.setOnClickListener(view -> showMonthPicker());
         transactionAdapter = new TransactionListAdapter();
         binding.detailsTransactionList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.detailsTransactionList.setAdapter(transactionAdapter);
@@ -129,19 +135,50 @@ public final class DetailsFragment extends Fragment {
         if (binding == null || !isAdded()) {
             return;
         }
-        MonthlyTotals totals = repository.getCurrentMonthTotals(System.currentTimeMillis());
+        MonthlyTotals totals = repository.getCurrentMonthTotals(selectedMonth.getTimeInMillis());
         binding.detailsLedgerSwitchButton.setText(repository.getCurrentLedger().getName() + "  ▾");
         binding.detailsLedgerName.setText("当前账本 · " + repository.getCurrentLedger().getName());
         binding.detailsIncome.setText("收入  " + MoneyParser.formatCents(totals.getIncomeInCents()));
         binding.detailsExpense.setText("支出  " + MoneyParser.formatCents(totals.getExpenseInCents()));
         binding.detailsBalance.setText(MoneyParser.formatCents(totals.getBalanceInCents()));
 
-        List<com.example.pkmapp.data.Transaction> transactions =
-                repository.getTransactionsForCurrentLedger();
+        binding.detailsMonthPickerButton.setText(String.format(java.util.Locale.CHINA, "%d年%02d月 ▼",
+                selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH) + 1));
+        List<com.example.pkmapp.data.Transaction> transactions = transactionsForSelectedMonth();
         binding.detailsEmptyState.setVisibility(transactions.isEmpty() ? View.VISIBLE : View.GONE);
         binding.detailsTransactionList.setVisibility(transactions.isEmpty() ? View.GONE : View.VISIBLE);
         transactionAdapter.submit(DetailsListItem.fromTransactions(transactions,
                 System.currentTimeMillis()));
+    }
+
+    private void showMonthPicker() {
+        LinearLayout wheels = new LinearLayout(requireContext());
+        wheels.setOrientation(LinearLayout.HORIZONTAL);
+        NumberPicker year = monthPicker(2020, 2035, selectedMonth.get(Calendar.YEAR));
+        NumberPicker month = monthPicker(1, 12, selectedMonth.get(Calendar.MONTH) + 1);
+        wheels.addView(year, new LinearLayout.LayoutParams(0, 180, 1));
+        wheels.addView(month, new LinearLayout.LayoutParams(0, 180, 1));
+        new MaterialAlertDialogBuilder(requireContext()).setTitle("选择月份").setView(wheels)
+                .setNegativeButton("取消", null).setPositiveButton("确定", (dialog, which) -> {
+                    selectedMonth.set(year.getValue(), month.getValue() - 1, 1, 12, 0, 0);
+                    render();
+                }).show();
+    }
+
+    private NumberPicker monthPicker(int min, int max, int value) {
+        NumberPicker picker = new NumberPicker(requireContext());
+        picker.setMinValue(min); picker.setMaxValue(max); picker.setValue(value);
+        picker.setWrapSelectorWheel(false); return picker;
+    }
+
+    private List<com.example.pkmapp.data.Transaction> transactionsForSelectedMonth() {
+        List<com.example.pkmapp.data.Transaction> filtered = new ArrayList<>();
+        for (com.example.pkmapp.data.Transaction transaction : repository.getTransactionsForCurrentLedger()) {
+            Calendar date = Calendar.getInstance(); date.setTimeInMillis(transaction.getOccurredAtMillis());
+            if (date.get(Calendar.YEAR) == selectedMonth.get(Calendar.YEAR)
+                    && date.get(Calendar.MONTH) == selectedMonth.get(Calendar.MONTH)) filtered.add(transaction);
+        }
+        return filtered;
     }
 
     @Override

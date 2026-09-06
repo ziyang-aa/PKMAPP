@@ -29,7 +29,7 @@ public final class DetailsListItemTest {
     }
 
     private static Transaction transaction(String id, int day) {
-        return new Transaction(id, "ledger", TransactionType.EXPENSE, 100L, "餐饮", "", 
+        return new Transaction(id, "ledger", TransactionType.EXPENSE, 100L, "餐饮", "",
                 noonUtc(2026, Calendar.SEPTEMBER, day));
     }
 

@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed phase-two work: `825180e` (`feat: connect record and details screens`).
+- Latest committed phase-two work: `825180e` (`feat: connect record and details screens`); the next commit adds custom categories.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -60,7 +60,7 @@ The debug APK is generated at:
 - Design: `docs/superpowers/specs/2026-09-06-record-details-frontend-design.md` (`a2b5723`).
 - Plan: `docs/superpowers/plans/2026-09-06-record-details-frontend.md` (`cfcce74`); Tasks 1–2 are complete and JVM-tested.
 - The record form and details summary/list now compile and pass their UI-source checks. `825180e` connects saving a record to the details screen.
-- Remaining: custom categories, calculator dialog, ledger create/switch, tools cards, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
+- Custom category entry is complete and verified in the next checkpoint. Remaining: calculator dialog, ledger create/switch, tools cards, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State
 

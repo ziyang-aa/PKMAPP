@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,6 +16,7 @@ import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentRecordBinding;
 import com.example.pkmapp.navigation.AppDestination;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.text.DateFormat;
 import java.util.Calendar;
 
@@ -32,7 +34,8 @@ public final class RecordFragment extends Fragment {
         binding.recordSaveButton.setOnClickListener(v->save()); dateLabel(); renderCategories();
     }
     private void dateLabel(){binding.recordDateButton.setText("日期："+DateFormat.getDateInstance().format(date.getTime()));}
-    private void renderCategories(){ category=null; binding.recordCategoryGroup.removeAllViews(); String[] labels=type==TransactionType.EXPENSE?new String[]{"餐饮","网购","日用","交通","娱乐","住房"}:new String[]{"工资","奖金","兼职","红包","理财","其他"}; for(String label:labels){Chip chip=new Chip(requireContext());chip.setText(label);chip.setCheckable(true);chip.setOnClickListener(v->category=label);binding.recordCategoryGroup.addView(chip);} }
+    private void renderCategories(){ category=null; binding.recordCategoryGroup.removeAllViews(); String[] labels=type==TransactionType.EXPENSE?new String[]{"餐饮","网购","日用","交通","娱乐","住房","自定义"}:new String[]{"工资","奖金","兼职","红包","理财","其他","自定义"}; for(String label:labels){Chip chip=new Chip(requireContext());chip.setText(label);chip.setCheckable(true);chip.setOnClickListener(v->{if("自定义".equals(label))showCustomCategory();else category=label;});binding.recordCategoryGroup.addView(chip);} }
+    private void showCustomCategory(){EditText input=new EditText(requireContext());input.setHint("输入分类名称");new MaterialAlertDialogBuilder(requireContext()).setTitle("自定义分类").setView(input).setNegativeButton("取消",null).setPositiveButton("确定",(d,w)->{String value=input.getText().toString().trim();if(value.isEmpty())Toast.makeText(requireContext(),"请输入分类名称",Toast.LENGTH_SHORT).show();else category=value;}).show();}
     private void save(){ try {long cents=MoneyParser.parseYuanToCents(String.valueOf(binding.recordAmountInput.getText())); if(category==null){Toast.makeText(requireContext(),"请选择分类",Toast.LENGTH_SHORT).show();return;} InMemoryLedgerRepository.getInstance().addTransaction(type,cents,category,String.valueOf(binding.recordNoteInput.getText()),date.getTimeInMillis()); Toast.makeText(requireContext(),"已收进森林账本",Toast.LENGTH_SHORT).show(); ((MainActivity)requireActivity()).showDestination(AppDestination.DETAILS);}catch(IllegalArgumentException e){binding.recordAmountLayout.setError(e.getMessage());}}
     @Override public void onDestroyView(){super.onDestroyView();binding=null;}
 }

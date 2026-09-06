@@ -65,6 +65,7 @@ The debug APK is generated at:
 - Details now places a horizontal "森林小工具" card above the monthly balance card. It exposes the planned exchange-rate and borrowing-statistics entry points, while clearly marking their data functionality as a later phase.
 - Details now supports switching between current in-memory ledgers and creating a named ledger that is immediately selected. The summary and transaction list refresh from the active ledger.
 - The record-page Android test now follows the intended sequence: choose a category first, then verify the entry controls are visible. It compiles, but still needs an emulator/phone run because no WSL device is connected.
+- The five feature pages now use the user-provided transparent WebP “open door” illustration as a 180dp-wide clickable return-to-home entrance, replacing the previous text buttons.
 - Detail records now use a `RecyclerView` and a JVM-tested date grouping model. Each date appears once as 今天、昨天或月日标题; records retain explicit 收入/支出 text alongside their colour. Empty ledgers show a “去记一笔” action.
 - `MainNavigationTest` now contains a full save-to-details scenario that uses a unique note to prove the newly entered record renders. It has compiled but has not run without a connected WSL-visible device.
 - Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, connected-device end-to-end/visual test, charts, savings, profile data and later local persistence.

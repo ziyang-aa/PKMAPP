@@ -19,6 +19,7 @@
             android:textColor="@color/forest_green"
             android:textSize="28sp"
             android:textStyle="bold" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/page_back_button" android:layout_width="wrap_content" android:layout_height="48dp" android:text="返回主页面" />
 
         <LinearLayout
             style="@style/Widget.PkmAPP.PaperCard"

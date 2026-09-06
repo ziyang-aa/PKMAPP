@@ -48,4 +48,10 @@ public final class MainNavigationTest {
         onView(withId(R.id.details_summary_card)).check(matches(isDisplayed()));
         onView(withId(R.id.details_transaction_list)).check(matches(isDisplayed()));
     }
+
+    @Test
+    public void featurePage_hasBackButton() {
+        onView(withId(R.id.nav_details)).perform(click());
+        onView(withId(R.id.page_back_button)).check(matches(isDisplayed()));
+    }
 }

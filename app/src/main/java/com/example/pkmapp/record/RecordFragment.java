@@ -27,6 +27,7 @@ public final class RecordFragment extends Fragment {
     private String category;
     @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent, @Nullable Bundle state) { binding=FragmentRecordBinding.inflate(inflater,parent,false); return binding.getRoot(); }
     @Override public void onViewCreated(@NonNull View view,@Nullable Bundle state) {
+        binding.pageBackButton.setOnClickListener(v -> ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
         binding.recordTypeExpense.setChecked(true);
         binding.recordTypeExpense.setOnClickListener(v->{type=TransactionType.EXPENSE; renderCategories();});
         binding.recordTypeIncome.setOnClickListener(v->{type=TransactionType.INCOME; renderCategories();});

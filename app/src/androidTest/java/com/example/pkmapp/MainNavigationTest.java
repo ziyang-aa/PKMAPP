@@ -31,4 +31,20 @@ public final class MainNavigationTest {
         onView(withId(R.id.nav_profile)).perform(click());
         onView(withId(R.id.title_profile)).check(matches(isDisplayed()));
     }
+
+    @Test
+    public void recordPage_hasAmountCategoryAndSaveControls() {
+        onView(withId(R.id.nav_record)).perform(click());
+        onView(withId(R.id.record_amount_input)).check(matches(isDisplayed()));
+        onView(withId(R.id.record_category_group)).check(matches(isDisplayed()));
+        onView(withId(R.id.record_date_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.record_save_button)).check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void detailsPage_hasMonthlySummaryAndTransactionList() {
+        onView(withId(R.id.nav_details)).perform(click());
+        onView(withId(R.id.details_summary_card)).check(matches(isDisplayed()));
+        onView(withId(R.id.details_transaction_list)).check(matches(isDisplayed()));
+    }
 }

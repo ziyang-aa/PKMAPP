@@ -1,30 +1,38 @@
 package com.example.pkmapp.record;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-
+import com.example.pkmapp.MainActivity;
+import com.example.pkmapp.data.InMemoryLedgerRepository;
+import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentRecordBinding;
+import com.example.pkmapp.navigation.AppDestination;
+import com.google.android.material.chip.Chip;
+import java.text.DateFormat;
+import java.util.Calendar;
 
 public final class RecordFragment extends Fragment {
     private FragmentRecordBinding binding;
-
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState) {
-        binding = FragmentRecordBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+    private final Calendar date = Calendar.getInstance();
+    private TransactionType type = TransactionType.EXPENSE;
+    private String category;
+    @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent, @Nullable Bundle state) { binding=FragmentRecordBinding.inflate(inflater,parent,false); return binding.getRoot(); }
+    @Override public void onViewCreated(@NonNull View view,@Nullable Bundle state) {
+        binding.recordTypeExpense.setChecked(true);
+        binding.recordTypeExpense.setOnClickListener(v->{type=TransactionType.EXPENSE; renderCategories();});
+        binding.recordTypeIncome.setOnClickListener(v->{type=TransactionType.INCOME; renderCategories();});
+        binding.recordDateButton.setOnClickListener(v->new DatePickerDialog(requireContext(),(x,y,m,d)->{date.set(y,m,d); dateLabel();},date.get(Calendar.YEAR),date.get(Calendar.MONTH),date.get(Calendar.DAY_OF_MONTH)).show());
+        binding.recordSaveButton.setOnClickListener(v->save()); dateLabel(); renderCategories();
     }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
-    }
+    private void dateLabel(){binding.recordDateButton.setText("日期："+DateFormat.getDateInstance().format(date.getTime()));}
+    private void renderCategories(){ category=null; binding.recordCategoryGroup.removeAllViews(); String[] labels=type==TransactionType.EXPENSE?new String[]{"餐饮","网购","日用","交通","娱乐","住房"}:new String[]{"工资","奖金","兼职","红包","理财","其他"}; for(String label:labels){Chip chip=new Chip(requireContext());chip.setText(label);chip.setCheckable(true);chip.setOnClickListener(v->category=label);binding.recordCategoryGroup.addView(chip);} }
+    private void save(){ try {long cents=MoneyParser.parseYuanToCents(String.valueOf(binding.recordAmountInput.getText())); if(category==null){Toast.makeText(requireContext(),"请选择分类",Toast.LENGTH_SHORT).show();return;} InMemoryLedgerRepository.getInstance().addTransaction(type,cents,category,String.valueOf(binding.recordNoteInput.getText()),date.getTimeInMillis()); Toast.makeText(requireContext(),"已收进森林账本",Toast.LENGTH_SHORT).show(); ((MainActivity)requireActivity()).showDestination(AppDestination.DETAILS);}catch(IllegalArgumentException e){binding.recordAmountLayout.setError(e.getMessage());}}
+    @Override public void onDestroyView(){super.onDestroyView();binding=null;}
 }

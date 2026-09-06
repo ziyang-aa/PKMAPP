@@ -1,46 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/cream_background"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="@dimen/space_24">
-
-        <TextView
-            android:id="@+id/title_details"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="明细"
-            android:textColor="@color/forest_green"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            style="@style/Widget.PkmAPP.PaperCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_24"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="@dimen/space_24">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="账单明细将在下一阶段开放"
-                android:textColor="@color/ink"
-                android:textSize="16sp" />
-
-            <ImageView
-                android:layout_width="144dp"
-                android:layout_height="144dp"
-                android:contentDescription="@null"
-                android:src="@drawable/bulbasaur_sleeping" />
-        </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/cream_background" android:fillViewport="true"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/space_24">
+<TextView android:id="@+id/title_details" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="明细" android:textColor="@color/forest_green" android:textSize="28sp" android:textStyle="bold"/>
+<TextView android:id="@+id/details_ledger_name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:textColor="@color/wood_brown" android:textSize="16sp"/>
+<LinearLayout android:id="@+id/details_summary_card" style="@style/Widget.PkmAPP.PaperCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16" android:orientation="vertical" android:padding="@dimen/space_16">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="本月结余" android:textColor="@color/ink" android:textStyle="bold"/><TextView android:id="@+id/details_balance" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/forest_green" android:textSize="26sp" android:textStyle="bold"/>
+<TextView android:id="@+id/details_income" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/forest_green"/><TextView android:id="@+id/details_expense" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/expense_red"/>
+</LinearLayout>
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_24" android:text="交易记录" android:textColor="@color/ink" android:textStyle="bold"/>
+<LinearLayout android:id="@+id/details_transaction_list" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+</LinearLayout></ScrollView>

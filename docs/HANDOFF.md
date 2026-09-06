@@ -6,7 +6,8 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest local commit: `5cd5e00` (`feat: build forest storybook frontend foundation`).
+- Latest committed phase-two work: `f523b74` (`feat: add record amount calculator`).
+- Commits are local-only and `main` is ahead of `origin/main`; push after record/details UI verification.
 
 ## Working Agreement
 
@@ -19,7 +20,7 @@
 
 - Java 21 is installed as a user-local JDK at:
   `/home/uug/.local/jdks/openjdk-21/usr/lib/jvm/java-21-openjdk-amd64`.
-- `~/.bashrc` sets `JAVA_HOME` and prepends the JDK 21 `bin` directory to `PATH`.
+- In direct non-interactive WSL calls, use the explicit JDK 21 environment; otherwise Gradle may use JDK 17 and attempt an unnecessary toolchain download.
 - Android SDK: `/home/uug/Android/Sdk`.
 - `local.properties` points to the WSL SDK and must remain local-only.
 - GitHub SSH authentication is working. `ssh -T git@github.com` authenticates as `ziyang-aa`.
@@ -51,28 +52,29 @@ The debug APK is generated at:
 - JVM tests for destination ordering and panorama sizing.
 - Android test sources for palette resources and five-button navigation.
 - README build instructions and prototype scope.
+- Phase two: immutable in-memory ledger/transaction repository, monthly totals and listeners.
+- Phase two: integer-cent amount parser and `BigDecimal` four-operator calculator.
 
-## Plan Progress
+## Phase-Two Progress
 
-- Tasks 1-5 implementation steps are complete and verified through compilation/builds.
-- Task 6 complete: clean build, APK resource inspection, and README documentation.
-- Task 1, Task 2, Task 3, Task 4, and Task 5 commit steps remain represented by the combined commit above rather than separate commits.
-- Instrumentation execution and emulator visual QA are still pending because no device was connected in WSL.
-- The plan file records implementation and verification steps that were completed; device-only visual QA, commit-step checkboxes, and push-step checkbox remain unchecked where applicable.
+- Design: `docs/superpowers/specs/2026-09-06-record-details-frontend-design.md` (`a2b5723`).
+- Plan: `docs/superpowers/plans/2026-09-06-record-details-frontend.md` (`cfcce74`); Tasks 1–2 are complete and JVM-tested.
+- Task 3 is test-first in progress: `MainNavigationTest.recordPage_hasAmountCategoryAndSaveControls` is intentionally uncommitted and currently fails because record-page IDs do not exist yet.
+- Remaining: record form, details list/summary, end-to-end Espresso flow, final build/device QA, README update and push.
 
 ## Known Worktree State
 
 - Existing unrelated line-ending changes remain in `gradle/wrapper/gradle-wrapper.properties` and `gradlew.bat`; do not revert them without explicit instruction.
-- This handoff document is included in the current handoff commit.
+- Keep the intentional uncommitted `MainNavigationTest.java` and plan checkbox updates, then continue Task 3.
 
 ## Next Steps
 
-1. Pull or fetch `main` in Windows Android Studio.
-2. Run the app on an emulator or phone and perform visual QA.
-3. If a device is available in WSL, run:
+1. Continue Task 3 by replacing the record placeholder with the Java/XML entry form; retain its failing UI test until the IDs compile.
+2. Complete Task 4 details RecyclerView/monthly summary and Task 5 end-to-end verification.
+3. Push only after final verification, then run on emulator/phone. If a device is available in WSL, run:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
 ```
 
-4. Continue with the next product feature only after the phase-one shell is visually accepted.
+4. Update this document at every completed feature phase before pushing, recording commits, tests, environment and remaining work.

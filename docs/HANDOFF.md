@@ -6,8 +6,8 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed phase-two work: `f523b74` (`feat: add record amount calculator`).
-- Commits are local-only and `main` is ahead of `origin/main`; push after record/details UI verification.
+- Latest committed phase-two work: `825180e` (`feat: connect record and details screens`).
+- This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
 
@@ -59,13 +59,13 @@ The debug APK is generated at:
 
 - Design: `docs/superpowers/specs/2026-09-06-record-details-frontend-design.md` (`a2b5723`).
 - Plan: `docs/superpowers/plans/2026-09-06-record-details-frontend.md` (`cfcce74`); Tasks 1–2 are complete and JVM-tested.
-- Task 3 is test-first in progress: `MainNavigationTest.recordPage_hasAmountCategoryAndSaveControls` is intentionally uncommitted and currently fails because record-page IDs do not exist yet.
-- Remaining: record form, details list/summary, end-to-end Espresso flow, final build/device QA, README update and push.
+- The record form and details summary/list now compile and pass their UI-source checks. `825180e` connects saving a record to the details screen.
+- Remaining: custom categories, calculator dialog, ledger create/switch, tools cards, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State
 
 - Existing unrelated line-ending changes remain in `gradle/wrapper/gradle-wrapper.properties` and `gradlew.bat`; do not revert them without explicit instruction.
-- Keep the intentional uncommitted `MainNavigationTest.java` and plan checkbox updates, then continue Task 3.
+- Only the pre-existing line-ending changes remain in the working tree; do not stage them.
 
 ## Next Steps
 

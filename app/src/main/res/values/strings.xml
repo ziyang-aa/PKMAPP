@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">pkmAPP</string>
+    <string name="nav_details">明细</string>
+    <string name="nav_charts">图表</string>
+    <string name="nav_record">记账</string>
+    <string name="nav_savings">攒钱</string>
+    <string name="nav_profile">我的</string>
 </resources>

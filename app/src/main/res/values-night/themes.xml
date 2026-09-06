@@ -1,16 +1,15 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.PkmAPP" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/black</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+<resources>
+    <style name="Theme.PkmAPP" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/cream_background</item>
+        <item name="android:statusBarColor">@color/cream_background</item>
+        <item name="android:navigationBarColor">@color/cream_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="colorPrimary">@color/forest_green</item>
+        <item name="colorOnPrimary">@color/paper_card</item>
+        <item name="colorSecondary">@color/warm_orange</item>
+        <item name="colorOnSecondary">@color/ink</item>
+        <item name="colorSurface">@color/paper_card</item>
+        <item name="colorOnSurface">@color/ink</item>
     </style>
 </resources>

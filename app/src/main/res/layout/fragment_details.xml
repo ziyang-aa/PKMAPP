@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/cream_background"
-    android:fillViewport="true">
+    android:clipToPadding="false"
+    android:paddingBottom="88dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -134,9 +135,31 @@
             android:textStyle="bold" />
 
         <LinearLayout
+            android:id="@+id/details_empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingVertical="@dimen/space_24">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="还没有记账记录"
+                android:textColor="@color/wood_brown" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/details_add_record_button"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginTop="@dimen/space_8"
+                android:text="去记一笔" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/details_transaction_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:nestedScrollingEnabled="false" />
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

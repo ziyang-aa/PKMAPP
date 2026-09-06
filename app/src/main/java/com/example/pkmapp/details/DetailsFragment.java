@@ -5,13 +5,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
@@ -19,21 +19,18 @@ import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.data.Ledger;
 import com.example.pkmapp.data.LedgerDataListener;
 import com.example.pkmapp.data.MonthlyTotals;
-import com.example.pkmapp.data.Transaction;
-import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentDetailsBinding;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.text.DateFormat;
 import java.util.List;
-import java.util.Locale;
 
 public final class DetailsFragment extends Fragment {
     private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
     private final LedgerDataListener listener = this::render;
     private FragmentDetailsBinding binding;
+    private TransactionListAdapter transactionAdapter;
 
     @Nullable
     @Override
@@ -47,6 +44,12 @@ public final class DetailsFragment extends Fragment {
                 "汇率换算", "汇率换算的页面入口已准备好；联网自动更新将在数据功能阶段接入。"));
         binding.detailsBorrowingToolButton.setOnClickListener(view -> showComingSoonDialog(
                 "借钱统计", "借入、借出和联系人资料将在数据功能阶段接入。"));
+        binding.detailsAddRecordButton.setOnClickListener(
+                view -> ((MainActivity) requireActivity()).showDestination(AppDestination.RECORD));
+        transactionAdapter = new TransactionListAdapter();
+        binding.detailsTransactionList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.detailsTransactionList.setAdapter(transactionAdapter);
+        binding.detailsTransactionList.setNestedScrollingEnabled(false);
         return binding.getRoot();
     }
 
@@ -133,31 +136,18 @@ public final class DetailsFragment extends Fragment {
         binding.detailsExpense.setText("支出  " + MoneyParser.formatCents(totals.getExpenseInCents()));
         binding.detailsBalance.setText(MoneyParser.formatCents(totals.getBalanceInCents()));
 
-        binding.detailsTransactionList.removeAllViews();
-        for (Transaction transaction : repository.getTransactionsForCurrentLedger()) {
-            binding.detailsTransactionList.addView(createTransactionRow(transaction));
-        }
-    }
-
-    private TextView createTransactionRow(Transaction transaction) {
-        TextView row = new TextView(requireContext());
-        int verticalPadding = getResources().getDimensionPixelSize(R.dimen.space_8);
-        row.setPadding(0, verticalPadding, 0, verticalPadding);
-        String sign = transaction.getType() == TransactionType.INCOME ? "+" : "-";
-        String note = transaction.getNote().isEmpty() ? "未写备注" : transaction.getNote();
-        DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.CHINA);
-        row.setText(transaction.getCategory() + "  ·  " + note + "\n"
-                + dateFormat.format(transaction.getOccurredAtMillis()) + "    " + sign
-                + MoneyParser.formatCents(transaction.getAmountInCents()));
-        int colorRes = transaction.getType() == TransactionType.INCOME
-                ? R.color.forest_green : R.color.expense_red;
-        row.setTextColor(ContextCompat.getColor(requireContext(), colorRes));
-        return row;
+        List<com.example.pkmapp.data.Transaction> transactions =
+                repository.getTransactionsForCurrentLedger();
+        binding.detailsEmptyState.setVisibility(transactions.isEmpty() ? View.VISIBLE : View.GONE);
+        binding.detailsTransactionList.setVisibility(transactions.isEmpty() ? View.GONE : View.VISIBLE);
+        transactionAdapter.submit(DetailsListItem.fromTransactions(transactions,
+                System.currentTimeMillis()));
     }
 
     @Override
     public void onDestroyView() {
         binding = null;
+        transactionAdapter = null;
         super.onDestroyView();
     }
 }

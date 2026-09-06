@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed UI checkpoint: `255d973` (`feat: add details ledger tools entry`); the next commit aligns the record-page instrumentation test with progressive disclosure.
+- Latest committed UI checkpoint: `4045027` (`test: cover record category reveal`); the next commit introduces date-grouped detail records.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -65,7 +65,8 @@ The debug APK is generated at:
 - Details now places a horizontal "森林小工具" card above the monthly balance card. It exposes the planned exchange-rate and borrowing-statistics entry points, while clearly marking their data functionality as a later phase.
 - Details now supports switching between current in-memory ledgers and creating a named ledger that is immediately selected. The summary and transaction list refresh from the active ledger.
 - The record-page Android test now follows the intended sequence: choose a category first, then verify the entry controls are visible. It compiles, but still needs an emulator/phone run because no WSL device is connected.
-- Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
+- Detail records now use a `RecyclerView` and a JVM-tested date grouping model. Each date appears once as 今天、昨天或月日标题; records retain explicit 收入/支出 text alongside their colour. Empty ledgers show a “去记一笔” action.
+- Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State
 

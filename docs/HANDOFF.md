@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed phase-two work: `370e716` (`feat: add record calculator dialog`); the next commit adds feature-page return navigation.
+- Latest committed phase-two work: `54ec395` (`feat: add feature page home navigation`); the next commit refines the record-entry flow.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -61,6 +61,7 @@ The debug APK is generated at:
 - Plan: `docs/superpowers/plans/2026-09-06-record-details-frontend.md` (`cfcce74`); Tasks 1–2 are complete and JVM-tested.
 - The record form and details summary/list now compile and pass their UI-source checks. `825180e` connects saving a record to the details screen.
 - All five feature pages now expose a left-aligned return action that goes back to the horizontally pannable Home screen.
+- Record entry now starts with a four-column category grid; selecting a category reveals the amount, note, calculator and save area. Date selection uses three wheel pickers for year/month/day, and the page uses a faint Treecko decoration. Category icons remain unified vector placeholders by user choice.
 - Custom categories and the calculator dialog are complete and verified in the next checkpoint. Remaining: ledger create/switch, tools cards, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State

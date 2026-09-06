@@ -12,13 +12,14 @@
         android:orientation="vertical"
         android:padding="@dimen/space_24">
 
-        <com.google.android.material.button.MaterialButton
+        <ImageButton
             android:id="@+id/page_back_button"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
+            android:layout_width="180dp"
+            android:layout_height="135dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回主页面"
-            android:text="返回主页面" />
+            android:scaleType="centerInside"
+            android:src="@drawable/return_home_door" />
 
         <TextView
             android:id="@+id/title_details"

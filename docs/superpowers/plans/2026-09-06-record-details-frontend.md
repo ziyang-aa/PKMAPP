@@ -135,7 +135,7 @@ git commit -m "feat: add in-memory ledger repository"
 - Consumes: Java `BigDecimal` and `RoundingMode`; no Android classes.
 - Produces: `MoneyParser.parseYuanToCents(String amountText)` returning `long`; `MoneyParser.formatCents(long cents)` returning a `¥`-prefixed two-decimal string; and calculator methods `append(String token)`, `backspace()`, `clear()`, `getExpression()`, `evaluateToCents()`.
 
-- [ ] **Step 1: Write failing money and calculator tests**
+- [x] **Step 1: Write failing money and calculator tests**
 
 Add the following cases:
 
@@ -167,25 +167,25 @@ public void calculator_rejectsDivisionByZero() {
 }
 ```
 
-- [ ] **Step 2: Run logic tests to verify they fail**
+- [x] **Step 2: Run logic tests to verify they fail**
 
 Run: `./gradlew testDebugUnitTest --tests com.example.pkmapp.record.MoneyParserTest --tests com.example.pkmapp.record.CalculatorEngineTest`
 
 Expected: compilation fails because parsing and calculator classes are missing.
 
-- [ ] **Step 3: Implement deterministic cents parsing and calculation**
+- [x] **Step 3: Implement deterministic cents parsing and calculation**
 
 `MoneyParser.parseYuanToCents` accepts only a positive decimal containing at most two fractional digits, uses `BigDecimal.movePointRight(2).longValueExact()`, and throws `IllegalArgumentException("金额最多保留两位小数")` for malformed or non-positive values. `formatCents` uses `BigDecimal.valueOf(cents, 2)` and `Locale.CHINA` formatting.
 
 `CalculatorEngine` accepts digit, decimal point and the visible operators `+`, `-`, `×`, `÷`. Evaluate the tokenized expression with a two-stack precedence algorithm using `BigDecimal`, return a positive result in cents through `MoneyParser`, and throw `IllegalArgumentException("请输入完整算式")` for malformed input. Do not evaluate by reflection, JavaScript or a third-party dependency.
 
-- [ ] **Step 4: Run logic tests to verify they pass**
+- [x] **Step 4: Run logic tests to verify they pass**
 
 Run: `./gradlew testDebugUnitTest --tests com.example.pkmapp.record.MoneyParserTest --tests com.example.pkmapp.record.CalculatorEngineTest`
 
 Expected: all valid arithmetic cases pass; malformed values and divide-by-zero fail predictably without an Android runtime.
 
-- [ ] **Step 5: Commit entry logic**
+- [x] **Step 5: Commit entry logic**
 
 ```bash
 git add app/src/main/java/com/example/pkmapp/record app/src/test/java/com/example/pkmapp/record

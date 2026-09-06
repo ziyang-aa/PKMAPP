@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/space_24">
+
+        <TextView
+            android:id="@+id/title_charts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="图表"
+            android:textColor="@color/forest_green"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            style="@style/Widget.PkmAPP.PaperCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/space_24">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="收支趋势将在下一阶段绘制"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="144dp"
+                android:layout_height="144dp"
+                android:contentDescription="@null"
+                android:src="@drawable/treecko_waiting" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

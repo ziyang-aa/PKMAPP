@@ -39,7 +39,7 @@
 - Consumes: Existing Android application module and converted WebP library.
 - Produces: ViewBinding classes, Fragment/RecyclerView APIs, a launcher Activity declaration, and five starter illustrations available through `R.drawable`.
 
-- [ ] **Step 1: Record the baseline build**
+- [x] **Step 1: Record the baseline build**
 
 Run:
 
@@ -49,7 +49,7 @@ Run:
 
 Expected: either the generated empty project builds or the exact pre-existing build failure is recorded before changes.
 
-- [ ] **Step 2: Add stable AndroidX dependencies**
+- [x] **Step 2: Add stable AndroidX dependencies**
 
 Add to `gradle/libs.versions.toml`:
 
@@ -74,7 +74,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 3: Declare the launcher Activity**
+- [x] **Step 3: Declare the launcher Activity**
 
 Change the self-closing `<application />` into an application containing:
 
@@ -89,7 +89,7 @@ Change the self-closing `<application />` into an application containing:
 </activity>
 ```
 
-- [ ] **Step 4: Keep generated and private working files out of Git**
+- [x] **Step 4: Keep generated and private working files out of Git**
 
 Ensure `.gitignore` contains:
 
@@ -101,7 +101,7 @@ Ensure `.gitignore` contains:
 
 Only Android resources copied into `app/src/main/res/` are shipped and versioned.
 
-- [ ] **Step 5: Copy the five phase-one WebP resources**
+- [x] **Step 5: Copy the five phase-one WebP resources**
 
 Run:
 
@@ -113,7 +113,7 @@ Copy-Item -LiteralPath 'artwork\processed\android_ready\treecko_waiting.webp' -D
 Copy-Item -LiteralPath 'artwork\processed\android_ready\turtwig_carrying_acorn_jar.webp' -Destination 'app\src\main\res\drawable-nodpi\turtwig_carrying_acorn_jar.webp'
 ```
 
-- [ ] **Step 6: Verify configuration and resources**
+- [x] **Step 6: Verify configuration and resources**
 
 Run:
 
@@ -150,7 +150,7 @@ git commit -m "build: configure frontend foundation"
 - Consumes: Material Components theme support from Task 1.
 - Produces: `Theme.PkmAPP`, `Widget.PkmAPP.PaperCard`, `Widget.PkmAPP.BottomNavButton`, shared spacing values, and named forest colors.
 
-- [ ] **Step 1: Write a failing resource test**
+- [x] **Step 1: Write a failing resource test**
 
 Create `ForestThemeResourceTest.java`:
 
@@ -169,7 +169,7 @@ public final class ForestThemeResourceTest {
 }
 ```
 
-- [ ] **Step 2: Compile the test and verify it fails**
+- [x] **Step 2: Compile the test and verify it fails**
 
 Run:
 
@@ -179,7 +179,7 @@ Run:
 
 Expected: compilation fails because the four named color resources do not exist.
 
-- [ ] **Step 3: Add the approved palette and shared dimensions**
+- [x] **Step 3: Add the approved palette and shared dimensions**
 
 Define these values in `colors.xml`:
 
@@ -196,13 +196,13 @@ Define these values in `colors.xml`:
 
 Define `space_4`, `space_8`, `space_12`, `space_16`, `space_24`, `radius_card`, `bottom_bar_height`, and `touch_target` in `dimens.xml`; use 4dp, 8dp, 12dp, 16dp, 24dp, 20dp, 76dp, and 48dp respectively.
 
-- [ ] **Step 4: Create reusable paper-card and bottom-navigation styles**
+- [x] **Step 4: Create reusable paper-card and bottom-navigation styles**
 
 `bg_paper_card.xml` uses `paper_card`, a 20dp corner radius, and a 1dp `#335C4938` stroke. `bg_bottom_bar.xml` uses `paper_card`, 24dp top corners, and the same subtle stroke. `nav_item_tint.xml` maps checked state to `forest_green` and default state to `wood_brown`.
 
 Set `Theme.PkmAPP` to inherit `Theme.Material3.DayNight.NoActionBar`, set the window background to `cream_background`, and use the same palette in the night resource so the first release has one intentional visual theme instead of an accidental dark mode.
 
-- [ ] **Step 5: Verify the resource contract**
+- [x] **Step 5: Verify the resource contract**
 
 Run:
 
@@ -238,7 +238,7 @@ git commit -m "feat: add forest storybook design system"
 - Consumes: `Theme.PkmAPP`, shared colors/styles, and Fragment support.
 - Produces: enum `AppDestination { HOME, DETAILS, CHARTS, RECORD, SAVINGS, PROFILE }`, `MainActivity.showDestination(AppDestination)`, and view IDs `nav_details`, `nav_charts`, `nav_record`, `nav_savings`, `nav_profile`.
 
-- [ ] **Step 1: Write the failing destination test**
+- [x] **Step 1: Write the failing destination test**
 
 ```java
 public final class AppDestinationTest {
@@ -256,7 +256,7 @@ public final class AppDestinationTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -266,15 +266,15 @@ Run:
 
 Expected: FAIL because `AppDestination` does not exist.
 
-- [ ] **Step 3: Implement the destination enum**
+- [x] **Step 3: Implement the destination enum**
 
 Implement `bottomBarDestinations()` as an unmodifiable list in the required order. Do not put Android resource references in the enum so the ordering test remains a plain JVM test.
 
-- [ ] **Step 4: Run the destination test**
+- [x] **Step 4: Run the destination test**
 
 Run the same targeted Gradle test. Expected: two tests PASS.
 
-- [ ] **Step 5: Build the Activity layout and navigation controller**
+- [x] **Step 5: Build the Activity layout and navigation controller**
 
 `activity_main.xml` contains a `FragmentContainerView` constrained above a fixed `MaterialButtonToggleGroup`. The group contains five equal-width `MaterialButton` children with vector icons and the required Chinese labels. Configure `singleSelection="true"` and `selectionRequired="false"` so Home can display with no checked feature button.
 
@@ -294,7 +294,7 @@ public void showDestination(AppDestination destination) {
 
 On first creation call `showDestination(HOME)`. Map the five buttons to the five feature destinations. Register an `OnBackPressedCallback`: when a feature page is visible, show Home and clear the toggle selection; when Home is visible, disable the callback and delegate to the Activity's normal back behavior.
 
-- [ ] **Step 6: Verify the Activity compiles**
+- [x] **Step 6: Verify the Activity compiles**
 
 Run:
 
@@ -326,7 +326,7 @@ git commit -m "feat: add single activity navigation"
 - Consumes: `bg_home_panorama_placeholder`, `bg_paper_texture`, and the Activity fragment container.
 - Produces: `HomeFragment` and `PanoramaSizing.requiredWidthPx(int viewportWidthPx)`.
 
-- [ ] **Step 1: Write the failing panorama sizing tests**
+- [x] **Step 1: Write the failing panorama sizing tests**
 
 ```java
 public final class PanoramaSizingTest {
@@ -342,7 +342,7 @@ public final class PanoramaSizingTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -352,7 +352,7 @@ Run:
 
 Expected: FAIL because `PanoramaSizing` does not exist.
 
-- [ ] **Step 3: Implement deterministic panorama width**
+- [x] **Step 3: Implement deterministic panorama width**
 
 ```java
 public final class PanoramaSizing {
@@ -364,17 +364,17 @@ public final class PanoramaSizing {
 }
 ```
 
-- [ ] **Step 4: Run the targeted tests**
+- [x] **Step 4: Run the targeted tests**
 
 Expected: both panorama sizing tests PASS.
 
-- [ ] **Step 5: Implement one scrollable scene**
+- [x] **Step 5: Implement one scrollable scene**
 
 `fragment_home.xml` contains one horizontal `HorizontalScrollView` with scroll bars disabled and exactly one child, an included `view_home_panorama.xml`. The included root is a `FrameLayout` whose width is updated after layout using `PanoramaSizing.requiredWidthPx(viewportWidth)` and whose height matches the available area.
 
 The scene contains one full-size placeholder background `ImageView` using `centerCrop`, a subtle paper texture overlay, and three non-clickable character `ImageView`s positioned at different horizontal locations. They are compositional elements of one scene, not separate pages. Preserve the current horizontal scroll offset across configuration changes using `onSaveInstanceState`.
 
-- [ ] **Step 6: Verify build and unit tests**
+- [x] **Step 6: Verify build and unit tests**
 
 Run:
 
@@ -412,7 +412,7 @@ git commit -m "feat: add pannable panorama home"
 - Consumes: `MainActivity.createFragment(AppDestination)` and the design-system resources.
 - Produces: five instantiable feature fragments with stable title IDs: `title_details`, `title_charts`, `title_record`, `title_savings`, `title_profile`.
 
-- [ ] **Step 1: Write the navigation instrumentation test**
+- [x] **Step 1: Write the navigation instrumentation test**
 
 ```java
 @RunWith(AndroidJUnit4.class)
@@ -446,15 +446,15 @@ Run:
 
 Expected: compilation fails because the five Fragment classes or title IDs do not exist.
 
-- [ ] **Step 3: Implement focused page shells**
+- [x] **Step 3: Implement focused page shells**
 
 Each Fragment inflates its own binding and clears it in `onDestroyView`. Each layout provides a forest-styled toolbar title, a short phase label, and one relevant transparent character illustration. Do not implement feature forms or fake data in this phase; those belong to the later subsystem plans.
 
-- [ ] **Step 4: Connect every destination in `MainActivity.createFragment`**
+- [x] **Step 4: Connect every destination in `MainActivity.createFragment`**
 
 Use an exhaustive switch over all six enum values. `HOME` returns `HomeFragment`; each feature value returns its matching fragment. Throw `IllegalArgumentException` only for a null destination.
 
-- [ ] **Step 5: Verify all source sets compile**
+- [x] **Step 5: Verify all source sets compile**
 
 Run:
 
@@ -483,7 +483,7 @@ git commit -m "feat: add five feature page shells"
 - Consumes: all deliverables from Tasks 1-5.
 - Produces: a reproducible build command, checked-off implementation plan, and a pushed phase-one baseline on `origin/main`.
 
-- [ ] **Step 1: Run the complete verification suite**
+- [x] **Step 1: Run the complete verification suite**
 
 Run:
 
@@ -493,7 +493,7 @@ Run:
 
 Expected: `BUILD SUCCESSFUL`, zero failing JVM tests, successful Android-test compilation, and `app/build/outputs/apk/debug/app-debug.apk` exists.
 
-- [ ] **Step 2: Inspect the APK resource contents**
+- [x] **Step 2: Inspect the APK resource contents**
 
 Confirm the packaged resources include the five phase-one WebP files and do not include any PNG from `宝可梦账本素材/`.
 
@@ -509,7 +509,7 @@ Verify at minimum:
 - Back from a feature shell returns to Home;
 - no transparent illustration shows a checkerboard or rectangular background.
 
-- [ ] **Step 4: Document how to run the prototype**
+- [x] **Step 4: Document how to run the prototype**
 
 Add to `README.md` the commands `./gradlew assembleDebug` and `./gradlew testDebugUnitTest`, the APK path, and a note that this phase uses page shells and temporary frontend state only.
 

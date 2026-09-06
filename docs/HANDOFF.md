@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed phase-two work: `54ec395` (`feat: add feature page home navigation`); the next commit refines the record-entry flow.
+- Latest committed UI checkpoint: `2687a85` (`feat: refine record category flow`); the next commit adds the details-page ledger and tools entry points.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -62,7 +62,9 @@ The debug APK is generated at:
 - The record form and details summary/list now compile and pass their UI-source checks. `825180e` connects saving a record to the details screen.
 - All five feature pages now expose a left-aligned return action that goes back to the horizontally pannable Home screen.
 - Record entry now starts with a four-column category grid; selecting a category reveals the amount, note, calculator and save area. Date selection uses three wheel pickers for year/month/day, and the page uses a faint Treecko decoration. Category icons remain unified vector placeholders by user choice.
-- Custom categories and the calculator dialog are complete and verified in the next checkpoint. Remaining: ledger create/switch, tools cards, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
+- Details now places a horizontal "森林小工具" card above the monthly balance card. It exposes the planned exchange-rate and borrowing-statistics entry points, while clearly marking their data functionality as a later phase.
+- Details now supports switching between current in-memory ledgers and creating a named ledger that is immediately selected. The summary and transaction list refresh from the active ledger.
+- Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State
 
@@ -71,9 +73,9 @@ The debug APK is generated at:
 
 ## Next Steps
 
-1. Continue Task 3 by replacing the record placeholder with the Java/XML entry form; retain its failing UI test until the IDs compile.
-2. Complete Task 4 details RecyclerView/monthly summary and Task 5 end-to-end verification.
-3. Push only after final verification, then run on emulator/phone. If a device is available in WSL, run:
+1. Make the record-page instrumentation test select a category before asserting the progressively revealed entry controls, then run it on an emulator/phone.
+2. Implement the real exchange-rate and borrowing-statistics data flows after the frontend layout is confirmed.
+3. Replace the transaction `LinearLayout` with a date-grouped `RecyclerView`, then add device-level end-to-end verification. If a device is available in WSL, run:
 
 ```bash
 ./gradlew connectedDebugAndroidTest

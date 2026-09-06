@@ -45,6 +45,10 @@ public final class MainNavigationTest {
     @Test
     public void detailsPage_hasMonthlySummaryAndTransactionList() {
         onView(withId(R.id.nav_details)).perform(click());
+        onView(withId(R.id.details_ledger_switch_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.details_tools_card)).check(matches(isDisplayed()));
+        onView(withId(R.id.details_fx_tool_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.details_borrowing_tool_button)).check(matches(isDisplayed()));
         onView(withId(R.id.details_summary_card)).check(matches(isDisplayed()));
         onView(withId(R.id.details_transaction_list)).check(matches(isDisplayed()));
     }

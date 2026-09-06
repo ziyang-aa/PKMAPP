@@ -36,6 +36,7 @@ public final class MainNavigationTest {
     public void recordPage_hasAmountCategoryAndSaveControls() {
         onView(withId(R.id.nav_record)).perform(click());
         onView(withId(R.id.record_amount_input)).check(matches(isDisplayed()));
+        onView(withId(R.id.record_calculator_button)).check(matches(isDisplayed()));
         onView(withId(R.id.record_category_group)).check(matches(isDisplayed()));
         onView(withId(R.id.record_date_button)).check(matches(isDisplayed()));
         onView(withId(R.id.record_save_button)).check(matches(isDisplayed()));

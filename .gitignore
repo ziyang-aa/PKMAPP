@@ -28,5 +28,6 @@ replay_pid*
 .cxx
 local.properties
 /.superpowers/
+/.worktrees/
 /宝可梦账本素材/
 /artwork/processed/android_ready/

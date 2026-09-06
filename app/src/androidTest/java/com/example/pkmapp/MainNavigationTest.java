@@ -12,6 +12,7 @@ import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
+import static androidx.test.espresso.matcher.ViewMatchers.withText;
 
 @RunWith(AndroidJUnit4.class)
 public final class MainNavigationTest {
@@ -33,11 +34,12 @@ public final class MainNavigationTest {
     }
 
     @Test
-    public void recordPage_hasAmountCategoryAndSaveControls() {
+    public void recordPage_revealsEntryControlsAfterCategorySelection() {
         onView(withId(R.id.nav_record)).perform(click());
+        onView(withId(R.id.record_category_group)).check(matches(isDisplayed()));
+        onView(withText("餐饮")).perform(click());
         onView(withId(R.id.record_amount_input)).check(matches(isDisplayed()));
         onView(withId(R.id.record_calculator_button)).check(matches(isDisplayed()));
-        onView(withId(R.id.record_category_group)).check(matches(isDisplayed()));
         onView(withId(R.id.record_date_button)).check(matches(isDisplayed()));
         onView(withId(R.id.record_save_button)).check(matches(isDisplayed()));
     }

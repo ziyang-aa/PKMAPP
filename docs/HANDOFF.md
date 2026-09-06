@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed UI checkpoint: `2687a85` (`feat: refine record category flow`); the next commit adds the details-page ledger and tools entry points.
+- Latest committed UI checkpoint: `255d973` (`feat: add details ledger tools entry`); the next commit aligns the record-page instrumentation test with progressive disclosure.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -64,6 +64,7 @@ The debug APK is generated at:
 - Record entry now starts with a four-column category grid; selecting a category reveals the amount, note, calculator and save area. Date selection uses three wheel pickers for year/month/day, and the page uses a faint Treecko decoration. Category icons remain unified vector placeholders by user choice.
 - Details now places a horizontal "森林小工具" card above the monthly balance card. It exposes the planned exchange-rate and borrowing-statistics entry points, while clearly marking their data functionality as a later phase.
 - Details now supports switching between current in-memory ledgers and creating a named ledger that is immediately selected. The summary and transaction list refresh from the active ledger.
+- The record-page Android test now follows the intended sequence: choose a category first, then verify the entry controls are visible. It compiles, but still needs an emulator/phone run because no WSL device is connected.
 - Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, RecyclerView/date grouping, end-to-end device test, README refinement and final phase QA.
 
 ## Known Worktree State

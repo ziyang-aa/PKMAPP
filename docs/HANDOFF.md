@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed UI checkpoint: `4045027` (`test: cover record category reveal`); the next commit introduces date-grouped detail records.
+- Latest committed UI checkpoint: `6a200e0` (`feat: group detail records by date`); the next checkpoint adds the end-to-end record-to-details test and README delivery notes.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement

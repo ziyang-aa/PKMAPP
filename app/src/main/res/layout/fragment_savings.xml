@@ -11,15 +11,10 @@
         android:orientation="vertical"
         android:padding="@dimen/space_24">
 
-        <TextView
-            android:id="@+id/title_savings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="攒钱"
-            android:textColor="@color/forest_green"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-        <ImageButton android:id="@+id/page_back_button" android:layout_width="180dp" android:layout_height="135dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="返回主页面" android:scaleType="centerInside" android:src="@drawable/return_home_door" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="135dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageButton android:id="@+id/page_back_button" android:layout_width="180dp" android:layout_height="135dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="返回主页面" android:scaleType="centerInside" android:src="@drawable/return_home_door" />
+            <TextView android:id="@+id/title_savings" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="end" android:text="攒钱" android:textColor="@color/forest_green" android:textSize="28sp" android:textStyle="bold" />
+        </LinearLayout>
 
         <LinearLayout
             style="@style/Widget.PkmAPP.PaperCard"

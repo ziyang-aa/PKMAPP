@@ -88,6 +88,8 @@ The debug APK is generated at:
 - HTML follow-up (not synced to Figma): the Home screen is now a single `主页面.png` forest-den image from `宝可梦账本素材\装饰素材\主页面背景`, with pointer dragging and left/right keyboard/button nudges changing its background position; Home no longer contains shortcut cards or recent-transaction functions.
 - HTML follow-up (not synced to Figma): after a category is selected, the Record screen keeps the category grid visible and reveals a forest calculator directly below it. The calculator supports decimal input, addition/subtraction/multiplication/division, clear/backspace, result evaluation and amount-field writeback.
 - Latest HTML verification: four Node checks pass; browser verification confirmed `购物` → calculator visible → `2 + 3 =` writes `5.00`, panorama nudge moves `--panorama-x` from `0px` to `72px`, and browser error logs are empty. Figma remains intentionally unchanged for this follow-up.
+- Latest HTML refinement: the calculator now follows the supplied reference's four-column keypad order (`7 8 9 AC / 4 5 6 + / 1 2 3 − / . 0 backspace =`) with a flat paper surface; the date selectors remain below the calculator so date entry is still retained.
+- Latest HTML refinement: the Home panorama is edge-to-edge inside the phone viewport with no card margin, radius or shadow around the forest image. Figma is intentionally not updated until the user confirms this direction.
 
 ## Next Steps
 

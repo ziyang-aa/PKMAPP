@@ -85,6 +85,9 @@ The debug APK is generated at:
 - The editable Figma board is in the user's file [Figma Basics](https://www.figma.com/design/LAcQw2liQ2kj2eGcDNUEF0/Figma-basics?node-id=2603-22), section node `2603:22` (`PKMAPP · HTML视觉稿`). Local PKMAPP color and layout variables are defined in that section, and the PNG transfer assets are placed into the phone frames so the character illustrations render in Figma.
 - TDD evidence: `node design/pkmapp-visual-redesign.test.js` passes both structural/accessibility checks. Browser verification confirmed six screens, 18 expense categories, the clean default category-selection state, and the local page has no HTML-to-design capture dependency after the Figma fallback.
 - The two HTML-to-Figma capture attempts remained pending after repeated polling and showed a capture timeout in the browser. The manual Figma board is therefore the editable source of truth for this phase; no capture output was used as a completed result.
+- HTML follow-up (not synced to Figma): the Home screen is now a single `主页面.png` forest-den image from `宝可梦账本素材\装饰素材\主页面背景`, with pointer dragging and left/right keyboard/button nudges changing its background position; Home no longer contains shortcut cards or recent-transaction functions.
+- HTML follow-up (not synced to Figma): after a category is selected, the Record screen keeps the category grid visible and reveals a forest calculator directly below it. The calculator supports decimal input, addition/subtraction/multiplication/division, clear/backspace, result evaluation and amount-field writeback.
+- Latest HTML verification: four Node checks pass; browser verification confirmed `购物` → calculator visible → `2 + 3 =` writes `5.00`, panorama nudge moves `--panorama-x` from `0px` to `72px`, and browser error logs are empty. Figma remains intentionally unchanged for this follow-up.
 
 ## Next Steps
 

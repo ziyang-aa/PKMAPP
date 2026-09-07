@@ -91,6 +91,7 @@ The debug APK is generated at:
 - Latest HTML refinement: the calculator now follows the supplied reference's four-column keypad order (`7 8 9 AC / 4 5 6 + / 1 2 3 − / . 0 backspace =`) with a flat paper surface; the date selectors remain below the calculator so date entry is still retained.
 - Latest HTML refinement: the Home panorama is edge-to-edge inside the phone viewport with no card margin, radius or shadow around the forest image. Figma is intentionally not updated until the user confirms this direction.
 - Latest HTML refinement: the Record screen now places the retained 发生日期 selectors above the calculator, uses warm paper surfaces instead of a white calculator background, and removes the redundant 返回选择分类 action. Figma remains intentionally unchanged.
+- Latest HTML refinement: the Charts screen centers the 支出 / 收入 toggle and places the supplied 草苗龟 illustration on the left and 木守宫 illustration on the right, sized as compact decorative companions. Figma remains intentionally unchanged.
 
 ## Next Steps
 

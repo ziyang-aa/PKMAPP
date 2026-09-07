@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PKMAPP · 森林账本视觉设计</title>
+  <style>
+    :root {
+      --paper: #f5f1e7;
+      --paper-light: #fff8df;
+      --paper-deep: #eee4cc;
+      --forest: #4e8146;
+      --leaf: #a8d58c;
+      --wood: #7b5c3b;
+      --orange: #d48a4a;
+      --expense: #c75b4b;
+      --ink: #3b352c;
+      --muted: #8a7b67;
+      --line: #ddcfb2;
+      --shadow: 0 12px 32px rgba(92, 69, 38, .12);
+      --small-shadow: 0 5px 14px rgba(92, 69, 38, .09);
+      --radius-lg: 28px;
+      --radius-md: 20px;
+      --radius-sm: 14px;
+      --ease: cubic-bezier(.22, .8, .28, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: #ded5c1; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255,255,255,.75), transparent 24rem),
+        linear-gradient(135deg, #e8dfcd 0%, #d8cfbc 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+    .board-header {
+      width: min(1240px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 56px 0 32px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--forest);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 26px;
+      height: 2px;
+      background: var(--orange);
+      border-radius: 999px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    .board-header h1 {
+      margin-top: 10px;
+      font-family: Georgia, "Songti SC", serif;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+
+    .board-header p {
+      max-width: 470px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .board-note {
+      max-width: 245px;
+      padding: 14px 16px;
+      border: 1px solid rgba(123, 92, 59, .18);
+      border-radius: var(--radius-sm);
+      color: var(--wood);
+      background: rgba(255, 248, 223, .56);
+      box-shadow: var(--small-shadow);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .board-note strong { display: block; color: var(--forest); font-size: 12px; margin-bottom: 3px; }
+
+    .screen-grid {
+      width: min(1240px, calc(100% - 48px));
+      margin: 0 auto;
+      padding-bottom: 70px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 390px));
+      justify-content: center;
+      gap: 58px 42px;
+    }
+
+    .screen-label {
+      margin: 0 0 12px 8px;
+      color: var(--wood);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .06em;
+    }
+
+    .phone {
+      position: relative;
+      width: min(390px, 100%);
+      height: 844px;
+      overflow: hidden;
+      border: 8px solid #51483a;
+      border-radius: 38px;
+      background: var(--paper);
+      box-shadow: 0 18px 42px rgba(57, 43, 26, .22), inset 0 0 0 1px rgba(255,255,255,.6);
+      isolation: isolate;
+    }
+
+    .phone::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      opacity: .18;
+      background-image: url('../app/src/main/res/drawable-nodpi/bg_paper_texture.webp');
+      background-size: 420px;
+      mix-blend-mode: multiply;
+    }
+
+    .screen-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      overflow-y: auto;
+      padding: 18px 18px 108px;
+      scrollbar-width: none;
+    }
+
+    .screen-content::-webkit-scrollbar { display: none; }
+    .screen-header { display: flex; align-items: center; gap: 8px; min-height: 74px; }
+    .screen-header h2 { flex: 1; text-align: right; color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 29px; letter-spacing: -.04em; }
+
+    .door-button {
+      width: 56px;
+      min-width: 48px;
+      min-height: 48px;
+      padding: 0;
+      border: 0;
+      border-radius: 16px;
+      background: transparent;
+      cursor: pointer;
+      transition: transform 160ms var(--ease), background 160ms ease;
+    }
+
+    .door-button:hover, .door-button:focus-visible { background: rgba(168, 213, 140, .3); transform: translateY(-1px); }
+    .door-button img { width: 54px; height: 54px; object-fit: contain; }
+
+    .paper-card {
+      border: 1px solid rgba(123, 92, 59, .18);
+      border-radius: var(--radius-md);
+      background: rgba(255, 248, 223, .94);
+      box-shadow: var(--small-shadow);
+    }
+
+    .hero-card { position: relative; min-height: 358px; overflow: hidden; padding: 24px; background: #dbe8b9; }
+    .hero-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(245,241,231,.04), rgba(48,80,39,.42)); }
+    .hero-card .hero-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; opacity: .82; }
+    .hero-copy { position: relative; z-index: 1; display: flex; min-height: 310px; flex-direction: column; justify-content: space-between; color: #fffdf0; }
+    .hero-copy .mini-label { color: rgba(255,253,240,.78); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+    .hero-copy h2 { max-width: 230px; margin-top: 7px; font-family: Georgia, "Songti SC", serif; font-size: 34px; line-height: 1.15; }
+    .hero-balance { align-self: end; text-align: right; }
+    .hero-balance small { display: block; color: rgba(255,253,240,.8); font-size: 12px; }
+    .hero-balance strong { display: block; margin-top: 4px; font-size: 30px; letter-spacing: -.04em; }
+    .hero-character { position: absolute; z-index: 1; bottom: -5px; left: 12px; width: 118px; height: 118px; object-fit: contain; filter: drop-shadow(0 7px 4px rgba(53,53,30,.2)); }
+
+    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
+    .quick-action, .nav-item, .text-button, .toggle-button, .category-tile, .month-button, .tool-button { cursor: pointer; transition: transform 160ms var(--ease), background 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+    .quick-action { min-height: 72px; padding: 10px 6px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-light); text-align: center; }
+    .quick-action:hover, .quick-action:focus-visible, .tool-button:hover, .tool-button:focus-visible { transform: translateY(-2px); border-color: var(--leaf); box-shadow: var(--small-shadow); }
+    .quick-action span { display: block; margin-top: 7px; color: var(--wood); font-size: 12px; font-weight: 700; }
+    .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .quick-action .icon { color: var(--forest); }
+
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 22px 2px 10px; }
+    .section-heading h3 { color: var(--wood); font-size: 15px; }
+    .section-heading span { color: var(--muted); font-size: 11px; }
+    .list-row { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 10px; min-height: 64px; padding: 10px 12px; border-bottom: 1px dashed var(--line); }
+    .list-row:last-child { border-bottom: 0; }
+    .list-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px; color: var(--forest); background: var(--leaf); }
+    .list-row strong { display: block; font-size: 13px; }
+    .list-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .list-row b { color: var(--expense); font-size: 13px; }
+
+    .ledger-button, .month-button { width: 100%; min-height: 50px; padding: 0 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper-light); text-align: left; font-size: 13px; font-weight: 750; }
+    .ledger-button { display: flex; align-items: center; justify-content: space-between; color: var(--wood); }
+    .ledger-button span:last-child { color: var(--forest); font-size: 18px; }
+    .month-row { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; }
+    .month-row .month-button { width: auto; color: var(--forest); }
+    .month-row .month-button:last-child { padding: 0 8px; border: 0; background: transparent; font-size: 12px; }
+
+    .balance-card { margin-top: 15px; padding: 20px; background: var(--forest); color: #fff8df; }
+    .balance-card .balance-label { color: rgba(255,248,223,.75); font-size: 12px; }
+    .balance-card h3 { margin-top: 4px; font-size: 31px; letter-spacing: -.05em; }
+    .balance-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,248,223,.22); }
+    .balance-meta small { display: block; color: rgba(255,248,223,.7); font-size: 11px; }
+    .balance-meta b { display: block; margin-top: 3px; font-size: 14px; }
+    .balance-meta .out b { color: #ffd2c4; }
+
+    .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .tool-button { min-height: 74px; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-light); text-align: left; }
+    .tool-button .icon { color: var(--orange); }
+    .tool-button strong { display: block; margin-top: 7px; color: var(--wood); font-size: 12px; }
+    .tool-button small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+
+    .record-toggle, .chart-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--paper-deep); }
+    .toggle-button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; font-size: 13px; font-weight: 800; }
+    .toggle-button[aria-pressed="true"] { color: var(--forest); background: var(--paper-light); box-shadow: var(--small-shadow); }
+    .category-head { display: flex; align-items: center; justify-content: space-between; margin: 17px 2px 10px; }
+    .category-head h3 { color: var(--wood); font-size: 15px; }
+    .category-head small { color: var(--muted); font-size: 11px; }
+    .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .category-tile { min-height: 92px; padding: 7px 3px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,248,223,.72); text-align: center; }
+    .category-tile:hover, .category-tile:focus-visible, .category-tile.selected { border-color: var(--forest); background: #edf6dc; box-shadow: inset 0 0 0 2px rgba(78,129,70,.14); }
+    .category-tile img { display: block; width: 49px; height: 49px; margin: 0 auto 4px; object-fit: contain; }
+    .category-tile span { display: block; overflow: hidden; color: var(--wood); font-size: 10px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+    .record-state { display: none; }
+    .record-state.active { display: block; animation: settle-in 220ms var(--ease); }
+    .selected-chip { display: flex; align-items: center; gap: 9px; margin-top: 16px; padding: 10px 12px; border: 1px solid rgba(78,129,70,.24); border-radius: 15px; background: #edf6dc; color: var(--forest); font-size: 12px; font-weight: 800; }
+    .selected-chip img { width: 35px; height: 35px; object-fit: contain; }
+    .field { margin-top: 12px; }
+    .field label { display: block; margin: 0 0 6px 2px; color: var(--wood); font-size: 11px; font-weight: 800; }
+    .field input { width: 100%; min-height: 52px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--paper-light); }
+    .amount-wrap { position: relative; }
+    .amount-wrap span { position: absolute; top: 14px; left: 14px; color: var(--forest); font-weight: 800; }
+    .amount-wrap input { padding-left: 32px; font-size: 22px; font-weight: 800; }
+    .date-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .date-picker select { width: 100%; min-height: 48px; padding: 0 8px; border: 1px solid var(--line); border-radius: 13px; color: var(--wood); background: var(--paper-light); }
+    .primary-button { width: 100%; min-height: 54px; margin-top: 18px; border: 0; border-radius: 16px; color: #fff8df; background: var(--forest); box-shadow: 0 8px 18px rgba(78,129,70,.2); font-weight: 850; cursor: pointer; transition: transform 160ms var(--ease), filter 160ms ease; }
+    .primary-button:hover, .primary-button:focus-visible { filter: brightness(1.06); transform: translateY(-2px); }
+
+    .chart-toggle { grid-template-columns: repeat(3, 1fr); margin-top: 9px; }
+    .chart-card { margin-top: 15px; padding: 17px 14px 12px; }
+    .chart-summary { display: flex; align-items: end; justify-content: space-between; }
+    .chart-summary small { color: var(--muted); font-size: 11px; }
+    .chart-summary strong { display: block; margin-top: 4px; color: var(--forest); font-size: 22px; }
+    .chart-summary span { color: var(--orange); font-size: 12px; font-weight: 800; }
+    .chart-svg { display: block; width: 100%; height: 170px; margin-top: 14px; overflow: visible; }
+    .chart-gridline { stroke: #e3d8c0; stroke-width: 1; stroke-dasharray: 3 4; }
+    .chart-line { fill: none; stroke: var(--forest); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-area { fill: url(#chartFill); }
+    .chart-dot { fill: var(--paper-light); stroke: var(--orange); stroke-width: 2.5; }
+    .chart-axis { fill: var(--muted); font-size: 9px; }
+    .rank-row { display: grid; grid-template-columns: 24px 30px 1fr auto; align-items: center; gap: 8px; min-height: 54px; border-bottom: 1px dashed var(--line); }
+    .rank-row:last-child { border-bottom: 0; }
+    .rank-no { color: var(--orange); font-size: 13px; font-weight: 900; }
+    .rank-row img { width: 30px; height: 30px; object-fit: contain; }
+    .rank-row strong { font-size: 12px; }
+    .rank-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .rank-row b { color: var(--expense); font-size: 12px; }
+
+    .savings-hero { position: relative; min-height: 192px; padding: 21px; overflow: hidden; background: #d7e9bc; }
+    .savings-hero::after { content: ""; position: absolute; width: 170px; height: 170px; right: -45px; bottom: -67px; border-radius: 50%; border: 25px solid rgba(255,248,223,.56); }
+    .savings-hero h3 { position: relative; z-index: 1; color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 23px; }
+    .savings-hero p { position: relative; z-index: 1; max-width: 190px; margin-top: 8px; color: var(--wood); font-size: 12px; line-height: 1.6; }
+    .savings-hero img { position: absolute; z-index: 1; right: 8px; bottom: 3px; width: 130px; height: 130px; object-fit: contain; }
+    .goal-card { padding: 16px; margin-top: 11px; }
+    .goal-top { display: flex; align-items: center; gap: 10px; }
+    .goal-top img { width: 42px; height: 42px; object-fit: contain; }
+    .goal-top strong { display: block; font-size: 13px; }
+    .goal-top small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .goal-amount { margin-left: auto; color: var(--forest); font-size: 12px; font-weight: 850; }
+    .progress-track { height: 9px; margin-top: 13px; overflow: hidden; border-radius: 99px; background: var(--paper-deep); }
+    .progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--orange); }
+    .goal-bottom { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 10px; }
+    .add-goal { display: flex; align-items: center; justify-content: center; min-height: 56px; margin-top: 12px; border: 1px dashed var(--forest); border-radius: 16px; color: var(--forest); background: rgba(255,248,223,.5); font-size: 12px; font-weight: 800; }
+
+    .profile-hero { display: flex; align-items: center; gap: 14px; padding: 18px; }
+    .profile-avatar { width: 72px; height: 72px; padding: 3px; border-radius: 24px; background: var(--leaf); object-fit: contain; }
+    .profile-hero h3 { color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 23px; }
+    .profile-hero p { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .asset-card { margin-top: 12px; padding: 17px; }
+    .asset-card small { color: var(--muted); font-size: 11px; }
+    .asset-card strong { display: block; margin-top: 5px; color: var(--forest); font-size: 26px; letter-spacing: -.04em; }
+    .profile-list { margin-top: 15px; overflow: hidden; }
+    .profile-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 15px; border-bottom: 1px dashed var(--line); }
+    .profile-row:last-child { border-bottom: 0; }
+    .profile-row .icon { color: var(--wood); }
+    .profile-row span { flex: 1; font-size: 13px; font-weight: 700; }
+    .profile-row b { color: var(--muted); font-size: 12px; font-weight: 500; }
+
+    .bottom-nav { position: absolute; z-index: 5; right: 10px; bottom: 10px; left: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; min-height: 68px; padding: 6px; border: 1px solid rgba(123,92,59,.16); border-radius: 22px; background: rgba(255,248,223,.96); box-shadow: var(--shadow); }
+    .nav-item { min-width: 48px; min-height: 48px; padding: 7px 3px; border: 0; border-radius: 16px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
+    .nav-item .icon { display: block; width: 19px; height: 19px; margin: 0 auto 3px; }
+    .nav-item[aria-current="page"] { color: var(--forest); background: #e3f1d4; }
+    .nav-item:hover, .nav-item:focus-visible { color: var(--forest); background: #edf6dc; }
+
+    .screen[data-screen="home"] .bottom-nav .nav-item[aria-current="page"] { background: #e3f1d4; }
+    .micro-note { margin-top: 12px; color: var(--muted); text-align: center; font-size: 10px; line-height: 1.5; }
+
+    @keyframes settle-in { from { opacity: .35; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 980px) { .screen-grid { grid-template-columns: repeat(2, minmax(280px, 390px)); } }
+    @media (max-width: 690px) {
+      .board-header { width: min(100% - 32px, 390px); padding: 34px 0 24px; display: block; }
+      .board-header h1 { font-size: 26px; letter-spacing: -.08em; }
+      .board-note { max-width: none; margin-top: 18px; }
+      .screen-grid { width: min(100% - 32px, 390px); grid-template-columns: 1fr; gap: 38px; }
+      .screen-label { margin-left: 3px; }
+      .phone { justify-self: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 1ms !important; transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="board-header">
+    <div>
+      <div class="eyebrow">PKMAPP / VISUAL REDESIGN</div>
+      <h1>把每一笔，收进森林里。</h1>
+      <p>Java + XML Android 记账 App 的 HTML 视觉稿。暖纸张、草木绿和角色插画共同组成一套轻盈的森林绘本界面。</p>
+    </div>
+    <aside class="board-note"><strong>设计说明</strong>六个页面共享同一套令牌；记账页默认先选分类，点击分类后渐进显露录入区。</aside>
+  </header>
+
+  <main class="screen-grid" aria-label="PKMAPP 页面设计板">
+    <section class="screen" data-screen="home">
+      <div class="screen-label">01 / 首页 · 森林入口</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="hero-card paper-card">
+            <img class="hero-scene" src="../app/src/main/res/drawable-nodpi/bg_home_panorama_placeholder.webp" alt="暖色森林场景">
+            <div class="hero-copy">
+              <div><span class="mini-label">GOOD MORNING, FOREST KEEPER</span><h2>今天也要<br>轻轻记一笔</h2></div>
+              <div class="hero-balance"><small>本月结余</small><strong>¥ 2,860.40</strong></div>
+            </div>
+            <img class="hero-character" src="../app/src/main/res/drawable-nodpi/treecko_waiting.webp" alt="木守宫插画">
+          </div>
+          <div class="quick-actions" aria-label="快捷操作">
+            <button class="quick-action" type="button" data-jump="record" aria-label="新增一笔记账"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>记一笔</span></button>
+            <button class="quick-action" type="button" data-jump="details" aria-label="查看明细"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg><span>看明细</span></button>
+            <button class="quick-action" type="button" data-jump="savings" aria-label="查看攒钱目标"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg><span>攒钱中</span></button>
+          </div>
+          <div class="section-heading"><h3>林间最近发生</h3><span>本月 · 3 笔</span></div>
+          <div class="paper-card">
+            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-bowl"></use></svg></div><div><strong>森林食堂</strong><small>今天 · 午餐</small></div><b>− ¥32.00</b></div>
+            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-spark"></use></svg></div><div><strong>本月零花</strong><small>昨天 · 收入</small></div><b style="color:var(--forest)">＋ ¥500.00</b></div>
+            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg></div><div><strong>森林图书馆</strong><small>09月03日 · 学习</small></div><b>− ¥68.00</b></div>
+          </div>
+          <p class="micro-note">左右滑动探索你的森林 · 数据暂存于本地内存</p>
+        </div>
+        <div class="bottom-nav" aria-label="主导航">
+          <button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button>
+          <button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button>
+          <button class="nav-item" data-jump="record" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button>
+          <button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button>
+          <button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="details">
+      <div class="screen-label">02 / 明细 · 林间账本</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>明细</h2></div>
+          <button class="ledger-button" type="button" aria-label="切换或新建账本"><span>日常森林账本</span><span>⌄</span></button>
+          <div class="month-row"><button class="month-button" type="button" aria-label="选择查看月份">2026年09月</button><button class="month-button" type="button">本月</button></div>
+          <div class="balance-card paper-card"><span class="balance-label">本月结余</span><h3>¥ 2,860.40</h3><div class="balance-meta"><div><small>收入</small><b>¥ 4,500.00</b></div><div class="out"><small>支出</small><b>¥ 1,639.60</b></div></div></div>
+          <div class="section-heading"><h3>森林小工具</h3><span>即将开放</span></div>
+          <div class="tool-grid"><button class="tool-button" type="button" aria-label="汇率换算工具"><svg class="icon" aria-hidden="true"><use href="#i-swap"></use></svg><strong>汇率换算</strong><small>离线基础流程</small></button><button class="tool-button" type="button" aria-label="借钱统计工具"><svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg><strong>借钱统计</strong><small>记录来往关系</small></button></div>
+          <div class="section-heading"><h3>交易记录</h3><span>按日期归档</span></div>
+          <div class="paper-card"><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-bowl"></use></svg></div><div><strong>森林食堂</strong><small>今天 · 支出</small></div><b>− ¥32.00</b></div><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg></div><div><strong>本月零花</strong><small>昨天 · 收入</small></div><b style="color:var(--forest)">＋ ¥500.00</b></div><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg></div><div><strong>森林图书馆</strong><small>09月03日 · 支出</small></div><b>− ¥68.00</b></div></div>
+        </div>
+        <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="charts">
+      <div class="screen-label">03 / 图表 · 林间观察</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>图表</h2></div>
+          <div class="chart-toggle" aria-label="收支类型"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button></div>
+          <div class="chart-toggle" aria-label="时间范围"><button class="toggle-button" type="button" aria-pressed="false">周</button><button class="toggle-button" type="button" aria-pressed="true">月</button><button class="toggle-button" type="button" aria-pressed="false">年</button></div>
+          <div class="chart-card paper-card"><div class="chart-summary"><div><small>支出趋势 · 本月</small><strong>¥ 1,639.60</strong></div><span>较上月 −8.4%</span></div><svg class="chart-svg" viewBox="0 0 330 170" role="img" aria-label="本月支出趋势折线图"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a8d58c" stop-opacity=".55"/><stop offset="1" stop-color="#a8d58c" stop-opacity="0"/></linearGradient></defs><line class="chart-gridline" x1="8" y1="30" x2="322" y2="30"/><line class="chart-gridline" x1="8" y1="75" x2="322" y2="75"/><line class="chart-gridline" x1="8" y1="120" x2="322" y2="120"/><path class="chart-area" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29 L319,137 L10,137 Z"/><path class="chart-line" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29"/><circle class="chart-dot" cx="10" cy="121" r="4"/><circle class="chart-dot" cx="76" cy="96" r="4"/><circle class="chart-dot" cx="139" cy="81" r="4"/><circle class="chart-dot" cx="198" cy="91" r="4"/><circle class="chart-dot" cx="250" cy="72" r="4"/><circle class="chart-dot" cx="319" cy="29" r="4"/><text class="chart-axis" x="8" y="157">01日</text><text class="chart-axis" x="151" y="157">15日</text><text class="chart-axis" x="294" y="157">30日</text></svg></div>
+          <div class="section-heading"><h3>分类排行榜</h3><span>支出占比</span></div>
+          <div class="paper-card"><div class="rank-row"><span class="rank-no">01</span><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_dining.webp" alt="餐饮分类"><div><strong>餐饮</strong><small>本月 8 笔</small></div><b>¥ 680.00</b></div><div class="rank-row"><span class="rank-no">02</span><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_transport.webp" alt="交通分类"><div><strong>交通</strong><small>本月 5 笔</small></div><b>¥ 328.60</b></div><div class="rank-row"><span class="rank-no">03</span><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_study.webp" alt="学习分类"><div><strong>学习</strong><small>本月 2 笔</small></div><b>¥ 268.00</b></div></div>
+        </div>
+        <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="record">
+      <div class="screen-label">04 / 记账 · 渐进录入</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>记账</h2></div>
+          <div class="record-toggle" aria-label="记账类型"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button></div>
+          <div class="category-head"><h3>今天花在哪里？</h3><small>选择后继续</small></div>
+          <div class="record-state active" data-record-state="categories">
+            <div class="category-grid" data-category-set="expense" aria-label="支出分类">
+              <button class="category-tile" type="button" data-category="餐饮" data-image="ic_category_expense_dining.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_dining.webp" alt=""><span>餐饮</span></button>
+              <button class="category-tile" type="button" data-category="购物" data-image="ic_category_expense_shopping.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_shopping.webp" alt=""><span>购物</span></button>
+              <button class="category-tile" type="button" data-category="饮料" data-image="ic_category_expense_drinks.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_drinks.webp" alt=""><span>饮料</span></button>
+              <button class="category-tile" type="button" data-category="交通" data-image="ic_category_expense_transport.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_transport.webp" alt=""><span>交通</span></button>
+              <button class="category-tile" type="button" data-category="日用" data-image="ic_category_expense_daily.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_daily.webp" alt=""><span>日用</span></button>
+              <button class="category-tile" type="button" data-category="学习" data-image="ic_category_expense_study.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_study.webp" alt=""><span>学习</span></button>
+              <button class="category-tile" type="button" data-category="水果" data-image="ic_category_expense_fruit.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_fruit.webp" alt=""><span>水果</span></button>
+              <button class="category-tile" type="button" data-category="娱乐" data-image="ic_category_expense_entertainment.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_entertainment.webp" alt=""><span>娱乐</span></button>
+              <button class="category-tile" type="button" data-category="服饰" data-image="ic_category_expense_clothing.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_clothing.webp" alt=""><span>服饰</span></button>
+              <button class="category-tile" type="button" data-category="礼物" data-image="ic_category_expense_gift.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_gift.webp" alt=""><span>礼物</span></button>
+              <button class="category-tile" type="button" data-category="红包" data-image="ic_category_expense_red_packet.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_red_packet.webp" alt=""><span>红包</span></button>
+              <button class="category-tile" type="button" data-category="人情" data-image="ic_category_expense_relationship.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_relationship.webp" alt=""><span>人情</span></button>
+              <button class="category-tile" type="button" data-category="医疗" data-image="ic_category_expense_medical.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_medical.webp" alt=""><span>医疗</span></button>
+              <button class="category-tile" type="button" data-category="订阅" data-image="ic_category_expense_subscription.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_subscription.webp" alt=""><span>订阅</span></button>
+              <button class="category-tile" type="button" data-category="借出" data-image="ic_category_expense_loan.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_loan.webp" alt=""><span>借出</span></button>
+              <button class="category-tile" type="button" data-category="还款" data-image="ic_category_expense_repayment.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_repayment.webp" alt=""><span>还款</span></button>
+              <button class="category-tile" type="button" data-category="自定义" data-image="ic_category_expense_custom.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_expense_custom.webp" alt=""><span>自定义</span></button>
+            </div>
+            <div class="category-grid" data-category-set="income" aria-label="收入分类" style="display:none">
+              <button class="category-tile" type="button" data-category="工资" data-image="ic_category_income_salary.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_income_salary.webp" alt=""><span>工资</span></button>
+              <button class="category-tile" type="button" data-category="零花" data-image="ic_category_income_allowance.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_income_allowance.webp" alt=""><span>零花</span></button>
+              <button class="category-tile" type="button" data-category="兼职" data-image="ic_category_income_part_time.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_income_part_time.webp" alt=""><span>兼职</span></button>
+              <button class="category-tile" type="button" data-category="转卖" data-image="ic_category_income_resale.webp"><img src="../app/src/main/res/drawable-nodpi/ic_category_income_resale.webp" alt=""><span>转卖</span></button>
+            </div>
+            <p class="micro-note">共 18 个支出分类 · 点击任意分类进入下一步</p>
+          </div>
+          <div class="record-state" data-record-state="entry">
+            <div class="selected-chip"><img data-selected-image src="../app/src/main/res/drawable-nodpi/ic_category_expense_dining.webp" alt=""><span>已选择：<b data-selected-name>餐饮</b></span></div>
+            <div class="field"><label for="amount">金额</label><div class="amount-wrap"><span>¥</span><input id="amount" value="32.00" inputmode="decimal" aria-label="金额"></div></div>
+            <div class="field"><label for="note">备注（可选）</label><input id="note" placeholder="写下这笔记录的故事" aria-label="备注"></div>
+            <div class="field"><label>发生日期</label><div class="date-picker"><select aria-label="年份"><option>2026年</option></select><select aria-label="月份"><option>09月</option></select><select aria-label="日期"><option>07日</option></select></div></div>
+            <button class="primary-button" type="button">收进森林账本</button>
+            <button class="text-button" type="button" data-record-back style="display:block; min-height:48px; width:100%; margin-top:6px; border:0; background:transparent; color:var(--wood); font-size:12px; font-weight:800;">返回选择分类</button>
+          </div>
+        </div>
+        <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="savings">
+      <div class="screen-label">05 / 攒钱 · 目标小径</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>攒钱</h2></div>
+          <div class="savings-hero paper-card"><h3>给未来留一片<br>更大的森林</h3><p>把想去的地方、想做的事，分成一小步一小步。</p><img src="../app/src/main/res/drawable-nodpi/turtwig_carrying_acorn_jar.webp" alt="草苗龟抱着橡果罐"></div>
+          <div class="section-heading"><h3>正在靠近的目标</h3><span>2 个目标</span></div>
+          <div class="goal-card paper-card"><div class="goal-top"><img src="../app/src/main/res/drawable-nodpi/turtwig_carrying_acorn_jar.webp" alt=""><div><strong>秋日旅行</strong><small>目标 ¥ 6,000.00</small></div><span class="goal-amount">42%</span></div><div class="progress-track"><i style="width:42%"></i></div><div class="goal-bottom"><span>已存 ¥ 2,520.00</span><span>还差 ¥ 3,480.00</span></div></div>
+          <div class="goal-card paper-card"><div class="goal-top"><img src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt=""><div><strong>森林小屋</strong><small>目标 ¥ 12,000.00</small></div><span class="goal-amount">18%</span></div><div class="progress-track"><i style="width:18%; background:var(--forest)"></i></div><div class="goal-bottom"><span>已存 ¥ 2,160.00</span><span>还差 ¥ 9,840.00</span></div></div>
+          <button class="add-goal" type="button" aria-label="创建新的攒钱目标">＋ 创建一个新目标</button>
+        </div>
+        <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="profile">
+      <div class="screen-label">06 / 我的 · 森林小屋</div>
+      <div class="phone">
+        <div class="screen-content">
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>我的</h2></div>
+          <div class="profile-hero paper-card"><img class="profile-avatar" src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt="用户头像"><div><h3>森林守护员</h3><p>从 2026 年 09 月开始记录</p></div></div>
+          <div class="asset-card paper-card"><small>森林资产总览</small><strong>¥ 18,420.80</strong><div class="balance-meta"><div><small>现金与存款</small><b style="color:var(--forest)">¥ 15,900.80</b></div><div><small>目标储蓄</small><b style="color:var(--orange)">¥ 2,520.00</b></div></div></div>
+          <div class="section-heading"><h3>小屋设置</h3><span>轻轻调整</span></div>
+          <div class="profile-list paper-card"><button class="profile-row" type="button" aria-label="编辑头像和昵称"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg><span>头像与昵称</span><b>森林守护员 ·›</b></button><button class="profile-row" type="button" aria-label="管理分类"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>分类管理</span><b>22 个分类 ·›</b></button><button class="profile-row" type="button" aria-label="导出账本"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出账本</span><b>CSV ·›</b></button><button class="profile-row" type="button" aria-label="关于森林账本"><svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg><span>关于森林账本</span><b>v0.1 ·›</b></button></div>
+          <p class="micro-note">愿每一笔记录，都让生活更清楚一点。</p>
+        </div>
+        <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
+      </div>
+    </section>
+  </main>
+
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M6 6h13M6 12h13M6 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4C10 4 5 8 5 14c0 3 2 5 5 5 6 0 10-5 10-15Z"/><path d="M4 21c2-5 6-8 12-11"/></symbol>
+    <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M4 11h16l-1 4a6 6 0 0 1-6 4h-2a6 6 0 0 1-6-4l-1-4Z"/><path d="M6 8c1-2 2-2 3 0M11 8c1-2 2-2 3 0M16 8c1-2 2-2 3 0"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21V5.5Z"/><path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H19"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-6"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.4 3-5 7-5s6.4 1.6 7 5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v6c0 5-3 7-7 7h-1c-2.5 0-4-1.4-5.5-3.6L4 14a1.5 1.5 0 0 1 2.5-1.1L7 14"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13"/><path d="M12 7H8.5a2.5 2.5 0 1 1 2.3-3.5L12 7ZM12 7h3.5A2.5 2.5 0 1 0 13.2 3L12 7Z"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+  </defs></svg>
+
+  <script>
+    const screens = [...document.querySelectorAll('[data-screen]')];
+    const recordStates = [...document.querySelectorAll('[data-record-state]')];
+    const setRecordState = (state) => {
+      recordStates.forEach((node) => node.classList.toggle('active', node.dataset.recordState === state));
+      document.querySelectorAll('[data-record-state-switch]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.recordStateSwitch === state)));
+    };
+    const jumpTo = (screenName) => {
+      const target = document.querySelector(`[data-screen="${screenName}"]`);
+      if (target) target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    };
+    document.querySelectorAll('[data-jump]').forEach((button) => button.addEventListener('click', () => jumpTo(button.dataset.jump)));
+    document.querySelectorAll('.toggle-button').forEach((button) => button.addEventListener('click', () => {
+      const group = button.parentElement;
+      group.querySelectorAll('.toggle-button').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      if (group.classList.contains('record-toggle')) {
+        const type = button.textContent.trim() === '收入' ? 'income' : 'expense';
+        document.querySelectorAll('[data-category-set]').forEach((set) => set.style.display = set.dataset.categorySet === type ? 'grid' : 'none');
+      }
+    }));
+    document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
+      document.querySelectorAll('[data-category]').forEach((item) => item.classList.toggle('selected', item === button));
+      const image = document.querySelector('[data-selected-image]');
+      const name = document.querySelector('[data-selected-name]');
+      image.src = `../app/src/main/res/drawable-nodpi/${button.dataset.image}`;
+      name.textContent = button.dataset.category;
+      setRecordState('entry');
+    }));
+    document.querySelector('[data-record-back]')?.addEventListener('click', () => setRecordState('categories'));
+    if (window.location.hash === '#record-entry') setRecordState('entry');
+  </script>
+</body>
+</html>

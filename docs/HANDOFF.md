@@ -6,7 +6,7 @@
 - Windows mirror for Android Studio: `D:\pkmAPP`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
-- Latest committed UI checkpoint: `1293784` (`style: clean details test whitespace`); the next checkpoint adds the source-level record-to-details test and refreshed delivery notes.
+- Latest committed Android checkpoint: `168cf12` (`feat: add chart trends and rankings`). The current visual-design checkpoint adds the HTML visual board, converted category WebPs, and an editable Figma board.
 - This is a runnable preview checkpoint: push it so the user can inspect the UI in Android Studio before the remaining enhancements.
 
 ## Working Agreement
@@ -75,7 +75,16 @@ The debug APK is generated at:
 ## Known Worktree State
 
 - Existing unrelated line-ending changes remain in `gradle/wrapper/gradle-wrapper.properties` and `gradlew.bat`; do not revert them without explicit instruction.
-- Only the pre-existing line-ending changes remain in the working tree; do not stage them.
+- The pre-existing line-ending changes remain alongside the current visual-phase files; do not stage the line-ending-only files.
+
+## HTML / Figma Visual Phase (2026-09-07)
+
+- Per the user's latest instruction, the HTML visual board is maintained directly in `D:\pkmAPP\design\pkmapp-visual-redesign.html`; do not overwrite the existing untracked `design\mastergo\pkmapp-redesign.html`.
+- The board contains six responsive mobile screens: 首页、明细、图表、记账、攒钱、我的. It uses warm paper, forest green, wood/orange accents, 48dp-equivalent touch targets, accessible labels/focus states, and reduced-motion support. The record screen demonstrates the progressive category-first flow with expense and income WebP categories.
+- The converted category assets are in `app/src/main/res/drawable-nodpi/` and should remain available to the Android XML implementation. The design board references the same resource filenames.
+- The editable Figma board is in the user's file [Figma Basics](https://www.figma.com/design/LAcQw2liQ2kj2eGcDNUEF0/Figma-basics?node-id=2603-22), section node `2603:22` (`PKMAPP · HTML视觉稿`). Local PKMAPP color and layout variables are defined in that section, and the PNG transfer assets are placed into the phone frames so the character illustrations render in Figma.
+- TDD evidence: `node design/pkmapp-visual-redesign.test.js` passes both structural/accessibility checks. Browser verification confirmed six screens, 18 expense categories, the clean default category-selection state, and the local page has no HTML-to-design capture dependency after the Figma fallback.
+- The two HTML-to-Figma capture attempts remained pending after repeated polling and showed a capture timeout in the browser. The manual Figma board is therefore the editable source of truth for this phase; no capture output was used as a completed result.
 
 ## Next Steps
 

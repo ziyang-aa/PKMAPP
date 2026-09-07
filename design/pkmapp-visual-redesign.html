@@ -296,6 +296,9 @@
     .primary-button:hover, .primary-button:focus-visible { filter: brightness(1.06); transform: translateY(-2px); }
 
     .chart-toggle { grid-template-columns: repeat(3, 1fr); margin-top: 9px; }
+    .chart-type-toggle { grid-template-columns: minmax(0, 1fr) 58px 58px minmax(0, 1fr); align-items: center; gap: 4px; padding: 6px 8px; margin-top: 12px; }
+    .chart-type-toggle img { display: block; justify-self: center; width: 74px; height: 74px; object-fit: contain; mix-blend-mode: multiply; }
+    .chart-type-toggle .toggle-button { width: 58px; padding: 0 4px; justify-self: center; }
     .chart-card { margin-top: 15px; padding: 17px 14px 12px; }
     .chart-summary { display: flex; align-items: end; justify-content: space-between; }
     .chart-summary small { color: var(--muted); font-size: 11px; }
@@ -428,7 +431,7 @@
       <div class="phone">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>图表</h2></div>
-          <div class="chart-toggle" aria-label="收支类型"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button></div>
+          <div class="chart-toggle chart-type-toggle" aria-label="收支类型"><img src="../宝可梦账本素材/草苗龟与储蓄罐插画生成.png" alt="草苗龟支出插画"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button><img src="../宝可梦账本素材/儿童插画：持放大镜观察金币.png" alt="木守宫收入插画"></div>
           <div class="chart-toggle" aria-label="时间范围"><button class="toggle-button" type="button" aria-pressed="false">周</button><button class="toggle-button" type="button" aria-pressed="true">月</button><button class="toggle-button" type="button" aria-pressed="false">年</button></div>
           <div class="chart-card paper-card"><div class="chart-summary"><div><small>支出趋势 · 本月</small><strong>¥ 1,639.60</strong></div><span>较上月 −8.4%</span></div><svg class="chart-svg" viewBox="0 0 330 170" role="img" aria-label="本月支出趋势折线图"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a8d58c" stop-opacity=".55"/><stop offset="1" stop-color="#a8d58c" stop-opacity="0"/></linearGradient></defs><line class="chart-gridline" x1="8" y1="30" x2="322" y2="30"/><line class="chart-gridline" x1="8" y1="75" x2="322" y2="75"/><line class="chart-gridline" x1="8" y1="120" x2="322" y2="120"/><path class="chart-area" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29 L319,137 L10,137 Z"/><path class="chart-line" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29"/><circle class="chart-dot" cx="10" cy="121" r="4"/><circle class="chart-dot" cx="76" cy="96" r="4"/><circle class="chart-dot" cx="139" cy="81" r="4"/><circle class="chart-dot" cx="198" cy="91" r="4"/><circle class="chart-dot" cx="250" cy="72" r="4"/><circle class="chart-dot" cx="319" cy="29" r="4"/><text class="chart-axis" x="8" y="157">01日</text><text class="chart-axis" x="151" y="157">15日</text><text class="chart-axis" x="294" y="157">30日</text></svg></div>
           <div class="section-heading"><h3>分类排行榜</h3><span>支出占比</span></div>

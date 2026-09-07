@@ -67,6 +67,7 @@ The debug APK is generated at:
 - The record-page Android test now follows the intended sequence: choose a category first, then verify the entry controls are visible. It compiles, but still needs an emulator/phone run because no WSL device is connected.
 - The five feature pages now use the user-provided transparent WebP “open door” illustration as a 180dp-wide clickable return-to-home entrance, replacing the previous text buttons.
 - The return-door WebP is alpha-cropped and shown in a compact 120dp-wide touch target; the details page also has a wheel-style year/month selector that filters its monthly balance and transaction list together.
+- Charts now has frontend income/expense and week/month/year controls, a native drawn trend line and a category ranking. It reads the current in-memory ledger totals/categories; trend points remain presentation data until a later analytics-data phase.
 - Detail records now use a `RecyclerView` and a JVM-tested date grouping model. Each date appears once as 今天、昨天或月日标题; records retain explicit 收入/支出 text alongside their colour. Empty ledgers show a “去记一笔” action.
 - `MainNavigationTest` now contains a full save-to-details scenario that uses a unique note to prove the newly entered record renders. It has compiled but has not run without a connected WSL-visible device.
 - Custom categories and the calculator dialog are complete. Remaining: real exchange-rate/borrowing data, ledger deletion, connected-device end-to-end/visual test, charts, savings, profile data and later local persistence.

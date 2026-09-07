@@ -211,7 +211,7 @@
     .panorama-nudge .icon { width: 22px; height: 22px; }
     .panorama-nudge + .panorama-nudge { margin-left: auto; }
 
-    .calculator { margin-top: 14px; overflow: hidden; border: 1px solid rgba(123,92,59,.2); border-radius: 20px; background: #fffdf8; box-shadow: var(--small-shadow); }
+    .calculator { margin-top: 14px; overflow: hidden; border: 1px solid rgba(123,92,59,.2); border-radius: 20px; background: var(--paper-deep); box-shadow: var(--small-shadow); }
     .calculator[hidden] { display: none; }
     .calculator-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; padding: 14px 14px 0; }
     .calculator-head h3 { color: var(--wood); font-size: 14px; }
@@ -221,13 +221,13 @@
     .calc-display:focus { border-bottom-color: var(--forest); }
     .calc-note { margin: 10px 14px 12px; }
     .calc-note label { margin-bottom: 4px; color: var(--muted); font-size: 10px; }
-    .calc-note input { min-height: 44px; color: var(--muted); background: #f5f6f4; }
-    .calculator-keys { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid #eee9df; }
-    .calculator-key { min-height: 58px; padding: 0; border: 0; border-right: 1px solid #eee9df; border-bottom: 1px solid #eee9df; border-radius: 0; color: var(--ink); background: #fffdf8; cursor: pointer; font-size: 17px; font-weight: 500; transition: background 160ms ease, color 160ms ease; }
+    .calc-note input { min-height: 44px; color: var(--muted); background: var(--paper-light); }
+    .calculator-keys { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+    .calculator-key { min-height: 58px; padding: 0; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0; color: var(--ink); background: var(--paper); cursor: pointer; font-size: 17px; font-weight: 500; transition: background 160ms ease, color 160ms ease; }
     .calculator-key:nth-child(4n) { border-right: 0; }
     .calculator-key:nth-last-child(-n + 4) { border-bottom: 0; }
     .calculator-key:hover, .calculator-key:focus-visible { color: var(--forest); background: #edf6dc; transform: none; }
-    .calculator-key.operator { color: var(--wood); background: #fffdf8; }
+    .calculator-key.operator { color: var(--wood); background: var(--paper); }
     .calculator-key.equals { color: #fff8df; background: var(--orange); }
 
     .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
@@ -475,6 +475,7 @@
           </div>
           <div class="record-state" data-record-state="entry" hidden>
             <div class="selected-chip"><img data-selected-image src="../app/src/main/res/drawable-nodpi/ic_category_expense_dining.webp" alt=""><span>已选择：<b data-selected-name>餐饮</b></span></div>
+            <div class="field"><label>发生日期</label><div class="date-picker"><select aria-label="年份"><option>2026年</option></select><select aria-label="月份"><option>09月</option></select><select aria-label="日期"><option>07日</option></select></div></div>
             <div class="calculator" data-calculator hidden>
               <div class="calculator-head"><h3>森林计算器</h3><small>先算清楚，再记入账本</small></div>
               <span class="calc-expression" data-calc-expression aria-live="polite">输入花销</span>
@@ -499,9 +500,7 @@
                 <button class="calculator-key equals" type="button" data-calculator-key="=" data-calculator-equals aria-label="计算结果">＝</button>
               </div>
             </div>
-            <div class="field"><label>发生日期</label><div class="date-picker"><select aria-label="年份"><option>2026年</option></select><select aria-label="月份"><option>09月</option></select><select aria-label="日期"><option>07日</option></select></div></div>
             <button class="primary-button" type="button">收进森林账本</button>
-            <button class="text-button" type="button" data-record-back style="display:block; min-height:48px; width:100%; margin-top:6px; border:0; background:transparent; color:var(--wood); font-size:12px; font-weight:800;">返回选择分类</button>
           </div>
         </div>
         <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
@@ -608,8 +607,6 @@
       setRecordState('entry');
       entryState?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
     }));
-    document.querySelector('[data-record-back]')?.addEventListener('click', () => setRecordState('categories'));
-
     const formatCalculatorResult = (value) => {
       if (!Number.isFinite(value)) return null;
       const rounded = Number(value.toFixed(2));

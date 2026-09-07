@@ -334,19 +334,28 @@
     .goal-bottom { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 10px; }
     .add-goal { display: flex; align-items: center; justify-content: center; min-height: 56px; margin-top: 12px; border: 1px dashed var(--forest); border-radius: 16px; color: var(--forest); background: rgba(255,248,223,.5); font-size: 12px; font-weight: 800; }
 
-    .profile-hero { display: flex; align-items: center; gap: 14px; padding: 18px; }
-    .profile-avatar { width: 72px; height: 72px; padding: 3px; border-radius: 24px; background: var(--leaf); object-fit: contain; }
-    .profile-hero h3 { color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 23px; }
-    .profile-hero p { margin-top: 4px; color: var(--muted); font-size: 11px; }
-    .asset-card { margin-top: 12px; padding: 17px; }
+    .profile-hero { position: relative; isolation: isolate; min-height: 166px; overflow: hidden; padding: 22px 18px; border-radius: 28px; background: radial-gradient(circle at 88% 84%, rgba(168,213,140,.72) 0 54px, transparent 55px), radial-gradient(circle at 75% 18%, rgba(255,248,223,.48) 0 24px, transparent 25px), linear-gradient(135deg, #e2efcf 0%, #c6e1aa 100%); }
+    .profile-hero::before { content: ""; position: absolute; z-index: -1; right: -34px; bottom: -78px; width: 210px; height: 150px; border-radius: 50% 50% 0 0; background: rgba(78,129,70,.12); transform: rotate(-12deg); }
+    .profile-identity { position: relative; z-index: 1; max-width: 58%; }
+    .profile-kicker { color: var(--forest); font-size: 10px; font-weight: 850; letter-spacing: .14em; }
+    .profile-avatar { position: absolute; z-index: 1; right: 7px; bottom: 1px; width: 126px; height: 126px; object-fit: contain; filter: drop-shadow(0 8px 7px rgba(78,81,35,.16)); }
+    .profile-hero h3 { margin-top: 8px; color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 25px; }
+    .profile-hero p { margin-top: 5px; color: #5f7951; font-size: 11px; }
+    .profile-level { display: inline-flex; align-items: center; gap: 5px; margin-top: 13px; padding: 6px 9px; border-radius: 999px; color: var(--wood); background: rgba(255,248,223,.68); font-size: 10px; font-weight: 800; }
+    .profile-level .icon { width: 14px; height: 14px; color: var(--forest); }
+    .asset-card { margin-top: 14px; padding: 17px; border: 0; background: rgba(255,248,223,.72); box-shadow: none; }
     .asset-card small { color: var(--muted); font-size: 11px; }
     .asset-card strong { display: block; margin-top: 5px; color: var(--forest); font-size: 26px; letter-spacing: -.04em; }
-    .profile-list { margin-top: 15px; overflow: hidden; }
-    .profile-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 15px; border-bottom: 1px dashed var(--line); }
+    .asset-card .balance-meta { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .asset-card .balance-meta small { color: var(--muted); }
+    .profile-section-heading { margin-top: 19px; margin-bottom: 5px; }
+    .profile-list { margin-top: 0; overflow: hidden; }
+    .profile-row { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 2px; border: 0; border-bottom: 1px solid rgba(221,207,178,.76); background: transparent; text-align: left; }
     .profile-row:last-child { border-bottom: 0; }
-    .profile-row .icon { color: var(--wood); }
+    .profile-row .icon { width: 27px; height: 27px; padding: 5px; border-radius: 10px; color: var(--wood); background: var(--paper-deep); }
     .profile-row span { flex: 1; font-size: 13px; font-weight: 700; }
     .profile-row b { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .screen[data-screen="profile"] .screen-header h2 { font-size: 23px; letter-spacing: -.02em; }
 
     .bottom-nav { position: absolute; z-index: 5; right: 10px; bottom: 10px; left: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; min-height: 68px; padding: 6px; border: 1px solid rgba(123,92,59,.16); border-radius: 22px; background: rgba(255,248,223,.96); box-shadow: var(--shadow); }
     .nav-item { min-width: 48px; min-height: 48px; padding: 7px 3px; border: 0; border-radius: 16px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
@@ -526,14 +535,16 @@
     </section>
 
     <section class="screen" data-screen="profile">
-      <div class="screen-label">06 / 我的 · 森林小屋</div>
+      <div class="screen-label">06 / 我的 · 森林档案</div>
       <div class="phone">
         <div class="screen-content">
-          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>我的</h2></div>
-          <div class="profile-hero paper-card"><img class="profile-avatar" src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt="用户头像"><div><h3>森林守护员</h3><p>从 2026 年 09 月开始记录</p></div></div>
+          <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>森林档案</h2></div>
+          <div class="profile-hero"><div class="profile-identity"><span class="profile-kicker">MY FOREST FILE</span><h3>森林守护员</h3><p>已在这里生活 27 天</p><span class="profile-level"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>Lv.4 · 小树林守护者</span></div><img class="profile-avatar" src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt="正在休息的妙蛙种子"></div>
           <div class="asset-card paper-card"><small>森林资产总览</small><strong>¥ 18,420.80</strong><div class="balance-meta"><div><small>现金与存款</small><b style="color:var(--forest)">¥ 15,900.80</b></div><div><small>目标储蓄</small><b style="color:var(--orange)">¥ 2,520.00</b></div></div></div>
-          <div class="section-heading"><h3>小屋设置</h3><span>轻轻调整</span></div>
-          <div class="profile-list paper-card"><button class="profile-row" type="button" aria-label="编辑头像和昵称"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg><span>头像与昵称</span><b>森林守护员 ·›</b></button><button class="profile-row" type="button" aria-label="管理分类"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>分类管理</span><b>22 个分类 ·›</b></button><button class="profile-row" type="button" aria-label="导出账本"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出账本</span><b>CSV ·›</b></button><button class="profile-row" type="button" aria-label="关于森林账本"><svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg><span>关于森林账本</span><b>v0.1 ·›</b></button></div>
+          <div class="section-heading profile-section-heading"><h3>小屋管理</h3><span>轻轻调整</span></div>
+          <div class="profile-list"><button class="profile-row" type="button" aria-label="编辑头像和昵称"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg><span>头像与昵称</span><b>森林守护员 ·›</b></button><button class="profile-row" type="button" aria-label="管理分类"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>分类管理</span><b>22 个分类 ·›</b></button><button class="profile-row" type="button" aria-label="导出账本"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出账本</span><b>CSV ·›</b></button></div>
+          <div class="section-heading profile-section-heading"><h3>其他</h3><span>关于森林账本</span></div>
+          <div class="profile-list"><button class="profile-row" type="button" aria-label="关于森林账本"><svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg><span>关于森林账本</span><b>v0.1 ·›</b></button></div>
           <p class="micro-note">愿每一笔记录，都让生活更清楚一点。</p>
         </div>
         <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>

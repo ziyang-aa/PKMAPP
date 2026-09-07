@@ -37,3 +37,23 @@ test('设计板包含移动端可访问性和减弱动效约束', () => {
   assert.match(source, /#F5F1E7/i);
   assert.match(source, /#FFF8DF/i);
 });
+
+test('首页使用单张森林小窝背景并移除首页功能卡', () => {
+  const source = page();
+  assert.match(source, /data-home-panorama/);
+  assert.match(source, /\.\.\/宝可梦账本素材\/装饰素材\/主页面背景\/主页面\.png/);
+  assert.doesNotMatch(source, /class="quick-actions"/);
+  assert.doesNotMatch(source, /林间最近发生/);
+  assert.match(source, /data-panorama-track/);
+  assert.match(source, /setProperty\(['"]--panorama-x/);
+});
+
+test('选择分类后在下方展开计算器', () => {
+  const source = page();
+  assert.match(source, /data-calculator/);
+  assert.match(source, /data-calculator-key/);
+  assert.match(source, /data-calc-display/);
+  assert.match(source, /data-calculator[^>]*hidden/);
+  assert.match(source, /data-calculator-equals/);
+  assert.match(source, /setRecordState\(['"]entry['"]\)/);
+});

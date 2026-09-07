@@ -177,16 +177,52 @@
       box-shadow: var(--small-shadow);
     }
 
-    .hero-card { position: relative; min-height: 358px; overflow: hidden; padding: 24px; background: #dbe8b9; }
-    .hero-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(245,241,231,.04), rgba(48,80,39,.42)); }
-    .hero-card .hero-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; opacity: .82; }
-    .hero-copy { position: relative; z-index: 1; display: flex; min-height: 310px; flex-direction: column; justify-content: space-between; color: #fffdf0; }
-    .hero-copy .mini-label { color: rgba(255,253,240,.78); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
-    .hero-copy h2 { max-width: 230px; margin-top: 7px; font-family: Georgia, "Songti SC", serif; font-size: 34px; line-height: 1.15; }
-    .hero-balance { align-self: end; text-align: right; }
-    .hero-balance small { display: block; color: rgba(255,253,240,.8); font-size: 12px; }
-    .hero-balance strong { display: block; margin-top: 4px; font-size: 30px; letter-spacing: -.04em; }
-    .hero-character { position: absolute; z-index: 1; bottom: -5px; left: 12px; width: 118px; height: 118px; object-fit: contain; filter: drop-shadow(0 7px 4px rgba(53,53,30,.2)); }
+    .home-panorama {
+      --panorama-x: 0px;
+      position: relative;
+      min-height: 690px;
+      overflow: hidden;
+      border: 1px solid rgba(123, 92, 59, .2);
+      border-radius: var(--radius-lg);
+      background-color: #eee2c7;
+      background-image: url('../宝可梦账本素材/装饰素材/主页面背景/主页面.png');
+      background-position: calc(50% + var(--panorama-x)) center;
+      background-repeat: no-repeat;
+      background-size: auto 100%;
+      box-shadow: var(--small-shadow);
+      cursor: grab;
+      touch-action: pan-y;
+      user-select: none;
+    }
+    .home-panorama.is-dragging { cursor: grabbing; }
+    .home-panorama::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(48,68,36,.5) 0%, rgba(48,68,36,.08) 30%, rgba(48,68,36,.03) 62%, rgba(41,54,29,.38) 100%); }
+    .home-welcome { position: absolute; z-index: 1; top: 22px; right: 18px; left: 18px; display: flex; align-items: start; justify-content: space-between; gap: 12px; color: #fffdf0; text-shadow: 0 2px 10px rgba(45, 47, 25, .26); }
+    .home-welcome .mini-label { color: rgba(255,253,240,.82); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+    .home-welcome h2 { margin-top: 5px; font-family: Georgia, "Songti SC", serif; font-size: 32px; line-height: 1.08; }
+    .home-balance { flex: 0 0 auto; padding: 10px 12px; border: 1px solid rgba(255,253,240,.34); border-radius: 15px; background: rgba(58, 84, 42, .58); text-align: right; }
+    .home-balance small { display: block; color: rgba(255,253,240,.8); font-size: 10px; }
+    .home-balance strong { display: block; margin-top: 3px; font-size: 16px; letter-spacing: -.03em; }
+    .panorama-controls { position: absolute; z-index: 2; right: 16px; bottom: 18px; left: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panorama-hint { padding: 8px 11px; border-radius: 999px; color: #fffdf0; background: rgba(58, 84, 42, .56); font-size: 11px; font-weight: 700; text-shadow: 0 1px 4px rgba(45,47,25,.25); }
+    .panorama-nudge { display: inline-grid; place-items: center; width: 48px; min-width: 48px; min-height: 48px; padding: 0; border: 1px solid rgba(255,253,240,.5); border-radius: 16px; color: #fffdf0; background: rgba(58, 84, 42, .54); cursor: pointer; transition: transform 160ms var(--ease), background 160ms ease; }
+    .panorama-nudge:hover, .panorama-nudge:focus-visible { transform: translateY(-2px); background: rgba(58, 84, 42, .78); }
+    .panorama-nudge .icon { width: 22px; height: 22px; }
+    .panorama-nudge + .panorama-nudge { margin-left: auto; }
+
+    .calculator { margin-top: 14px; padding: 14px; border: 1px solid rgba(123,92,59,.2); border-radius: 20px; background: var(--paper-deep); box-shadow: var(--small-shadow); }
+    .calculator[hidden] { display: none; }
+    .calculator-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; }
+    .calculator-head h3 { color: var(--wood); font-size: 14px; }
+    .calculator-head small { color: var(--muted); font-size: 10px; }
+    .calc-display { display: block; min-height: 58px; margin-top: 10px; padding: 9px 12px; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; color: var(--forest); background: var(--paper-light); text-align: right; font-size: 26px; font-weight: 850; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+    .calc-expression { display: block; min-height: 16px; overflow: hidden; color: var(--muted); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .calculator-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .calculator-key { min-height: 50px; padding: 0; border: 1px solid var(--line); border-radius: 14px; color: var(--wood); background: var(--paper-light); cursor: pointer; font-size: 16px; font-weight: 850; transition: transform 160ms var(--ease), background 160ms ease, border-color 160ms ease; }
+    .calculator-key:hover, .calculator-key:focus-visible { transform: translateY(-1px); border-color: var(--leaf); background: #edf6dc; }
+    .calculator-key.operator { color: var(--orange); background: #fff0d5; }
+    .calculator-key.equals { color: #fff8df; background: var(--forest); }
+    .calculator-key.wide { grid-column: span 2; }
+    .calculator-apply { width: 100%; min-height: 48px; margin-top: 9px; border: 1px dashed var(--forest); border-radius: 14px; color: var(--forest); background: rgba(255,248,223,.5); cursor: pointer; font-size: 12px; font-weight: 850; }
 
     .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
     .quick-action, .nav-item, .text-button, .toggle-button, .category-tile, .month-button, .tool-button { cursor: pointer; transition: transform 160ms var(--ease), background 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
@@ -342,26 +378,17 @@
       <div class="screen-label">01 / 首页 · 森林入口</div>
       <div class="phone">
         <div class="screen-content">
-          <div class="hero-card paper-card">
-            <img class="hero-scene" src="../app/src/main/res/drawable-nodpi/bg_home_panorama_placeholder.webp" alt="暖色森林场景">
-            <div class="hero-copy">
-              <div><span class="mini-label">GOOD MORNING, FOREST KEEPER</span><h2>今天也要<br>轻轻记一笔</h2></div>
-              <div class="hero-balance"><small>本月结余</small><strong>¥ 2,860.40</strong></div>
+          <div class="home-panorama" data-home-panorama data-panorama-track tabindex="0" role="region" aria-label="森林小窝全景，可左右拖动查看">
+            <div class="home-welcome">
+              <div><span class="mini-label">GOOD MORNING, FOREST KEEPER</span><h2>森林小窝</h2></div>
+              <div class="home-balance"><small>本月结余</small><strong>¥ 2,860.40</strong></div>
             </div>
-            <img class="hero-character" src="../app/src/main/res/drawable-nodpi/treecko_waiting.webp" alt="木守宫插画">
+            <div class="panorama-controls" aria-label="森林背景平移控制">
+              <button class="panorama-nudge" type="button" data-panorama-nudge="left" aria-label="向左查看森林"><svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg></button>
+              <span class="panorama-hint">左右拖动，看看小窝周围</span>
+              <button class="panorama-nudge" type="button" data-panorama-nudge="right" aria-label="向右查看森林"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+            </div>
           </div>
-          <div class="quick-actions" aria-label="快捷操作">
-            <button class="quick-action" type="button" data-jump="record" aria-label="新增一笔记账"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>记一笔</span></button>
-            <button class="quick-action" type="button" data-jump="details" aria-label="查看明细"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg><span>看明细</span></button>
-            <button class="quick-action" type="button" data-jump="savings" aria-label="查看攒钱目标"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg><span>攒钱中</span></button>
-          </div>
-          <div class="section-heading"><h3>林间最近发生</h3><span>本月 · 3 笔</span></div>
-          <div class="paper-card">
-            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-bowl"></use></svg></div><div><strong>森林食堂</strong><small>今天 · 午餐</small></div><b>− ¥32.00</b></div>
-            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-spark"></use></svg></div><div><strong>本月零花</strong><small>昨天 · 收入</small></div><b style="color:var(--forest)">＋ ¥500.00</b></div>
-            <div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg></div><div><strong>森林图书馆</strong><small>09月03日 · 学习</small></div><b>− ¥68.00</b></div>
-          </div>
-          <p class="micro-note">左右滑动探索你的森林 · 数据暂存于本地内存</p>
         </div>
         <div class="bottom-nav" aria-label="主导航">
           <button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button>
@@ -440,9 +467,35 @@
             </div>
             <p class="micro-note">共 18 个支出分类 · 点击任意分类进入下一步</p>
           </div>
-          <div class="record-state" data-record-state="entry">
+          <div class="record-state" data-record-state="entry" hidden>
             <div class="selected-chip"><img data-selected-image src="../app/src/main/res/drawable-nodpi/ic_category_expense_dining.webp" alt=""><span>已选择：<b data-selected-name>餐饮</b></span></div>
-            <div class="field"><label for="amount">金额</label><div class="amount-wrap"><span>¥</span><input id="amount" value="32.00" inputmode="decimal" aria-label="金额"></div></div>
+            <div class="calculator" data-calculator hidden>
+              <div class="calculator-head"><h3>森林计算器</h3><small>先算清楚，再记入账本</small></div>
+              <span class="calc-expression" data-calc-expression aria-live="polite">输入花销</span>
+              <output class="calc-display" data-calc-display aria-live="polite">0</output>
+              <div class="calculator-keys" aria-label="计算器按键">
+                <button class="calculator-key operator" type="button" data-calculator-key="clear" aria-label="清除">AC</button>
+                <button class="calculator-key operator" type="button" data-calculator-key="backspace" aria-label="删除一位">⌫</button>
+                <button class="calculator-key operator" type="button" data-calculator-key="÷" aria-label="除法">÷</button>
+                <button class="calculator-key operator" type="button" data-calculator-key="×" aria-label="乘法">×</button>
+                <button class="calculator-key" type="button" data-calculator-key="7">7</button>
+                <button class="calculator-key" type="button" data-calculator-key="8">8</button>
+                <button class="calculator-key" type="button" data-calculator-key="9">9</button>
+                <button class="calculator-key operator" type="button" data-calculator-key="-" aria-label="减法">−</button>
+                <button class="calculator-key" type="button" data-calculator-key="4">4</button>
+                <button class="calculator-key" type="button" data-calculator-key="5">5</button>
+                <button class="calculator-key" type="button" data-calculator-key="6">6</button>
+                <button class="calculator-key operator" type="button" data-calculator-key="+" aria-label="加法">＋</button>
+                <button class="calculator-key" type="button" data-calculator-key="1">1</button>
+                <button class="calculator-key" type="button" data-calculator-key="2">2</button>
+                <button class="calculator-key" type="button" data-calculator-key="3">3</button>
+                <button class="calculator-key equals" type="button" data-calculator-key="=" data-calculator-equals aria-label="计算结果">＝</button>
+                <button class="calculator-key wide" type="button" data-calculator-key="0">0</button>
+                <button class="calculator-key" type="button" data-calculator-key=".">.</button>
+              </div>
+              <button class="calculator-apply" type="button" data-calculator-apply>将结果填入金额</button>
+            </div>
+            <div class="field"><label for="amount">金额</label><div class="amount-wrap"><span>¥</span><input id="amount" value="0.00" inputmode="decimal" aria-label="金额"></div></div>
             <div class="field"><label for="note">备注（可选）</label><input id="note" placeholder="写下这笔记录的故事" aria-label="备注"></div>
             <div class="field"><label>发生日期</label><div class="date-picker"><select aria-label="年份"><option>2026年</option></select><select aria-label="月份"><option>09月</option></select><select aria-label="日期"><option>07日</option></select></div></div>
             <button class="primary-button" type="button">收进森林账本</button>
@@ -499,13 +552,35 @@
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9.5 5 7 7-7 7"/></symbol>
   </defs></svg>
 
   <script>
     const screens = [...document.querySelectorAll('[data-screen]')];
     const recordStates = [...document.querySelectorAll('[data-record-state]')];
+    const categoriesState = document.querySelector('[data-record-state="categories"]');
+    const entryState = document.querySelector('[data-record-state="entry"]');
+    const calculator = document.querySelector('[data-calculator]');
+    const calcExpressionNode = document.querySelector('[data-calc-expression]');
+    const calcDisplayNode = document.querySelector('[data-calc-display]');
+    const amountInput = document.querySelector('#amount');
+    const panorama = document.querySelector('[data-panorama-track]');
+    let calculatorExpression = '';
+    let calculatorJustEvaluated = false;
+    let panoramaX = 0;
+    let panoramaPointerId = null;
+    let panoramaStartX = 0;
+    let panoramaStartOffset = 0;
+
     const setRecordState = (state) => {
-      recordStates.forEach((node) => node.classList.toggle('active', node.dataset.recordState === state));
+      categoriesState?.classList.add('active');
+      entryState?.classList.toggle('active', state === 'entry');
+      if (entryState) entryState.hidden = state !== 'entry';
+      if (calculator) calculator.hidden = state !== 'entry';
+      recordStates.forEach((node) => {
+        if (node.dataset.recordState === 'categories') node.hidden = false;
+      });
       document.querySelectorAll('[data-record-state-switch]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.recordStateSwitch === state)));
     };
     const jumpTo = (screenName) => {
@@ -519,6 +594,7 @@
       if (group.classList.contains('record-toggle')) {
         const type = button.textContent.trim() === '收入' ? 'income' : 'expense';
         document.querySelectorAll('[data-category-set]').forEach((set) => set.style.display = set.dataset.categorySet === type ? 'grid' : 'none');
+        setRecordState('categories');
       }
     }));
     document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => {
@@ -528,9 +604,114 @@
       image.src = `../app/src/main/res/drawable-nodpi/${button.dataset.image}`;
       name.textContent = button.dataset.category;
       setRecordState('entry');
+      entryState?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
     }));
     document.querySelector('[data-record-back]')?.addEventListener('click', () => setRecordState('categories'));
-    if (window.location.hash === '#record-entry') setRecordState('entry');
+
+    const formatCalculatorResult = (value) => {
+      if (!Number.isFinite(value)) return null;
+      const rounded = Number(value.toFixed(2));
+      return Object.is(rounded, -0) ? 0 : rounded;
+    };
+    const evaluateCalculator = () => {
+      const safeExpression = calculatorExpression.replaceAll('×', '*').replaceAll('÷', '/');
+      if (!safeExpression || !/^[0-9+\-*/.\s]+$/.test(safeExpression)) return null;
+      try {
+        return formatCalculatorResult(Function(`"use strict"; return (${safeExpression})`)());
+      } catch {
+        return null;
+      }
+    };
+    const updateCalculatorDisplay = () => {
+      calcExpressionNode.textContent = calculatorExpression ? calculatorExpression : '输入花销';
+      calcDisplayNode.textContent = calculatorExpression || '0';
+    };
+    const commitCalculatorResult = () => {
+      const result = evaluateCalculator();
+      if (result === null) {
+        calcExpressionNode.textContent = '算式还不完整';
+        calcDisplayNode.textContent = '—';
+        return;
+      }
+      calculatorExpression = String(result);
+      calculatorJustEvaluated = true;
+      amountInput.value = Number(result).toFixed(2);
+      updateCalculatorDisplay();
+    };
+    const appendCalculatorKey = (key) => {
+      if (key === 'clear') {
+        calculatorExpression = '';
+        calculatorJustEvaluated = false;
+        updateCalculatorDisplay();
+        return;
+      }
+      if (key === 'backspace') {
+        calculatorExpression = calculatorExpression.slice(0, -1);
+        calculatorJustEvaluated = false;
+        updateCalculatorDisplay();
+        return;
+      }
+      if (key === '=') {
+        commitCalculatorResult();
+        return;
+      }
+      if (calculatorJustEvaluated && /[0-9.]/.test(key)) {
+        calculatorExpression = '';
+        calculatorJustEvaluated = false;
+      }
+      if (['+', '-', '×', '÷'].includes(key)) {
+        if (!calculatorExpression && key !== '-') calculatorExpression = '0';
+        if (/[+\-×÷]$/.test(calculatorExpression)) calculatorExpression = calculatorExpression.slice(0, -1) + key;
+        else calculatorExpression += key;
+      } else if (key === '.') {
+        const currentNumber = calculatorExpression.split(/[+\-×÷]/).pop();
+        if (!currentNumber.includes('.')) calculatorExpression += currentNumber ? '.' : '0.';
+      } else {
+        calculatorExpression += key;
+      }
+      updateCalculatorDisplay();
+    };
+    document.querySelectorAll('[data-calculator-key]').forEach((button) => button.addEventListener('click', () => appendCalculatorKey(button.dataset.calculatorKey)));
+    document.querySelector('[data-calculator-apply]')?.addEventListener('click', commitCalculatorResult);
+
+    const panoramaMaxOffset = () => Math.max(0, (panorama.clientHeight * (2848 / 1600) - panorama.clientWidth) / 2);
+    const clampPanorama = (value) => Math.min(panoramaMaxOffset(), Math.max(-panoramaMaxOffset(), value));
+    const applyPanoramaOffset = () => panorama.style.setProperty('--panorama-x', `${Math.round(panoramaX)}px`);
+    const nudgePanorama = (direction) => {
+      panoramaX = clampPanorama(panoramaX + direction * 72);
+      applyPanoramaOffset();
+    };
+    document.querySelectorAll('[data-panorama-nudge]').forEach((button) => button.addEventListener('click', () => nudgePanorama(button.dataset.panoramaNudge === 'right' ? 1 : -1)));
+    panorama?.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('button')) return;
+      panoramaPointerId = event.pointerId;
+      panoramaStartX = event.clientX;
+      panoramaStartOffset = panoramaX;
+      panorama.classList.add('is-dragging');
+      panorama.setPointerCapture(event.pointerId);
+    });
+    panorama?.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== panoramaPointerId) return;
+      panoramaX = clampPanorama(panoramaStartOffset + event.clientX - panoramaStartX);
+      applyPanoramaOffset();
+    });
+    const endPanoramaDrag = (event) => {
+      if (event.pointerId !== panoramaPointerId) return;
+      panoramaPointerId = null;
+      panorama.classList.remove('is-dragging');
+    };
+    panorama?.addEventListener('pointerup', endPanoramaDrag);
+    panorama?.addEventListener('pointercancel', endPanoramaDrag);
+    panorama?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        nudgePanorama(event.key === 'ArrowRight' ? 1 : -1);
+      }
+    });
+
+    updateCalculatorDisplay();
+    applyPanoramaOffset();
+    setRecordState(window.location.hash === '#record-entry' ? 'entry' : 'categories');
   </script>
 </body>
 </html>

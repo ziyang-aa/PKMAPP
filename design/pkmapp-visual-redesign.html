@@ -130,6 +130,15 @@
       isolation: isolate;
     }
 
+    .phone.fixed-page-background::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: url('../宝可梦账本素材/装饰素材/5个页面的固定背景/背景.png') center center / cover no-repeat;
+    }
+
     .phone::after {
       content: "";
       position: absolute;
@@ -420,7 +429,7 @@
 
     <section class="screen" data-screen="details">
       <div class="screen-label">02 / 明细 · 林间账本</div>
-      <div class="phone">
+      <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>明细</h2></div>
           <button class="ledger-button" type="button" aria-label="切换或新建账本"><span>日常森林账本</span><span>⌄</span></button>
@@ -437,7 +446,7 @@
 
     <section class="screen" data-screen="charts">
       <div class="screen-label">03 / 图表 · 林间观察</div>
-      <div class="phone">
+      <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>图表</h2></div>
           <div class="chart-toggle chart-type-toggle" aria-label="收支类型"><img src="../宝可梦账本素材/草苗龟与储蓄罐插画生成.png" alt="草苗龟支出插画"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button><img src="../宝可梦账本素材/儿童插画：持放大镜观察金币.png" alt="木守宫收入插画"></div>
@@ -452,7 +461,7 @@
 
     <section class="screen" data-screen="record">
       <div class="screen-label">04 / 记账 · 渐进录入</div>
-      <div class="phone">
+      <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>记账</h2></div>
           <div class="record-toggle" aria-label="记账类型"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button></div>
@@ -521,7 +530,7 @@
 
     <section class="screen" data-screen="savings">
       <div class="screen-label">05 / 攒钱 · 目标小径</div>
-      <div class="phone">
+      <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>攒钱</h2></div>
           <div class="savings-hero paper-card"><h3>给未来留一片<br>更大的森林</h3><p>把想去的地方、想做的事，分成一小步一小步。</p><img src="../app/src/main/res/drawable-nodpi/turtwig_carrying_acorn_jar.webp" alt="草苗龟抱着橡果罐"></div>
@@ -536,7 +545,7 @@
 
     <section class="screen" data-screen="profile">
       <div class="screen-label">06 / 我的 · 森林档案</div>
-      <div class="phone">
+      <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>森林档案</h2></div>
           <div class="profile-hero"><div class="profile-identity"><span class="profile-kicker">MY FOREST FILE</span><h3>森林守护员</h3><p>已在这里生活 27 天</p><span class="profile-level"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>Lv.4 · 小树林守护者</span></div><img class="profile-avatar" src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt="正在休息的妙蛙种子"></div>

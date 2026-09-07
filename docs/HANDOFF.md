@@ -93,6 +93,7 @@ The debug APK is generated at:
 - Latest HTML refinement: the Record screen now places the retained 发生日期 selectors above the calculator, uses warm paper surfaces instead of a white calculator background, and removes the redundant 返回选择分类 action. Figma remains intentionally unchanged.
 - Latest HTML refinement: the Charts screen centers the 支出 / 收入 toggle and places the supplied 草苗龟 illustration on the left and 木守宫 illustration on the right, sized as compact decorative companions. Figma remains intentionally unchanged.
 - Latest HTML refinement: the Profile screen now presents a borderless forest identity Hero using the existing sleeping Bulbasaur art, a clearer 2+1 asset hierarchy, flat grouped management lists, and a smaller 森林档案 heading. No new Profile actions or assets were added; Figma remains intentionally unchanged.
+- Latest HTML refinement: the five non-home mobile pages now use the supplied `宝可梦账本素材\装饰素材\5个页面的固定背景\背景.png` as a fixed phone-layer background. The Home panorama remains independent, and the new background stays in place while each page's content scrolls.
 
 ## Next Steps
 

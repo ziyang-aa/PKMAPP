@@ -2,10 +2,20 @@
 <resources>
     <color name="cream_background">#F5F1E7</color>
     <color name="paper_card">#FFF8DF</color>
+    <color name="paper_deep">#EEE4C9</color>
+    <color name="paper_light">#FFFDF2</color>
     <color name="forest_green">#4E8146</color>
     <color name="leaf_green">#A8D58C</color>
     <color name="wood_brown">#7B5C3B</color>
+    <color name="brown_soft">#A58B69</color>
     <color name="warm_orange">#D48A4A</color>
     <color name="expense_red">#C75B4B</color>
     <color name="ink">#3B352C</color>
+    <color name="home_text_shadow">#CC3B352C</color>
+    <color name="nav_selected_background">#DCEFCB</color>
+    <color name="nav_item_border">#806B5138</color>
+    <color name="record_toggle_text">#3B352C</color>
+    <color name="borrowing_summary_text">#FFFDF2</color>
+    <color name="borrowing_summary_muted">#BFD7B7</color>
+    <color name="borrowing_summary_divider">#4F8A58</color>
 </resources>

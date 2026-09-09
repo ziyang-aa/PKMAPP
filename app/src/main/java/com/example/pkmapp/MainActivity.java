@@ -11,7 +11,11 @@ import androidx.fragment.app.Fragment;
 import com.example.pkmapp.charts.ChartsFragment;
 import com.example.pkmapp.databinding.ActivityMainBinding;
 import com.example.pkmapp.details.DetailsFragment;
+import com.example.pkmapp.exchange.ExchangeFragment;
+import com.example.pkmapp.borrowing.BorrowingFragment;
+import com.example.pkmapp.borrowing.BorrowingDirection;
 import com.example.pkmapp.home.HomeFragment;
+import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.profile.ProfileFragment;
 import com.example.pkmapp.record.RecordFragment;
@@ -27,25 +31,27 @@ public final class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        InMemoryLedgerRepository.initialize(this);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        binding.bottomNavigation.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            AppDestination destination = destinationForButton(checkedId);
-            if (destination == null) {
-                return;
-            }
-            if (isChecked && destination != currentDestination) {
-                showDestination(destination);
-            } else if (!isChecked && destination == currentDestination) {
-                showDestination(AppDestination.HOME);
-            }
-        });
+        binding.navDetails.setCheckable(true);
+        binding.navCharts.setCheckable(true);
+        binding.navRecord.setCheckable(true);
+        binding.navSavings.setCheckable(true);
+        binding.navProfile.setCheckable(true);
+        binding.navDetails.setOnClickListener(v -> handleNavClick(AppDestination.DETAILS));
+        binding.navCharts.setOnClickListener(v -> handleNavClick(AppDestination.CHARTS));
+        binding.navRecord.setOnClickListener(v -> handleNavClick(AppDestination.RECORD));
+        binding.navSavings.setOnClickListener(v -> handleNavClick(AppDestination.SAVINGS));
+        binding.navProfile.setOnClickListener(v -> handleNavClick(AppDestination.PROFILE));
 
         backPressedCallback = new OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
-                showDestination(AppDestination.HOME);
+                showDestination(currentDestination == AppDestination.EXCHANGE
+                        || currentDestination == AppDestination.BORROWING
+                        ? AppDestination.DETAILS : AppDestination.HOME);
             }
         };
         getOnBackPressedDispatcher().addCallback(this, backPressedCallback);
@@ -69,6 +75,18 @@ public final class MainActivity extends AppCompatActivity {
         syncBottomBar(destination);
     }
 
+    public void showBorrowingComposer(@NonNull BorrowingDirection direction, long amountCents,
+            long occurredAtMillis, @Nullable String sourceTransactionId) {
+        Fragment fragment = BorrowingFragment.newComposer(direction, amountCents,
+                occurredAtMillis, sourceTransactionId);
+        getSupportFragmentManager().beginTransaction()
+                .setReorderingAllowed(true)
+                .replace(R.id.fragment_container, fragment, AppDestination.BORROWING.name())
+                .commit();
+        currentDestination = AppDestination.BORROWING;
+        syncBottomBar(AppDestination.BORROWING);
+    }
+
     @NonNull
     private Fragment createFragment(@NonNull AppDestination destination) {
         switch (destination) {
@@ -84,57 +102,26 @@ public final class MainActivity extends AppCompatActivity {
                 return new SavingsFragment();
             case PROFILE:
                 return new ProfileFragment();
+            case EXCHANGE:
+                return new ExchangeFragment();
+            case BORROWING:
+                return new BorrowingFragment();
             default:
                 throw new IllegalArgumentException("Unknown destination: " + destination);
         }
     }
 
     private void syncBottomBar(@NonNull AppDestination destination) {
-        int buttonId = buttonForDestination(destination);
-        if (buttonId == 0) {
-            binding.bottomNavigation.clearChecked();
-        } else {
-            binding.bottomNavigation.check(buttonId);
-        }
+        binding.navDetails.setChecked(destination == AppDestination.DETAILS);
+        binding.navCharts.setChecked(destination == AppDestination.CHARTS);
+        binding.navRecord.setChecked(destination == AppDestination.RECORD);
+        binding.navSavings.setChecked(destination == AppDestination.SAVINGS);
+        binding.navProfile.setChecked(destination == AppDestination.PROFILE);
         backPressedCallback.setEnabled(destination != AppDestination.HOME);
     }
 
-    @Nullable
-    private AppDestination destinationForButton(int buttonId) {
-        if (buttonId == R.id.nav_details) {
-            return AppDestination.DETAILS;
-        }
-        if (buttonId == R.id.nav_charts) {
-            return AppDestination.CHARTS;
-        }
-        if (buttonId == R.id.nav_record) {
-            return AppDestination.RECORD;
-        }
-        if (buttonId == R.id.nav_savings) {
-            return AppDestination.SAVINGS;
-        }
-        if (buttonId == R.id.nav_profile) {
-            return AppDestination.PROFILE;
-        }
-        return null;
-    }
-
-    private int buttonForDestination(@NonNull AppDestination destination) {
-        switch (destination) {
-            case DETAILS:
-                return R.id.nav_details;
-            case CHARTS:
-                return R.id.nav_charts;
-            case RECORD:
-                return R.id.nav_record;
-            case SAVINGS:
-                return R.id.nav_savings;
-            case PROFILE:
-                return R.id.nav_profile;
-            case HOME:
-            default:
-                return 0;
-        }
+    private void handleNavClick(@NonNull AppDestination destination) {
+        showDestination(destination == currentDestination ? AppDestination.HOME : destination);
     }
 
     @Override

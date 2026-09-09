@@ -13,5 +13,83 @@
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="iconTint">@color/nav_item_tint</item>
         <item name="android:textColor">@color/nav_item_tint</item>
+        <item name="backgroundTint">@color/nav_item_background</item>
+        <item name="strokeColor">@color/nav_item_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.BottomNavRecordButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="iconTint">@null</item>
+        <item name="android:textColor">@color/wood_brown</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.ChartToggleButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="backgroundTint">@color/chart_toggle_button_tint</item>
+        <item name="android:textColor">@color/chart_toggle_text</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.RecordToggleExpense">
+        <item name="android:background">@drawable/bg_record_toggle_expense</item>
+        <item name="android:textColor">@color/record_toggle_text</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.RecordToggleIncome">
+        <item name="android:background">@drawable/bg_record_toggle_income</item>
+        <item name="android:textColor">@color/record_toggle_text</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.DatePickerBox">
+        <item name="android:background">@drawable/bg_date_picker_box</item>
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textColor">@color/wood_brown</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:drawableEnd">@drawable/ic_chevron_down</item>
+        <item name="android:drawablePadding">8dp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.CalculatorKey" parent="Widget.Material3.Button.TextButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">58dp</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:background">@drawable/bg_calculator_key</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <style name="Widget.PkmAPP.CalculatorEquals" parent="Widget.Material3.Button.TextButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">58dp</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:background">@drawable/bg_calculator_equals</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textColor">@color/paper_light</item>
+        <item name="android:textSize">17sp</item>
     </style>
 </resources>

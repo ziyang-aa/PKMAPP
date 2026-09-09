@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">pkmAPP</string>
+    <string name="app_name">芽叶记</string>
     <string name="nav_details">明细</string>
     <string name="nav_charts">图表</string>
     <string name="nav_record">记账</string>

@@ -63,14 +63,15 @@ public final class DetailsListItem {
         today.setTimeInMillis(nowMillis);
         Calendar occurred = Calendar.getInstance();
         occurred.setTimeInMillis(occurredAtMillis);
+        String dateLabel = new SimpleDateFormat("M月d日", Locale.CHINA).format(occurredAtMillis);
         if (isSameDay(occurred, today)) {
-            return "今天";
+            return dateLabel + " · 今天";
         }
         today.add(Calendar.DAY_OF_YEAR, -1);
         if (isSameDay(occurred, today)) {
-            return "昨天";
+            return dateLabel + " · 昨天";
         }
-        return new SimpleDateFormat("M月d日", Locale.CHINA).format(occurredAtMillis);
+        return dateLabel;
     }
 
     private static boolean isSameDay(Calendar first, Calendar second) {

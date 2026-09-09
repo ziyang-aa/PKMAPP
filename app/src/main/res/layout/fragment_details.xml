@@ -2,7 +2,7 @@
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/cream_background"
+    android:background="@drawable/bg_fixed_forest_backdrop"
     android:clipToPadding="false"
     android:paddingBottom="88dp">
 
@@ -10,79 +10,106 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_24">
+        android:paddingStart="@dimen/space_16"
+        android:paddingTop="@dimen/space_16"
+        android:paddingEnd="@dimen/space_16">
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="135dp" android:gravity="center_vertical" android:orientation="horizontal">
-            <ImageButton android:id="@+id/page_back_button" android:layout_width="120dp" android:layout_height="100dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="返回主页面" android:scaleType="centerInside" android:src="@drawable/return_home_door" />
-            <TextView android:id="@+id/title_details" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="end" android:text="明细" android:textColor="@color/forest_green" android:textSize="28sp" android:textStyle="bold" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/page_back_button"
+                android:layout_width="88dp"
+                android:layout_height="72dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="返回主页面"
+                android:scaleType="centerInside"
+                android:src="@drawable/return_home_door" />
+
+            <TextView
+                android:id="@+id/title_details"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="明细"
+                android:textColor="@color/forest_green"
+                android:textSize="24sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/details_ledger_switch_button"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/details_filter_row"
+            android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:contentDescription="切换或新建账本"
-            android:text="当前账本" />
+            android:layout_marginTop="@dimen/space_12"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/details_ledger_switch_button"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_details_ledger_button"
+                android:clickable="true"
+                android:contentDescription="切换或新建账本"
+                android:ellipsize="end"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:paddingHorizontal="@dimen/space_12"
+                android:text="当前账本  ›"
+                android:textColor="@color/wood_brown"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/details_month_picker_button"
+                android:layout_width="112dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_8"
+                android:background="@drawable/bg_details_month_button"
+                android:clickable="true"
+                android:contentDescription="选择查看月份"
+                android:focusable="true"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="2026年9月⌄"
+                android:textColor="@color/wood_brown"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/details_current_month_button"
+                android:layout_width="56dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_8"
+                android:background="@drawable/bg_details_current_month"
+                android:clickable="true"
+                android:contentDescription="回到本月"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="本月"
+                android:textColor="@color/forest_green"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/details_ledger_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:textColor="@color/wood_brown"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:id="@+id/details_tools_card"
-            style="@style/Widget.PkmAPP.PaperCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16"
-            android:orientation="vertical"
-            android:padding="@dimen/space_16">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="森林小工具"
-                android:textColor="@color/ink"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/details_fx_tool_button"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:contentDescription="汇率换算工具"
-                    android:text="汇率换算" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/details_borrowing_tool_button"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="@dimen/space_8"
-                    android:layout_weight="1"
-                    android:contentDescription="借钱统计工具"
-                    android:text="借钱统计" />
-            </LinearLayout>
-        </LinearLayout>
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:visibility="invisible" />
 
         <LinearLayout
             android:id="@+id/details_summary_card"
-            style="@style/Widget.PkmAPP.PaperCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
+            android:background="@drawable/bg_details_balance_card"
             android:orientation="vertical"
             android:padding="@dimen/space_16">
 
@@ -90,33 +117,196 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="本月结余"
-                android:textColor="@color/ink"
-                android:textStyle="bold" />
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
 
             <TextView
                 android:id="@+id/details_balance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/forest_green"
-                android:textSize="26sp"
+                android:layout_marginTop="@dimen/space_4"
+                android:textColor="@android:color/white"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/details_income"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:alpha="0.3"
+                    android:background="@android:color/white" />
+
+                <TextView
+                    android:id="@+id/details_expense"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/details_tools_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_20"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="森林小工具"
+                    android:textColor="@color/wood_brown"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="轻量入口"
+                    android:textColor="@color/wood_brown"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/details_fx_tool_button"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_details_tool_button"
+                    android:clickable="true"
+                    android:contentDescription="汇率换算工具"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/space_12">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription=""
+                        android:src="@drawable/ic_chart"
+                        android:tint="@color/warm_orange" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="汇率换算"
+                            android:textColor="@color/ink"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="联网同步最新汇率"
+                            android:textColor="@color/wood_brown"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/details_borrowing_tool_button"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_details_tool_button"
+                    android:clickable="true"
+                    android:contentDescription="借钱统计工具"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/space_12">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription=""
+                        android:src="@drawable/ic_savings"
+                        android:tint="@color/warm_orange" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="借钱统计"
+                            android:textColor="@color/ink"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="记录来往关系"
+                            android:textColor="@color/wood_brown"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="交易记录"
+                android:textColor="@color/wood_brown"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/details_income"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/forest_green" />
-
-            <TextView
-                android:id="@+id/details_expense"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/expense_red" />
-        </LinearLayout>
-
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_24" android:gravity="center_vertical" android:orientation="horizontal">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="交易记录" android:textColor="@color/ink" android:textStyle="bold" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/details_month_picker_button" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:contentDescription="选择查看月份" android:text="选择月份" />
+                android:text="按日期归档"
+                android:textColor="@color/wood_brown"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -133,18 +323,27 @@
                 android:text="还没有记账记录"
                 android:textColor="@color/wood_brown" />
 
-            <com.google.android.material.button.MaterialButton
+            <TextView
                 android:id="@+id/details_add_record_button"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="48dp"
                 android:layout_marginTop="@dimen/space_8"
-                android:text="去记一笔" />
+                android:background="@drawable/bg_details_current_month"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="去记一笔"
+                android:textColor="@color/forest_green"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/details_transaction_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
+            android:background="@android:color/transparent"
+            android:nestedScrollingEnabled="false"
+            android:paddingHorizontal="0dp"
+            android:paddingVertical="0dp" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

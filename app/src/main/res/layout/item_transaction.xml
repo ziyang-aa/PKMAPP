@@ -2,9 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/bg_transaction_row"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingVertical="@dimen/space_8">
+
+    <ImageView
+        android:id="@+id/transaction_icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="@dimen/space_12"
+        android:contentDescription=""
+        android:scaleType="centerInside" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -17,6 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/ink"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
         <TextView
@@ -34,15 +44,32 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/transaction_type"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="12sp" />
-
-        <TextView
             android:id="@+id/transaction_amount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/transaction_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.7"
+            android:textSize="10sp" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/transaction_delete"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="@dimen/space_8"
+        android:background="@drawable/bg_transaction_delete"
+        android:clickable="true"
+        android:contentDescription="删除交易"
+        android:focusable="true"
+        android:gravity="center"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:text="删除"
+        android:textColor="@color/expense_red"
+        android:textSize="11sp" />
 </LinearLayout>

@@ -10,7 +10,9 @@ public enum AppDestination {
     CHARTS,
     RECORD,
     SAVINGS,
-    PROFILE;
+    PROFILE,
+    EXCHANGE,
+    BORROWING;
 
     private static final List<AppDestination> BOTTOM_BAR_DESTINATIONS =
             Collections.unmodifiableList(Arrays.asList(DETAILS, CHARTS, RECORD, SAVINGS, PROFILE));

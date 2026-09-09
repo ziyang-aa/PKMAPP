@@ -8,6 +8,7 @@ appcompat = "1.6.1"
 material = "1.10.0"
 fragment = "1.8.9"
 recyclerview = "1.4.0"
+json = "20240303"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -18,6 +19,7 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+json = { group = "org.json", name = "json", version.ref = "json" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -22,7 +22,18 @@ public final class MoneyParserTest {
     }
 
     @Test
+    public void parseYuanToCentsAllowZero_acceptsEmptyAndZeroForInitialAssets() {
+        assertEquals(0L, MoneyParser.parseYuanToCentsAllowZero(""));
+        assertEquals(0L, MoneyParser.parseYuanToCentsAllowZero("0"));
+    }
+
+    @Test
     public void formatCents_returnsTwoDecimalYuanText() {
         assertEquals("¥12.58", MoneyParser.formatCents(1_258L));
+    }
+
+    @Test
+    public void formatCents_groupsThousandsForReadableLedgerAmounts() {
+        assertEquals("¥6,416.40", MoneyParser.formatCents(641_640L));
     }
 }

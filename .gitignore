@@ -31,3 +31,10 @@ local.properties
 /.worktrees/
 /宝可梦账本素材/
 /artwork/processed/android_ready/
+
+# Local development screenshots and emulator snapshots
+/build-*.png
+/emulator-window.xml
+
+# Design-tool generated cache
+/design/.figma-assets/

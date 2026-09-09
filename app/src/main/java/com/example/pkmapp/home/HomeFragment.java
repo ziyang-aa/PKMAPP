@@ -16,12 +16,14 @@ public final class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
     private int restoredScrollX;
+    private boolean hasRestoredScroll;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (savedInstanceState != null) {
             restoredScrollX = savedInstanceState.getInt(STATE_SCROLL_X);
+            hasRestoredScroll = true;
         }
     }
 
@@ -40,14 +42,24 @@ public final class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         binding.homeScroll.post(() -> {
             int sceneWidth = PanoramaSizing.requiredWidthPx(binding.homeScroll.getWidth());
-            ViewGroup.LayoutParams sceneParams = binding.panoramaScene.getRoot().getLayoutParams();
-            sceneParams.width = sceneWidth;
-            binding.panoramaScene.getRoot().setLayoutParams(sceneParams);
+            ViewGroup.LayoutParams backgroundParams =
+                    binding.panoramaScene.panoramaBackground.getLayoutParams();
+            backgroundParams.width = sceneWidth;
+            binding.panoramaScene.panoramaBackground.setLayoutParams(backgroundParams);
 
-            binding.panoramaScene.bulbasaurSleeping.setX(sceneWidth * 0.12f);
-            binding.panoramaScene.treeckoWaiting.setX(sceneWidth * 0.47f);
-            binding.panoramaScene.turtwigSaving.setX(sceneWidth * 0.76f);
-            binding.homeScroll.scrollTo(restoredScrollX, 0);
+            ViewGroup.LayoutParams textureParams =
+                    binding.panoramaScene.panoramaTexture.getLayoutParams();
+            textureParams.width = sceneWidth;
+            binding.panoramaScene.panoramaTexture.setLayoutParams(textureParams);
+
+            int initialScrollX = hasRestoredScroll
+                    ? restoredScrollX
+                    : PanoramaSizing.initialScrollPx(sceneWidth, binding.homeScroll.getWidth());
+            binding.homeScroll.post(() -> {
+                if (binding != null) {
+                    binding.homeScroll.scrollTo(initialScrollX, 0);
+                }
+            });
         });
     }
 

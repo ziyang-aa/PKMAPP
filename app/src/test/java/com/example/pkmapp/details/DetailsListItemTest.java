@@ -22,9 +22,9 @@ public final class DetailsListItemTest {
         List<DetailsListItem> items = DetailsListItem.fromTransactions(transactions, now);
 
         assertEquals(DetailsListItem.Kind.DATE_HEADER, items.get(0).getKind());
-        assertEquals("今天", items.get(0).getHeaderLabel());
+        assertEquals("9月6日 · 今天", items.get(0).getHeaderLabel());
         assertEquals(DetailsListItem.Kind.TRANSACTION, items.get(1).getKind());
-        assertEquals("昨天", items.get(2).getHeaderLabel());
+        assertEquals("9月5日 · 昨天", items.get(2).getHeaderLabel());
         assertEquals("9月4日", items.get(4).getHeaderLabel());
     }
 

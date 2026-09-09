@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/checkin_dialog_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_checkin_dialog"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_16"
+    android:paddingTop="@dimen/space_16"
+    android:paddingEnd="@dimen/space_16"
+    android:paddingBottom="@dimen/space_16">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.12"
+                android:text="DAILY FOREST LOG"
+                android:textColor="@color/forest_green"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/checkin_dialog_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="打卡记录"
+                android:textColor="@color/wood_brown"
+                android:textSize="21sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/checkin_close"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_checkin_close"
+            android:clickable="true"
+            android:contentDescription="关闭打卡记录"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="×"
+            android:textColor="@color/wood_brown"
+            android:textSize="22sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/checkin_level_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:background="@drawable/bg_checkin_level"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_12"
+        android:paddingTop="@dimen/space_8"
+        android:paddingEnd="@dimen/space_12"
+        android:paddingBottom="@dimen/space_8">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/checkin_level_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Lv.4 · 小树林守护者"
+                android:textColor="@color/forest_green"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/checkin_progress_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="27 / 45 天"
+                android:textColor="@color/forest_green"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/checkin_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="7dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:max="100"
+            android:progress="60"
+            android:progressDrawable="@drawable/progress_checkin" />
+
+        <TextView
+            android:id="@+id/checkin_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:text="再坚持 18 天，升级为 Lv.5 · 森林巡游者"
+            android:textColor="#5F7951"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/checkin_calendar_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:background="@drawable/bg_checkin_calendar"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_8"
+        android:paddingTop="@dimen/space_8"
+        android:paddingEnd="@dimen/space_8"
+        android:paddingBottom="@dimen/space_8">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/checkin_previous_month"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_checkin_month"
+                android:clickable="true"
+                android:contentDescription="上一个月"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="‹"
+                android:textColor="@color/forest_green"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/checkin_month_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="2026 年 09 月"
+                android:textColor="@color/wood_brown"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/checkin_next_month"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_checkin_month"
+                android:clickable="true"
+                android:contentDescription="下一个月"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="›"
+                android:textColor="@color/forest_green"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/checkin_weekdays"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:layout_marginTop="@dimen/space_4"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+
+        <GridLayout
+            android:id="@+id/checkin_calendar_grid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="7"
+            android:rowCount="6"
+            android:useDefaultMargins="false" />
+
+        <LinearLayout
+            android:id="@+id/checkin_legend"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/space_4"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:background="@drawable/bg_details_balance_card" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="已签到"
+                android:textColor="@color/wood_brown"
+                android:textSize="9sp" />
+
+            <View
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_marginStart="@dimen/space_12"
+                android:background="@color/paper_deep" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="未签到"
+                android:textColor="@color/wood_brown"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/checkin_action"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="@dimen/space_12"
+        android:background="@drawable/bg_checkin_action"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="今日签到"
+        android:textColor="@color/paper_light"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+</LinearLayout>

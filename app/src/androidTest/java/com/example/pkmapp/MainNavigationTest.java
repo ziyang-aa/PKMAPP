@@ -41,7 +41,7 @@ public final class MainNavigationTest {
         onView(withId(R.id.record_category_group)).check(matches(isDisplayed()));
         onView(withText("餐饮")).perform(click());
         onView(withId(R.id.record_amount_input)).check(matches(isDisplayed()));
-        onView(withId(R.id.record_calculator_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.record_calculator_panel)).check(matches(isDisplayed()));
         onView(withId(R.id.record_date_button)).check(matches(isDisplayed()));
         onView(withId(R.id.record_save_button)).check(matches(isDisplayed()));
     }

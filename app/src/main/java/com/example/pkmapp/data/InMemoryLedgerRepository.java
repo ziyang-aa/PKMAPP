@@ -1,5 +1,7 @@
 package com.example.pkmapp.data;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -19,19 +21,26 @@ public final class InMemoryLedgerRepository {
             Comparator.comparingLong(Transaction::getOccurredAtMillis).reversed()
                     .thenComparing(Transaction::getId, Comparator.reverseOrder());
 
-    private static final InMemoryLedgerRepository INSTANCE = new InMemoryLedgerRepository(true);
+    private static final InMemoryLedgerRepository INSTANCE = new InMemoryLedgerRepository();
 
     private final Map<String, Ledger> ledgers = new LinkedHashMap<>();
     private final List<Transaction> transactions = new ArrayList<>();
     private final Set<LedgerDataListener> listeners = new CopyOnWriteArraySet<>();
     private String currentLedgerId;
+    private LedgerPersistence persistence;
 
-    private InMemoryLedgerRepository(boolean includeDemoData) {
+    private InMemoryLedgerRepository() {
+        this(null);
+    }
+
+    InMemoryLedgerRepository(LedgerPersistence persistence) {
         Ledger defaultLedger = new Ledger(nextId(), "生活账本");
         ledgers.put(defaultLedger.getId(), defaultLedger);
         currentLedgerId = defaultLedger.getId();
-        if (includeDemoData) {
-            seedDemoData(defaultLedger.getId());
+        this.persistence = persistence;
+        if (persistence != null) {
+            restore(persistence.load());
+            persist();
         }
     }
 
@@ -39,8 +48,25 @@ public final class InMemoryLedgerRepository {
         return INSTANCE;
     }
 
+    public static void initialize(Context context) {
+        INSTANCE.attachPersistence(new SharedPreferencesLedgerPersistence(context));
+    }
+
     static InMemoryLedgerRepository createForTest() {
-        return new InMemoryLedgerRepository(false);
+        return new InMemoryLedgerRepository();
+    }
+
+    static InMemoryLedgerRepository createForTest(LedgerPersistence persistence) {
+        return new InMemoryLedgerRepository(persistence);
+    }
+
+    private synchronized void attachPersistence(LedgerPersistence persistence) {
+        if (this.persistence != null) {
+            return;
+        }
+        this.persistence = Objects.requireNonNull(persistence, "账本存储不能为空");
+        restore(persistence.load());
+        persist();
     }
 
     public synchronized List<Ledger> getLedgers() {
@@ -56,6 +82,7 @@ public final class InMemoryLedgerRepository {
         synchronized (this) {
             ledgers.put(ledger.getId(), ledger);
         }
+        persist();
         notifyListeners();
         return ledger;
     }
@@ -71,6 +98,7 @@ public final class InMemoryLedgerRepository {
             currentLedgerId = selectedId;
         }
         if (changed) {
+            persist();
             notifyListeners();
         }
     }
@@ -83,8 +111,43 @@ public final class InMemoryLedgerRepository {
                     note, occurredAtMillis);
             transactions.add(transaction);
         }
+        persist();
         notifyListeners();
         return transaction;
+    }
+
+    public boolean deleteTransaction(String transactionId) {
+        String selectedId = requireId(transactionId);
+        boolean deleted = false;
+        synchronized (this) {
+            for (int index = transactions.size() - 1; index >= 0; index--) {
+                Transaction transaction = transactions.get(index);
+                if (currentLedgerId.equals(transaction.getLedgerId())
+                        && selectedId.equals(transaction.getId())) {
+                    transactions.remove(index);
+                    deleted = true;
+                    break;
+                }
+            }
+        }
+        if (deleted) {
+            persist();
+            notifyListeners();
+        }
+        return deleted;
+    }
+
+    /** Restores the ledger repository to the same empty state as a first launch. */
+    public void resetToInitialState() {
+        synchronized (this) {
+            ledgers.clear();
+            transactions.clear();
+            Ledger defaultLedger = new Ledger(nextId(), "生活账本");
+            ledgers.put(defaultLedger.getId(), defaultLedger);
+            currentLedgerId = defaultLedger.getId();
+        }
+        persist();
+        notifyListeners();
     }
 
     public synchronized List<Transaction> getTransactionsForCurrentLedger() {
@@ -124,6 +187,18 @@ public final class InMemoryLedgerRepository {
         return new MonthlyTotals(income, expense);
     }
 
+    public synchronized long getCurrentLedgerNetFlowInCents() {
+        long netFlow = 0L;
+        for (Transaction transaction : transactions) {
+            if (!currentLedgerId.equals(transaction.getLedgerId())) {
+                continue;
+            }
+            netFlow += transaction.getType() == TransactionType.INCOME
+                    ? transaction.getAmountInCents() : -transaction.getAmountInCents();
+        }
+        return netFlow;
+    }
+
     public void addListener(LedgerDataListener listener) {
         listeners.add(Objects.requireNonNull(listener, "监听器不能为空"));
     }
@@ -134,19 +209,38 @@ public final class InMemoryLedgerRepository {
         }
     }
 
-    private void seedDemoData(String ledgerId) {
-        addDemoTransaction(ledgerId, TransactionType.INCOME, 650_000L, "工资", "九月工资", 1);
-        addDemoTransaction(ledgerId, TransactionType.EXPENSE, 3_680L, "餐饮", "午餐和咖啡", 6);
-        addDemoTransaction(ledgerId, TransactionType.EXPENSE, 1_200L, "交通", "地铁通勤", 5);
-        addDemoTransaction(ledgerId, TransactionType.EXPENSE, 8_880L, "网购", "绘本收纳盒", 3);
-        addDemoTransaction(ledgerId, TransactionType.INCOME, 8_000L, "兼职", "周末设计稿", 2);
-        addDemoTransaction(ledgerId, TransactionType.EXPENSE, 2_600L, "日用", "洗护用品", 1);
+    private synchronized void restore(LedgerCodec.State state) {
+        if (state == null || state.getLedgers().isEmpty()) {
+            return;
+        }
+        ledgers.clear();
+        transactions.clear();
+        for (Ledger ledger : state.getLedgers()) {
+            ledgers.put(ledger.getId(), ledger);
+        }
+        transactions.addAll(state.getTransactions());
+        if (ledgers.containsKey(state.getCurrentLedgerId())) {
+            currentLedgerId = state.getCurrentLedgerId();
+        } else {
+            currentLedgerId = state.getLedgers().get(0).getId();
+        }
     }
 
-    private void addDemoTransaction(String ledgerId, TransactionType type, long amountInCents,
-            String category, String note, int dayOfMonth) {
-        transactions.add(new Transaction(nextId(), ledgerId, type, amountInCents, category, note,
-                noonUtc(2026, Calendar.SEPTEMBER, dayOfMonth)));
+    private void persist() {
+        LedgerPersistence storage;
+        List<Ledger> ledgerSnapshot;
+        List<Transaction> transactionSnapshot;
+        String selectedLedgerId;
+        synchronized (this) {
+            storage = persistence;
+            if (storage == null) {
+                return;
+            }
+            ledgerSnapshot = new ArrayList<>(ledgers.values());
+            transactionSnapshot = new ArrayList<>(transactions);
+            selectedLedgerId = currentLedgerId;
+        }
+        storage.save(ledgerSnapshot, transactionSnapshot, selectedLedgerId);
     }
 
     private void notifyListeners() {

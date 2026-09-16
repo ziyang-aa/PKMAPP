@@ -493,8 +493,12 @@
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#C2DDCF" />
 
         <LinearLayout
+            android:id="@+id/profile_export_data_button"
             android:layout_width="match_parent"
             android:layout_height="58dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -512,7 +516,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_12"
                 android:layout_weight="1"
-                android:text="导出账本"
+                android:text="导出账单"
                 android:textColor="@color/ink"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -520,7 +524,46 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="CSV  ·›"
+                android:text="JSON 备份  ·›"
+                android:textColor="@color/wood_brown"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#C2DDCF" />
+
+        <LinearLayout
+            android:id="@+id/profile_import_data_button"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="27dp"
+                android:layout_height="27dp"
+                android:background="@drawable/bg_profile_icon"
+                android:contentDescription=""
+                android:padding="@dimen/space_4"
+                android:src="@drawable/ic_download"
+                android:tint="@color/wood_brown" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:text="导入账单"
+                android:textColor="@color/ink"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选择备份文件  ·›"
                 android:textColor="@color/wood_brown"
                 android:textSize="11sp" />
         </LinearLayout>

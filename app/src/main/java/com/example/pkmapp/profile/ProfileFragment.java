@@ -32,6 +32,10 @@ import androidx.fragment.app.Fragment;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.backup.BackupCodec;
+import com.example.pkmapp.backup.BackupImportResult;
+import com.example.pkmapp.backup.BackupManager;
+import com.example.pkmapp.backup.BackupSnapshot;
 import com.example.pkmapp.data.AssetSnapshot;
 import com.example.pkmapp.data.AssetStore;
 import com.example.pkmapp.data.InMemoryLedgerRepository;
@@ -46,8 +50,14 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.math.BigDecimal;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collections;
@@ -65,10 +75,16 @@ public final class ProfileFragment extends Fragment {
     private static final String DATE_PATTERN = "yyyy-MM-dd";
 
     private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
-    private final LedgerDataListener ledgerDataListener = this::renderProfileSummary;
+    private final LedgerDataListener ledgerDataListener = this::handleLedgerDataChanged;
     private final ExecutorService avatarExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
     private final ActivityResultLauncher<String> avatarPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(), this::handleAvatarPicked);
+    private final ActivityResultLauncher<String> exportPicker = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("application/json"),
+            this::handleExportDestination);
+    private final ActivityResultLauncher<String[]> importPicker = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), this::handleImportSelected);
     private FragmentProfileBinding binding;
     private SharedPreferences preferences;
     private AssetStore assetStore;
@@ -91,6 +107,8 @@ public final class ProfileFragment extends Fragment {
         binding.profileNicknameEdit.setOnClickListener(v -> showNicknameEditor());
         binding.profileCheckinButton.setOnClickListener(v -> showCheckInDialog());
         binding.profileManageAssetsButton.setOnClickListener(v -> showAssetManager());
+        binding.profileExportDataButton.setOnClickListener(v -> startExport());
+        binding.profileImportDataButton.setOnClickListener(v -> startImport());
         binding.profileClearDataButton.setOnClickListener(v -> confirmClearData());
         Bitmap savedAvatar = AvatarStore.load(requireContext());
         if (savedAvatar != null) {
@@ -114,6 +132,9 @@ public final class ProfileFragment extends Fragment {
     }
 
     private void renderProfileSummary() {
+        if (binding == null || preferences == null) {
+            return;
+        }
         renderProfileIdentity();
         int days = checkedDates().size();
         int level = CheckInProgress.levelForDays(days);
@@ -124,6 +145,14 @@ public final class ProfileFragment extends Fragment {
         boolean checkedToday = checkedDates().contains(formatDate(Calendar.getInstance()));
         binding.profileCheckinStatus.setText(checkedToday ? "今日已签到" : "去签到 ›");
         renderAssetSummary();
+    }
+
+    private void handleLedgerDataChanged() {
+        Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
+        activity.runOnUiThread(this::renderProfileSummary);
     }
 
     private void renderProfileIdentity() {
@@ -149,6 +178,145 @@ public final class ProfileFragment extends Fragment {
     private AssetSnapshot currentAssetSnapshot() {
         return assetStore.getSnapshot(repository.getCurrentLedger().getId(),
                 repository.getCurrentLedgerNetFlowInCents());
+    }
+
+    private void startExport() {
+        exportPicker.launch("芽叶记备份_" + formatDate(Calendar.getInstance())
+                + ".pkmbackup.json");
+    }
+
+    private void startImport() {
+        importPicker.launch(new String[]{"application/json", "text/plain", "*/*"});
+    }
+
+    private void handleExportDestination(@Nullable Uri uri) {
+        if (uri == null) {
+            return;
+        }
+        Context context = requireContext().getApplicationContext();
+        backupExecutor.execute(() -> {
+            try {
+                String encoded = BackupCodec.encode(new BackupManager(context).capture());
+                ContentResolver resolver = context.getContentResolver();
+                try (OutputStream output = resolver.openOutputStream(uri)) {
+                    if (output == null) {
+                        throw new IOException("无法打开备份文件");
+                    }
+                    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                            output, StandardCharsets.UTF_8))) {
+                        writer.write(encoded);
+                    }
+                }
+                postBackupUi(() -> Toast.makeText(requireContext(), "账单已导出",
+                        Toast.LENGTH_SHORT).show());
+            } catch (Exception exception) {
+                postBackupUi(() -> Toast.makeText(requireContext(),
+                        "导出失败：" + safeMessage(exception), Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void handleImportSelected(@Nullable Uri uri) {
+        if (uri == null) {
+            return;
+        }
+        Context context = requireContext().getApplicationContext();
+        backupExecutor.execute(() -> {
+            try {
+                String encoded = readText(context.getContentResolver(), uri);
+                BackupSnapshot snapshot = BackupCodec.decode(encoded);
+                postBackupUi(() -> showImportModeDialog(snapshot));
+            } catch (Exception exception) {
+                postBackupUi(() -> Toast.makeText(requireContext(),
+                        "导入失败：" + safeMessage(exception), Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void showImportModeDialog(BackupSnapshot snapshot) {
+        String message = "备份包含 " + snapshot.getLedgers().size() + " 个账本、"
+                + snapshot.getTransactions().size() + " 笔交易、"
+                + snapshot.getSavingsGoals().size() + " 个攒钱目标。\n\n"
+                + "请选择导入方式";
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("导入账单")
+                .setMessage(message)
+                .setNegativeButton("取消", null)
+                .setNeutralButton("合并导入", (dialog, which) -> runImport(snapshot,
+                        BackupManager.ImportMode.MERGE))
+                .setPositiveButton("完全覆盖", (dialog, which) -> confirmOverwrite(snapshot))
+                .show();
+    }
+
+    private void confirmOverwrite(BackupSnapshot snapshot) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("确认完全覆盖？")
+                .setMessage("当前账本、交易、攒钱目标、资产和借钱记录将被备份内容替换。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认覆盖", (dialog, which) -> runImport(snapshot,
+                        BackupManager.ImportMode.OVERWRITE))
+                .show();
+    }
+
+    private void runImport(BackupSnapshot snapshot, BackupManager.ImportMode mode) {
+        Context context = requireContext().getApplicationContext();
+        backupExecutor.execute(() -> {
+            try {
+                BackupImportResult result = new BackupManager(context)
+                        .importSnapshot(snapshot, mode);
+                postBackupUi(() -> {
+                    renderProfileSummary();
+                    Toast.makeText(requireContext(), importResultMessage(result, mode),
+                            Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception exception) {
+                postBackupUi(() -> Toast.makeText(requireContext(),
+                        "导入失败：" + safeMessage(exception), Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private String importResultMessage(BackupImportResult result, BackupManager.ImportMode mode) {
+        if (mode == BackupManager.ImportMode.OVERWRITE) {
+            return "已恢复 " + result.getImportedTransactions() + " 笔交易和 "
+                    + result.getImportedSavingsGoals() + " 个攒钱目标";
+        }
+        return "合并完成：新增 " + result.getImportedTransactions() + " 笔交易，跳过重复 "
+                + result.getSkippedTransactions() + " 笔，新增 " + result.getImportedSavingsGoals()
+                + " 个攒钱目标";
+    }
+
+    private String readText(ContentResolver resolver, Uri uri) throws IOException {
+        InputStream input = resolver.openInputStream(uri);
+        if (input == null) {
+            throw new IOException("无法读取备份文件");
+        }
+        try (InputStream stream = input;
+                BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        stream, StandardCharsets.UTF_8))) {
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append('\n');
+            }
+            return content.toString();
+        }
+    }
+
+    private void postBackupUi(Runnable action) {
+        Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
+        activity.runOnUiThread(() -> {
+            if (isAdded() && binding != null) {
+                action.run();
+            }
+        });
+    }
+
+    private String safeMessage(Exception exception) {
+        return exception.getMessage() == null ? "文件处理失败" : exception.getMessage();
     }
 
     private void showAssetManager() {
@@ -568,6 +736,7 @@ public final class ProfileFragment extends Fragment {
     @Override
     public void onDestroy() {
         avatarExecutor.shutdownNow();
+        backupExecutor.shutdownNow();
         super.onDestroy();
     }
 

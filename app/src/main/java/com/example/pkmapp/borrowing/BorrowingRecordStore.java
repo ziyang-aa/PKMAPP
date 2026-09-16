@@ -49,6 +49,13 @@ public final class BorrowingRecordStore {
         preferences.edit().putString(RECORDS_KEY, BorrowingRecordCodec.encode(records)).apply();
     }
 
+    public synchronized void replaceAll(List<BorrowingRecord> records) {
+        if (records == null) {
+            throw new IllegalArgumentException("借钱记录不能为空");
+        }
+        preferences.edit().putString(RECORDS_KEY, BorrowingRecordCodec.encode(records)).apply();
+    }
+
     public synchronized void clear() {
         preferences.edit().clear().apply();
     }

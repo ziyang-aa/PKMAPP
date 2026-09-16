@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -159,6 +160,46 @@ public final class InMemoryLedgerRepository {
         }
         currentTransactions.sort(TRANSACTION_ORDER);
         return Collections.unmodifiableList(currentTransactions);
+    }
+
+    public synchronized List<Transaction> getAllTransactions() {
+        return Collections.unmodifiableList(new ArrayList<>(transactions));
+    }
+
+    public void replaceState(List<Ledger> restoredLedgers, List<Transaction> restoredTransactions,
+            String restoredCurrentLedgerId) {
+        if (restoredLedgers == null || restoredLedgers.isEmpty()
+                || restoredTransactions == null) {
+            throw new IllegalArgumentException("账本备份不能为空");
+        }
+        Map<String, Ledger> validatedLedgers = new LinkedHashMap<>();
+        for (Ledger ledger : restoredLedgers) {
+            if (ledger == null || validatedLedgers.put(ledger.getId(), ledger) != null) {
+                throw new IllegalArgumentException("备份中存在重复账本");
+            }
+        }
+        String selectedId = requireId(restoredCurrentLedgerId);
+        if (!validatedLedgers.containsKey(selectedId)) {
+            throw new IllegalArgumentException("当前账本不存在");
+        }
+        Set<String> transactionIds = new HashSet<>();
+        List<Transaction> validatedTransactions = new ArrayList<>();
+        for (Transaction transaction : restoredTransactions) {
+            if (transaction == null || !validatedLedgers.containsKey(transaction.getLedgerId())
+                    || !transactionIds.add(transaction.getId())) {
+                throw new IllegalArgumentException("备份中存在重复或无效交易");
+            }
+            validatedTransactions.add(transaction);
+        }
+        synchronized (this) {
+            ledgers.clear();
+            transactions.clear();
+            ledgers.putAll(validatedLedgers);
+            transactions.addAll(validatedTransactions);
+            currentLedgerId = selectedId;
+        }
+        persist();
+        notifyListeners();
     }
 
     public synchronized MonthlyTotals getCurrentMonthTotals(long referenceTimeMillis) {

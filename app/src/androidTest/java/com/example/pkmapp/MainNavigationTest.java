@@ -64,6 +64,13 @@ public final class MainNavigationTest {
     }
 
     @Test
+    public void profilePage_hasBackupActions() {
+        onView(withId(R.id.nav_profile)).perform(click());
+        onView(withId(R.id.profile_export_data_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.profile_import_data_button)).check(matches(isDisplayed()));
+    }
+
+    @Test
     public void saveExpense_opensDetailsWithNewTransactionVisible() {
         onView(withId(R.id.nav_record)).perform(click());
         onView(withText("餐饮")).perform(click());

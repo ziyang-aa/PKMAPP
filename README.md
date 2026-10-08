@@ -1,6 +1,16 @@
-# PKMAPP · 芽叶记
+# PKMAPP · 芽叶记（Android 安卓软件）
 
 芽叶记是一款宝可梦森林绘本风格的 Android 个人记账应用。以温暖的森林场景呈现日常收支、账本统计和攒钱进度，数据主要保存在设备本地。
+
+## 下载安装
+
+**平台：Android（安卓），支持 Android 7.0 及以上。**
+
+[直接下载芽叶记 Android 安装包（APK）](https://github.com/ziyang-aa/PKMAPP/releases/latest/download/PKMAPP-Android.apk)
+
+[查看版本说明](https://github.com/ziyang-aa/PKMAPP/releases/latest)
+
+下载后在安卓设备上打开 APK，按系统提示允许浏览器或文件管理器安装应用。当前提供调试签名体验版，尚未通过应用商店分发。安装前请保存重要账目，避免因卸载或清除数据而丢失记录。
 
 ## 功能介绍
 

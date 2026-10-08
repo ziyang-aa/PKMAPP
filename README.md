@@ -1,87 +1,79 @@
-# PKMAPP（芽叶记）
+# PKMAPP · 芽叶记
 
-宝可梦森林绘本风格的个人记账 Android 应用，使用 Java 和 XML 开发。
+芽叶记是一款宝可梦森林绘本风格的 Android 个人记账应用。以温暖的森林场景呈现日常收支、账本统计和攒钱进度，数据主要保存在设备本地。
 
-## 项目功能
+## 功能介绍
 
-- 森林绘本风格的横向首页，以及固定的五项底部导航。
-- 支出和收入分类记账，支持备注、日期、自定义分类和四则计算器。
-- 多账本创建与切换、按日期分组的交易明细、本月收入/支出/结余统计。
-- 收支趋势图表、周/月/年统计和分类排行。
-- 攒钱目标、存入金额和目标进度。
-- 借入/借出记录、联系人、日期和借钱统计。
-- 汇率换算，支持联网刷新和上次成功汇率缓存。
-- 个人资料、昵称、头像裁剪、每日签到和资产管理。
+- **日常记账**：记录收入和支出，选择分类、日期和备注，支持自定义分类与四则计算器。
+- **多账本管理**：创建、切换账本，按日期查看交易明细，统计每月收入、支出和结余。
+- **收支分析**：按周、月、年查看趋势和分类排行。
+- **攒钱目标**：设置目标金额、记录存入金额并查看完成进度。
+- **借款记录**：管理借入、借出记录及联系人，查看借款统计。
+- **汇率换算**：通过 Frankfurter API 获取汇率，缓存最近一次成功结果。
+- **个人页面**：修改昵称、裁剪头像、每日签到和管理资产。
+- **森林主题**：横向森林全景首页、角色插画与统一的纸张质感界面。
 
-## 技术结构
+## 技术栈
+
+| 领域 | 技术与用途 |
+| --- | --- |
+| 开发语言 | Java；Gradle 构建配置使用 Kotlin DSL |
+| 界面 | Android XML 布局、ViewBinding、Material Components、AppCompat |
+| 页面与列表 | AndroidX Fragment、RecyclerView |
+| 图表 | 自定义 Android View 绘制收支趋势 |
+| 本地存储 | SharedPreferences 与 JSON 序列化；头像保存在应用私有文件目录 |
+| 网络请求 | HttpURLConnection、Frankfurter 汇率 API |
+| 金额计算 | 整数分存储金额，BigDecimal 处理计算器运算 |
+| 构建 | Gradle Wrapper 9.3.1、Android Gradle Plugin 9.1.1 |
+| 测试 | JUnit 4、AndroidX Test、Espresso |
+
+项目使用原生 Android 界面，未引入云端账号系统或 Room 数据库。Java 源码兼容级别为 Java 11，Gradle 构建使用 JDK 21。
+
+## 环境与运行
+
+- Android Studio（需支持 Android Gradle Plugin 9.1.1）
+- JDK 21
+- Android SDK 36（minor API level 1）
+- Android 7.0（API 24）或更高版本的模拟器或真机
+
+使用 Android Studio 打开项目根目录，完成 Gradle 同步后，选择 `app` 并运行到模拟器或设备。Android SDK 路径由本机 `local.properties` 配置，不需要提交到仓库。
+
+也可以在项目根目录使用 Gradle Wrapper 构建：
+
+```powershell
+# Windows PowerShell
+./gradlew.bat assembleDebug
+./gradlew.bat testDebugUnitTest
+```
+
+```bash
+# macOS / Linux
+./gradlew assembleDebug
+./gradlew testDebugUnitTest
+```
+
+调试 APK 位于 `app/build/outputs/apk/debug/app-debug.apk`。连接模拟器或真机后，可运行 `connectedDebugAndroidTest` 执行设备测试。
+
+## 项目结构
 
 ```text
 app/src/main/java/com/example/pkmapp/
-├─ data/       账本、交易和本地数据管理
-├─ home/       首页森林场景
-├─ details/    交易明细和账本切换
-├─ record/     记账、金额解析和计算器
-├─ charts/     图表统计和趋势绘制
-├─ savings/    攒钱目标
-├─ borrowing/  借钱/借出记录
-├─ exchange/   汇率换算
-├─ profile/    头像、昵称、签到和资产
-└─ navigation/ 页面导航
+├── data/        账本、交易与本地数据管理
+├── home/        森林全景首页
+├── details/     交易明细与账本切换
+├── record/      记账、分类与计算器
+├── charts/      收支统计与趋势图
+├── savings/     攒钱目标
+├── borrowing/   借入与借出记录
+├── exchange/    汇率获取与换算
+├── profile/     头像、昵称、签到与资产
+└── navigation/  页面导航
 ```
 
-- `MainActivity` 是页面容器，负责底部导航和 Fragment 切换。
-- `SplashActivity` 是启动画面。
-- `app/src/main/res/layout` 存放 XML 页面布局。
-- `app/src/main/res/drawable` 存放图标、按钮和背景样式。
-- `app/src/main/res/drawable-nodpi` 存放森林背景、角色和分类图片。PNG 和 WebP 可以混用；大图优先使用无损 WebP 或经过检查的高质量 WebP。
-- `app/src/test` 存放不需要手机的单元测试。
-- `app/src/androidTest` 存放需要模拟器或真机的 Android 测试。
+`app/src/main/res/` 保存布局、样式及图片资源；`app/src/test/` 和 `app/src/androidTest/` 分别保存本地单元测试和设备测试。
 
-## 数据保存方式
+## 数据说明
 
-项目目前不使用云端账号和数据库，数据保存在手机本地：
+账本、交易、攒钱目标、借款记录和资产保存在设备本地，头像保存在应用私有目录。汇率功能需要联网，并会向汇率服务发送所选货币对；记账数据不会通过该汇率请求上传。
 
-- 账本和交易：应用私有的 `SharedPreferences`。
-- 攒钱目标、借钱记录和资产：各自的本地存储。
-- 用户头像：应用私有文件目录。
-- 汇率：联网获取，并缓存最近一次成功结果。
-
-卸载 App 或清除 App 数据会删除这些本地数据。
-
-## 构建与测试
-
-Windows PowerShell 可以在项目根目录执行：
-
-```powershell
-./gradlew.bat testDebugUnitTest compileDebugAndroidTestSources assembleDebug
-```
-
-如果已经连接 Android 模拟器或真机，还可以执行：
-
-```powershell
-./gradlew.bat connectedDebugAndroidTest
-```
-
-调试 APK 生成在：
-
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-## GitHub 上传说明
-
-应该上传：
-
-- `app/src` 中的 Java、XML、图片和测试代码。
-- `build.gradle.kts`、`settings.gradle.kts`、`gradle.properties`。
-- `gradle/`、`gradlew`、`gradlew.bat`。
-- `README.md`、`.gitignore` 和 `app/proguard-rules.pro`。
-
-不应该上传：
-
-- `build/` 和 `app/build/` 生成的构建产物。
-- `.gradle/`、`.idea/`、`local.properties` 等本机配置。
-- 开发过程中的 `build-*.png` 截图和模拟器临时文件。
-- 含有密码、密钥、令牌或个人路径的配置文件。
-
-本仓库会保留能让其他人从源码重新构建 App 所需的代码、资源和 Gradle 配置，不会把本机生成文件一起提交。
+清除应用数据或卸载应用可能导致本地记录丢失，请在操作前妥善保存重要数据。

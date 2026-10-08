@@ -38,3 +38,20 @@ local.properties
 
 # Design-tool generated cache
 /design/.figma-assets/
+
+# Credentials and private financial exports
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+id_rsa
+id_ed25519
+*.pkmbackup.json
+
+# Private development handoff notes
+/docs/HANDOFF.*.md
+/docs/PKMAPP-FIGMA-ASSET-MAP.md

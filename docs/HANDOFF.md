@@ -2,8 +2,8 @@
 
 ## Workspace
 
-- Work only in the Ubuntu WSL project: `<local-path>`.
-- Windows mirror for Android Studio: `<project-path>`.
+- Work only in the Ubuntu WSL project: `<project-root>`.
+- Windows mirror for Android Studio: `<project-root>`.
 - Git remote: `git@github.com:ziyang-aa/PKMAPP.git`.
 - Branch: `main`.
 - Latest committed Android checkpoint: `168cf12` (`feat: add chart trends and rankings`). The current visual-design checkpoint adds the HTML visual board, converted category WebPs, and an editable Figma board.
@@ -19,15 +19,15 @@
 ## WSL Environment
 
 - Java 21 is installed as a user-local JDK at:
-  `<local-path>`.
+  `<jdk-home>`.
 - In direct non-interactive WSL calls, use the explicit JDK 21 environment; otherwise Gradle may use JDK 17 and attempt an unnecessary toolchain download.
-- Android SDK: `<local-path>`.
+- Android SDK: `<android-sdk>`.
 - `local.properties` points to the WSL SDK and must remain local-only.
 - GitHub SSH authentication is working. `ssh -T git@github.com` authenticates as `ziyang-aa`.
 
 ## Verification
 
-Run from `<local-path>`:
+Run from `<project-root>`:
 
 ```bash
 ./gradlew clean testDebugUnitTest compileDebugAndroidTestSources assembleDebug
@@ -79,10 +79,10 @@ The debug APK is generated at:
 
 ## HTML / Figma Visual Phase (2026-09-07)
 
-- Per the user's latest instruction, the HTML visual board is maintained directly in `<project-path>`; do not overwrite the existing untracked `design\mastergo\pkmapp-redesign.html`.
+- Per the user's latest instruction, the HTML visual board is maintained directly in `design\pkmapp-visual-redesign.html`; do not overwrite the existing untracked `design\mastergo\pkmapp-redesign.html`.
 - The board contains six responsive mobile screens: 首页、明细、图表、记账、攒钱、我的. It uses warm paper, forest green, wood/orange accents, 48dp-equivalent touch targets, accessible labels/focus states, and reduced-motion support. The record screen demonstrates the progressive category-first flow with expense and income WebP categories.
 - The converted category assets are in `app/src/main/res/drawable-nodpi/` and should remain available to the Android XML implementation. The design board references the same resource filenames.
-- The editable Figma board is in the user's file [Figma Basics](<private-design-reference>), section node `<private-node-id>` (`PKMAPP · HTML视觉稿`). Local PKMAPP color and layout variables are defined in that section, and the PNG transfer assets are placed into the phone frames so the character illustrations render in Figma.
+- The editable design reference is maintained privately; public source resources are in `app/src/main/res/`.
 - TDD evidence: `node design/pkmapp-visual-redesign.test.js` passes both structural/accessibility checks. Browser verification confirmed six screens, 18 expense categories, the clean default category-selection state, and the local page has no HTML-to-design capture dependency after the Figma fallback.
 - The two HTML-to-Figma capture attempts remained pending after repeated polling and showed a capture timeout in the browser. The manual Figma board is therefore the editable source of truth for this phase; no capture output was used as a completed result.
 - HTML follow-up (not synced to Figma): the Home screen is now a single `主页面.png` forest-den image from `宝可梦账本素材\装饰素材\主页面背景`, with pointer dragging and left/right keyboard/button nudges changing its background position; Home no longer contains shortcut cards or recent-transaction functions.

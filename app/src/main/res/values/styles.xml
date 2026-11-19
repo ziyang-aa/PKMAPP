@@ -61,14 +61,14 @@
     <style name="Widget.PkmAPP.DatePickerBox">
         <item name="android:background">@drawable/bg_date_picker_box</item>
         <item name="android:gravity">center_vertical|start</item>
-        <item name="android:paddingStart">16dp</item>
-        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">8dp</item>
         <item name="android:textColor">@color/wood_brown</item>
         <item name="android:textSize">16sp</item>
         <item name="android:maxLines">1</item>
         <item name="android:singleLine">true</item>
         <item name="android:drawableEnd">@drawable/ic_chevron_down</item>
-        <item name="android:drawablePadding">8dp</item>
+        <item name="android:drawablePadding">4dp</item>
     </style>
 
     <style name="Widget.PkmAPP.CalculatorKey" parent="Widget.Material3.Button.TextButton">

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f5f1e7" />
+    <link rel="icon" href="data:," />
+    <title>芽叶记 · 森林生活小窝</title>
+    <link rel="stylesheet" href="study-forest.css" />
+    <link rel="stylesheet" href="forest-home.css" />
+    <link rel="stylesheet" href="forest-journal.css" />
+  </head>
+  <body>
+    <svg
+      class="icon-library"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <symbol id="i-leaf" viewBox="0 0 24 24">
+        <path d="M20 3C11 2 3 6 4 13c1 8 15 10 16-10Z" />
+        <path d="M3 21 15 9M8 16l-1-6m5 2 5 1" />
+      </symbol>
+      <symbol id="i-book" viewBox="0 0 24 24">
+        <path
+          d="M12 5C9 3 5 3 2 4v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-7-1-10 1Zm0 0v15M5 8l4 1m6 0 4-1"
+        />
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M4 3v17h17M8 15v-4m5 4V6m5 9V9" />
+      </symbol>
+      <symbol id="i-tree" viewBox="0 0 24 24">
+        <path d="m12 2-7 8h3l-5 7h8v5h2v-5h8l-5-7h3L12 2Z" />
+      </symbol>
+      <symbol id="i-drop" viewBox="0 0 24 24">
+        <path d="M12 2C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-13Z" />
+        <path d="M8 15c0 2 1 3 3 3" />
+      </symbol>
+      <symbol id="i-seed" viewBox="0 0 24 24">
+        <path
+          d="M12 21v-9C6 13 3 9 3 4c6-1 9 3 9 8 0-6 4-9 9-8 0 5-3 8-9 8M6 21h12"
+        />
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 24 24">
+        <path d="m8 4 13 8-13 8V4Z" />
+      </symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24">
+        <path d="M8 5v14M16 5v14" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="m5 12 4 4L20 5" />
+      </symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24">
+        <path d="M4 12h16m-6-6 6 6-6 6" />
+      </symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="4" />
+        <path
+          d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"
+        />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M6 18 18 6" />
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path d="m3 10 9-7 9 7M5 9v12h14V9M10 21v-7h4v7" />
+      </symbol>
+      <symbol id="i-list" viewBox="0 0 24 24">
+        <path d="M8 6h12M8 12h12M8 18h12M3 6h1M3 12h1M3 18h1" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 4v16M4 12h16" />
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="7" r="4" />
+        <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+      </symbol>
+    </svg>
+    <main class="review-board">
+      <header class="brand-row">
+        <a class="brand" href="study-forest.html"
+          ><span class="brand-mark"
+            ><svg><use href="#i-leaf" /></svg></span
+          ><span>芽叶记<small>把日子，过成喜欢的样子</small></span></a
+        ><span class="version-tag">ANDROID · 森林生活集合 03</span>
+      </header>
+      <section class="board-heading">
+        <div>
+          <div class="eyebrow">A LITTLE WORLD FOR YOUR EVERYDAY</div>
+          <h1>一座森林，<br class="mobile-break" />装下认真生活的你。</h1>
+          <p>让伙伴带路，走进学习与生活各自的小屋。</p>
+        </div>
+        <div class="review-tools">
+          <span class="prototype-label"><i></i> 可交互 HTML 原型</span
+          ><button id="mode-toggle" class="text-button">查看空白状态 ↗</button
+          ><button id="demo-session" class="demo-button">
+            体验完成 25 分钟 <svg><use href="#i-arrow" /></svg></button
+          ><small id="storage-hint">示例数据 · 仅保存在当前浏览器</small>
+        </div>
+      </section>
+      <section class="screens" aria-label="森林入口、学习与生活模块设计">
+        <article class="screen-column">
+          <div class="screen-caption">
+            <b>01</b> 森林入口 <span>伙伴带路，小屋相见</span>
+          </div>
+          <div class="phone" data-page="hub" aria-label="森林入口预览"></div>
+          <p class="screen-note">
+            <span>WELCOME HOME</span>
+            总入口只负责选择目的地。点伙伴或小屋门牌，走进自己的生活场景。
+          </p>
+        </article>
+        <article class="screen-column">
+          <div class="screen-caption">
+            <b>02</b> 学习小屋 <span>只专注眼前这一件事</span>
+          </div>
+          <div class="phone" data-page="focus" aria-label="学习小屋预览"></div>
+          <p class="screen-note">
+            <span>FOCUS & GROW</span>
+            专注、学习足迹、小林地留在学习模块；记录统一在足迹里查看。
+          </p>
+        </article>
+        <article class="screen-column">
+          <div class="screen-caption">
+            <b>03</b> 生活小屋 <span>熟悉的账本，新的归处</span>
+          </div>
+          <div
+            class="phone"
+            data-page="life-details"
+            aria-label="生活小屋预览"
+          ></div>
+          <p class="screen-note">
+            <span>EVERYDAY LIFE</span>
+            延续记账的五项导航，只增加回到森林入口的路径，日常操作仍然熟悉。
+          </p>
+        </article>
+      </section>
+      <footer class="board-footer">
+        <span
+          ><svg><use href="#i-leaf" /></svg> 生活小屋 / 记账 · 学习 ·
+          更多日常</span
+        ><span>先感受，再调整。让它慢慢长成你的生活 APP。</span>
+      </footer>
+    </main>
+    <dialog id="sheet">
+      <form method="dialog" id="sheet-form">
+        <button type="button" class="close-sheet" aria-label="关闭弹窗">
+          <svg><use href="#i-close" /></svg>
+        </button>
+        <div id="sheet-content"></div>
+      </form>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="study-garden.js"></script>
+    <script src="forest-home.js"></script>
+    <script src="study-forest.js"></script>
+  </body>
+</html>

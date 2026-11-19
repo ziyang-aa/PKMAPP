@@ -1,0 +1,16 @@
+<resources>
+    <item type="id" name="home_enter_study"/><item type="id" name="home_enter_life"/>
+    <item type="id" name="home_door_study"/><item type="id" name="home_door_life"/>
+    <item type="id" name="home_resume_study"/>
+    <item type="id" name="nav_study_focus"/><item type="id" name="nav_study_stats"/><item type="id" name="nav_study_garden"/>
+    <item type="id" name="study_bottom_navigation"/>
+    <item type="id" name="study_start_pause_button"/><item type="id" name="study_finish_button"/>
+    <item type="id" name="study_timer"/><item type="id" name="study_subject_picker"/>
+    <item type="id" name="study_subject_selector"/>
+    <item type="id" name="study_today_summary"/><item type="id" name="study_daily_goal_button"/>
+    <item type="id" name="study_note_input"/><item type="id" name="study_records_container"/>
+    <item type="id" name="study_chart_view"/><item type="id" name="study_garden_view"/>
+    <item type="id" name="study_water_button"/><item type="id" name="study_wallet"/>
+    <item type="id" name="study_date_today"/><item type="id" name="study_date_week"/><item type="id" name="study_date_month"/>
+    <item type="id" name="study_chart_ring"/><item type="id" name="study_chart_bars"/><item type="id" name="study_chart_trend"/>
+</resources>

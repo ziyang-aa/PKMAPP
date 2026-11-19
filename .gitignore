@@ -55,3 +55,10 @@ id_ed25519
 # Private development handoff notes
 /docs/HANDOFF.*.md
 /docs/PKMAPP-FIGMA-ASSET-MAP.md
+
+# Local runtime artifacts and separate mini-program workspace
+/output/
+/pkmapp_wx/
+*.apk
+*.jks
+*.keystore

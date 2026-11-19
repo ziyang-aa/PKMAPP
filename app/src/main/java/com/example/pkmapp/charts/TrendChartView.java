@@ -37,6 +37,7 @@ public final class TrendChartView extends View {
     private float[] pointXs = new float[0];
     private float[] pointYs = new float[0];
     private int selectedIndex = -1;
+    private int pendingIndex = -1;
 
     public TrendChartView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -131,23 +132,34 @@ public final class TrendChartView extends View {
         canvas.drawPath(line, linePaint);
 
         for (int i = 0; i < xs.length; i++) {
-            if (values[i] == 0L) {
+            if (counts[i] <= 0) {
                 continue;
             }
             canvas.drawCircle(xs[i], ys[i], dp(4), dotFillPaint);
             canvas.drawCircle(xs[i], ys[i], dp(4), dotStrokePaint);
         }
 
-        if (selectedIndex >= 0 && selectedIndex < xs.length && values[selectedIndex] > 0L) {
+        if (selectedIndex >= 0 && selectedIndex < xs.length && counts[selectedIndex] > 0) {
             canvas.drawCircle(xs[selectedIndex], ys[selectedIndex], dp(7), dotStrokePaint);
             drawTooltip(canvas, selectedIndex, xs[selectedIndex], ys[selectedIndex], left, right, top);
         }
 
-        canvas.drawText(startLabel, left, height - dp(5), labelPaint);
-        float middleLabelWidth = labelPaint.measureText(middleLabel);
-        canvas.drawText(middleLabel, (width - middleLabelWidth) / 2f, height - dp(5), labelPaint);
-        float endLabelWidth = labelPaint.measureText(endLabel);
-        canvas.drawText(endLabel, right - endLabelWidth, height - dp(5), labelPaint);
+        drawAxisLabel(canvas, startLabel, left, height - dp(5), false);
+        drawAxisLabel(canvas, middleLabel, width / 2f, height - dp(5), true);
+        drawAxisLabel(canvas, endLabel, right, height - dp(5), false);
+    }
+
+    private void drawAxisLabel(Canvas canvas, String value, float x, float baseline,
+            boolean centered) {
+        String[] lines = value.split("\\n");
+        float firstBaseline = lines.length > 1 ? baseline - dp(14) : baseline;
+        boolean rightAligned = !centered && value.equals(endLabel);
+        for (int i = 0; i < lines.length; i++) {
+            float lineWidth = labelPaint.measureText(lines[i]);
+            float lineX = centered ? x - lineWidth / 2f : rightAligned ? x - lineWidth : x;
+            float lineBaseline = i == 0 ? firstBaseline : baseline;
+            canvas.drawText(lines[i], lineX, lineBaseline, labelPaint);
+        }
     }
 
     private void drawTooltip(Canvas canvas, int index, float pointX, float pointY,
@@ -179,17 +191,23 @@ public final class TrendChartView extends View {
         }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                int hit = nearestPoint(event.getX(), event.getY());
-                if (hit < 0) {
+                pendingIndex = nearestPoint(event.getX(), event.getY());
+                if (pendingIndex < 0) {
                     return false;
                 }
-                selectedIndex = hit;
-                invalidate();
                 return true;
             case MotionEvent.ACTION_UP:
+                int hit = nearestPoint(event.getX(), event.getY());
+                if (pendingIndex >= 0 && hit >= 0) {
+                    selectedIndex = ChartDataCalculator.togglePointSelection(selectedIndex, hit,
+                            counts[hit] > 0);
+                    invalidate();
+                }
+                pendingIndex = -1;
                 performClick();
                 return true;
             case MotionEvent.ACTION_CANCEL:
+                pendingIndex = -1;
                 return true;
             default:
                 return true;
@@ -197,21 +215,8 @@ public final class TrendChartView extends View {
     }
 
     private int nearestPoint(float x, float y) {
-        int nearest = -1;
-        float nearestDistance = dp(28);
-        for (int i = 0; i < pointXs.length; i++) {
-            if (values[i] <= 0L) {
-                continue;
-            }
-            float dx = pointXs[i] - x;
-            float dy = pointYs[i] - y;
-            float distance = (float) Math.sqrt(dx * dx + dy * dy);
-            if (distance <= nearestDistance) {
-                nearestDistance = distance;
-                nearest = i;
-            }
-        }
-        return nearest;
+        return ChartDataCalculator.nearestPopulatedPointIndex(pointXs, pointYs, counts,
+                x, y, dp(40));
     }
 
     @Override

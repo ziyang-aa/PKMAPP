@@ -33,33 +33,91 @@ import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentRecordBinding;
 import com.example.pkmapp.navigation.AppDestination;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.example.pkmapp.forest.ForestDialogBuilder;
 
 import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class RecordFragment extends Fragment {
-    private final RecordDateState date = RecordDateState.today();
+    private static final String ARG_EDITING_TRANSACTION_ID = "editing_transaction_id";
+    private static final String ARG_EDITING_TYPE = "editing_type";
+    private static final String ARG_EDITING_AMOUNT = "editing_amount";
+    private static final String ARG_EDITING_CATEGORY = "editing_category";
+    private static final String ARG_EDITING_NOTE = "editing_note";
+    private static final String ARG_EDITING_OCCURRED_AT = "editing_occurred_at";
+
+    private RecordDateState date = RecordDateState.today();
     private final CalculatorEngine calculator = new CalculatorEngine();
     private FragmentRecordBinding binding;
     private TransactionType type = TransactionType.EXPENSE;
     private String category;
     private View selectedCategoryView;
+    private CategoryStore categoryStore;
+    private boolean editMode;
+    private String editingTransactionId;
+    private long editingAmountInCents;
+    private String initialCategory;
+    private String initialNote;
+
+    public static RecordFragment newEditor(@NonNull Transaction transaction) {
+        Bundle arguments = new Bundle();
+        arguments.putString(ARG_EDITING_TRANSACTION_ID, transaction.getId());
+        arguments.putString(ARG_EDITING_TYPE, transaction.getType().name());
+        arguments.putLong(ARG_EDITING_AMOUNT, transaction.getAmountInCents());
+        arguments.putString(ARG_EDITING_CATEGORY, transaction.getCategory());
+        arguments.putString(ARG_EDITING_NOTE, transaction.getNote());
+        arguments.putLong(ARG_EDITING_OCCURRED_AT, transaction.getOccurredAtMillis());
+        RecordFragment fragment = new RecordFragment();
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle state) {
+        super.onCreate(state);
+        Bundle arguments = getArguments();
+        if (arguments == null || !arguments.containsKey(ARG_EDITING_TRANSACTION_ID)) {
+            return;
+        }
+        editMode = true;
+        editingTransactionId = arguments.getString(ARG_EDITING_TRANSACTION_ID);
+        type = TransactionType.valueOf(arguments.getString(ARG_EDITING_TYPE,
+                TransactionType.EXPENSE.name()));
+        editingAmountInCents = arguments.getLong(ARG_EDITING_AMOUNT);
+        initialCategory = arguments.getString(ARG_EDITING_CATEGORY);
+        initialNote = arguments.getString(ARG_EDITING_NOTE, "");
+        Calendar initialDate = Calendar.getInstance();
+        initialDate.setTimeInMillis(arguments.getLong(ARG_EDITING_OCCURRED_AT));
+        date = new RecordDateState(initialDate);
+    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent,
             @Nullable Bundle state) {
         binding = FragmentRecordBinding.inflate(inflater, parent, false);
+        categoryStore = new CategoryStore(requireContext());
         return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
         binding.pageBackButton.setOnClickListener(v ->
-                ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
-        binding.recordTypeExpense.setSelected(true);
+                ((MainActivity) requireActivity()).showDestination(
+                        editMode ? AppDestination.DETAILS : AppDestination.HOME));
+        binding.recordTypeExpense.setSelected(type == TransactionType.EXPENSE);
+        binding.recordTypeIncome.setSelected(type == TransactionType.INCOME);
+        if (editMode) {
+            binding.titleRecord.setText("编辑账单");
+            binding.recordSaveButton.setText("保存修改");
+            String formattedAmount = MoneyParser.formatCents(editingAmountInCents)
+                    .replace("¥", "").trim();
+            binding.recordAmountInput.setText(formattedAmount);
+            binding.recordCalculatorDisplay.setText("¥" + formattedAmount);
+            binding.recordCalculatorExpression.setText("修改金额");
+            binding.recordNoteInput.setText(initialNote);
+        }
         binding.recordTypeExpense.setOnClickListener(v -> {
             type = TransactionType.EXPENSE;
             binding.recordTypeExpense.setSelected(true);
@@ -79,6 +137,9 @@ public final class RecordFragment extends Fragment {
         bindCalculatorKeys();
         dateLabel();
         renderCategories();
+        if (editMode) {
+            initialCategory = null;
+        }
     }
 
     private void renderCategories() {
@@ -86,9 +147,12 @@ public final class RecordFragment extends Fragment {
         selectedCategoryView = null;
         binding.recordEntryCard.setVisibility(View.GONE);
         binding.recordCategoryGroup.removeAllViews();
-        String[] labels = type == TransactionType.EXPENSE
-                ? new String[]{"餐饮", "购物", "饮料", "交通", "日用", "学习", "水果", "娱乐", "服饰", "礼物", "红包", "人情", "医疗", "订阅", "借出", "还款", "自定义"}
-                : new String[]{"工资", "零花", "兼职", "转卖", "借入", "自定义"};
+        List<String> labels = new ArrayList<>(categoryStore.getCategories(type));
+        if (editMode && initialCategory != null && !labels.contains(initialCategory)) {
+            labels.add(initialCategory);
+        }
+        labels.add("自定义");
+        View initialCategoryView = null;
         for (String label : labels) {
             LinearLayout item = new LinearLayout(requireContext());
             item.setGravity(Gravity.CENTER);
@@ -119,11 +183,19 @@ public final class RecordFragment extends Fragment {
                     showEntry();
                 }
             });
+            if (editMode && label.equals(initialCategory)) {
+                initialCategoryView = item;
+            }
             android.widget.GridLayout.LayoutParams params = new android.widget.GridLayout.LayoutParams();
             params.width = 0;
             params.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
             params.setMargins(dp(2), dp(6), dp(2), dp(6));
             binding.recordCategoryGroup.addView(item, params);
+        }
+        if (initialCategoryView != null) {
+            category = initialCategory;
+            selectCategoryView(initialCategoryView, category);
+            showEntry();
         }
     }
 
@@ -137,15 +209,17 @@ public final class RecordFragment extends Fragment {
     private void showCustomCategory(View customItem) {
         EditText input = new EditText(requireContext());
         input.setHint("输入分类名称");
-        new MaterialAlertDialogBuilder(requireContext()).setTitle("自定义分类").setView(input)
+        new ForestDialogBuilder(requireContext()).setTitle("自定义分类").setView(input)
                 .setNegativeButton("取消", null)
                 .setPositiveButton("确定", (dialog, which) -> {
                     String value = input.getText().toString().trim();
                     if (value.isEmpty()) {
                         Toast.makeText(requireContext(), "请输入分类名称", Toast.LENGTH_SHORT).show();
+                    } else if (!categoryStore.addCustomCategory(type, value)) {
+                        Toast.makeText(requireContext(), "分类已存在，请换一个名称", Toast.LENGTH_SHORT).show();
                     } else {
-                        category = value;
-                        selectCategoryView(customItem, value);
+                        category = value.trim();
+                        selectCategoryView(customItem, category);
                         showEntry();
                     }
                 }).show();
@@ -206,6 +280,9 @@ public final class RecordFragment extends Fragment {
 
     private void appendCalculatorToken(String token) {
         try {
+            if (editMode && calculator.getExpression().isEmpty()) {
+                binding.recordAmountInput.setText("");
+            }
             calculator.append(token);
             updateCalculatorDisplay();
         } catch (IllegalArgumentException exception) {
@@ -297,8 +374,16 @@ public final class RecordFragment extends Fragment {
             }
             long cents = RecordAmountResolver.resolveCents(
                     String.valueOf(binding.recordAmountInput.getText()), calculator.getExpression());
+            String note = String.valueOf(binding.recordNoteInput.getText());
+            if (editMode) {
+                InMemoryLedgerRepository.getInstance().updateTransaction(editingTransactionId, type,
+                        cents, category, note, date.timeInMillis());
+                Toast.makeText(requireContext(), "账单已更新", Toast.LENGTH_SHORT).show();
+                ((MainActivity) requireActivity()).showDestination(AppDestination.DETAILS);
+                return;
+            }
             Transaction transaction = InMemoryLedgerRepository.getInstance().addTransaction(type, cents,
-                    category, String.valueOf(binding.recordNoteInput.getText()), date.timeInMillis());
+                    category, note, date.timeInMillis());
             BorrowingDirection borrowingDirection = BorrowingCategoryLink.directionFor(type, category);
             if (borrowingDirection == null) {
                 showSaveSuccessDialog();
@@ -317,7 +402,7 @@ public final class RecordFragment extends Fragment {
 
     private void showSaveSuccessDialog() {
         View content = getLayoutInflater().inflate(R.layout.dialog_record_success, null, false);
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+        androidx.appcompat.app.AlertDialog dialog = new ForestDialogBuilder(requireContext())
                 .setView(content)
                 .create();
         content.findViewById(R.id.record_success_continue).setOnClickListener(view -> {
@@ -345,7 +430,7 @@ public final class RecordFragment extends Fragment {
         message.setText(direction == BorrowingDirection.LEND
                 ? "这笔借出已经记入账本，再补充对方和日期就能长期追踪。"
                 : "这笔借入已经记入账本，再补充对方和日期就能长期追踪。");
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+        androidx.appcompat.app.AlertDialog dialog = new ForestDialogBuilder(requireContext())
                 .setView(content)
                 .create();
         content.findViewById(R.id.borrowing_prompt_skip).setOnClickListener(view -> {

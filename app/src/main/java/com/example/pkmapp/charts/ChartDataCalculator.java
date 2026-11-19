@@ -4,7 +4,9 @@ import com.example.pkmapp.data.Transaction;
 import com.example.pkmapp.data.TransactionType;
 
 import java.util.Calendar;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Builds chart buckets from the transactions in the active ledger. */
@@ -16,6 +18,70 @@ public final class ChartDataCalculator {
     }
 
     private ChartDataCalculator() {
+    }
+
+    public static final class CategorySummary {
+        private long amountInCents;
+        private int count;
+
+        private void add(long amount) {
+            amountInCents += amount;
+            count++;
+        }
+
+        public long getAmountInCents() {
+            return amountInCents;
+        }
+
+        public int getCount() {
+            return count;
+        }
+    }
+
+    public static Map<String, CategorySummary> categorySummary(List<Transaction> transactions,
+            TransactionType type, Calendar reference, Period period) {
+        Objects.requireNonNull(transactions, "交易列表不能为空");
+        Objects.requireNonNull(type, "收支类型不能为空");
+        Objects.requireNonNull(reference, "参考日期不能为空");
+        Objects.requireNonNull(period, "统计周期不能为空");
+        long start = startOfPeriod(reference, period, 0).getTimeInMillis();
+        long end = endOfPeriod(reference, period, 0).getTimeInMillis();
+        Map<String, CategorySummary> summary = new LinkedHashMap<>();
+        for (Transaction transaction : transactions) {
+            long occurredAt = transaction.getOccurredAtMillis();
+            if (transaction.getType() == type && occurredAt >= start && occurredAt < end) {
+                summary.computeIfAbsent(transaction.getCategory(), key -> new CategorySummary())
+                        .add(transaction.getAmountInCents());
+            }
+        }
+        return summary;
+    }
+
+    public static int togglePointSelection(int selectedIndex, int tappedIndex, boolean populated) {
+        if (!populated || tappedIndex < 0) {
+            return selectedIndex;
+        }
+        return selectedIndex == tappedIndex ? -1 : tappedIndex;
+    }
+
+    public static int nearestPopulatedPointIndex(float[] xCoordinates, float[] yCoordinates,
+            int[] counts, float x, float y, float verticalRadius) {
+        if (xCoordinates == null || yCoordinates == null || counts == null
+                || xCoordinates.length == 0 || yCoordinates.length != xCoordinates.length
+                || counts.length != xCoordinates.length) {
+            return -1;
+        }
+        int nearest = -1;
+        float nearestHorizontalDistance = Float.POSITIVE_INFINITY;
+        for (int i = 0; i < xCoordinates.length; i++) {
+            float dx = Math.abs(xCoordinates[i] - x);
+            if (dx < nearestHorizontalDistance) {
+                nearestHorizontalDistance = dx;
+                nearest = i;
+            }
+        }
+        return nearest >= 0 && counts[nearest] > 0
+                && Math.abs(yCoordinates[nearest] - y) <= verticalRadius ? nearest : -1;
     }
 
     public static long[] bucketTotals(List<Transaction> transactions, TransactionType type,

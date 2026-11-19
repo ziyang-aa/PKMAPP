@@ -24,6 +24,13 @@ public final class AssetStore {
                 ledgerNetFlowInCents);
     }
 
+    public StartingValues getStartingValues(String ledgerId) {
+        String safeLedgerId = requireLedgerId(ledgerId);
+        return new StartingValues(
+                preferences.getLong(INITIAL_ASSETS_PREFIX + safeLedgerId, 0L),
+                preferences.getLong(LIABILITIES_PREFIX + safeLedgerId, 0L));
+    }
+
     public void saveStartingValues(String ledgerId, long initialAssetsInCents,
             long liabilitiesInCents) {
         String safeLedgerId = requireLedgerId(ledgerId);
@@ -51,10 +58,36 @@ public final class AssetStore {
         preferences.edit().clear().apply();
     }
 
+    public void deleteStartingValues(String ledgerId) {
+        String safeLedgerId = requireLedgerId(ledgerId);
+        preferences.edit()
+                .remove(INITIAL_ASSETS_PREFIX + safeLedgerId)
+                .remove(LIABILITIES_PREFIX + safeLedgerId)
+                .apply();
+    }
+
     private static String requireLedgerId(String ledgerId) {
         if (ledgerId == null || ledgerId.trim().isEmpty()) {
             throw new IllegalArgumentException("账本编号不能为空");
         }
         return ledgerId.trim();
+    }
+
+    public static final class StartingValues {
+        private final long initialAssetsInCents;
+        private final long liabilitiesInCents;
+
+        private StartingValues(long initialAssetsInCents, long liabilitiesInCents) {
+            this.initialAssetsInCents = initialAssetsInCents;
+            this.liabilitiesInCents = liabilitiesInCents;
+        }
+
+        public long getInitialAssetsInCents() {
+            return initialAssetsInCents;
+        }
+
+        public long getLiabilitiesInCents() {
+            return liabilitiesInCents;
+        }
     }
 }

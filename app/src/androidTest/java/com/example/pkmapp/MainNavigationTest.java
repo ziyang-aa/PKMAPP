@@ -4,6 +4,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Rule;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -11,6 +12,7 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.action.ViewActions.typeText;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
@@ -20,6 +22,11 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 public final class MainNavigationTest {
     @Rule
     public ActivityScenarioRule<MainActivity> rule = new ActivityScenarioRule<>(MainActivity.class);
+
+    @Before
+    public void enterLifeCottage() {
+        onView(withId(R.id.home_enter_life)).perform(scrollTo(), click());
+    }
 
     @Test
     public void allFiveButtonsOpenTheirFeaturePage() {
@@ -61,6 +68,13 @@ public final class MainNavigationTest {
     public void featurePage_hasBackButton() {
         onView(withId(R.id.nav_details)).perform(click());
         onView(withId(R.id.page_back_button)).check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void profilePage_hasBackupActions() {
+        onView(withId(R.id.nav_profile)).perform(click());
+        onView(withId(R.id.profile_export_data_button)).check(matches(isDisplayed()));
+        onView(withId(R.id.profile_import_data_button)).check(matches(isDisplayed()));
     }
 
     @Test

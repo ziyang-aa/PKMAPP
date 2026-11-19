@@ -12,12 +12,19 @@ public enum AppDestination {
     SAVINGS,
     PROFILE,
     EXCHANGE,
-    BORROWING;
+    BORROWING,
+    STUDY_FOCUS,
+    STUDY_STATS,
+    STUDY_GARDEN;
 
     private static final List<AppDestination> BOTTOM_BAR_DESTINATIONS =
             Collections.unmodifiableList(Arrays.asList(DETAILS, CHARTS, RECORD, SAVINGS, PROFILE));
 
     public static List<AppDestination> bottomBarDestinations() {
         return BOTTOM_BAR_DESTINATIONS;
+    }
+
+    public boolean isStudy() {
+        return this == STUDY_FOCUS || this == STUDY_STATS || this == STUDY_GARDEN;
     }
 }

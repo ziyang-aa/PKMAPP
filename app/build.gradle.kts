@@ -12,10 +12,14 @@ android {
 
     defaultConfig {
         applicationId = "com.example.pkmapp"
+        if (providers.gradleProperty("studyTestIsolation").orNull == "true") {
+            applicationId = "com.example.pkmapp.studytest"
+            testApplicationId = "com.example.pkmapp.studytest.test"
+        }
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

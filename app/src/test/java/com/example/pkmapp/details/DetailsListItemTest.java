@@ -28,8 +28,29 @@ public final class DetailsListItemTest {
         assertEquals("9月4日", items.get(4).getHeaderLabel());
     }
 
+    @Test
+    public void fromTransactions_calculatesNetAmountForEachDateHeader() {
+        long now = noonUtc(2026, Calendar.SEPTEMBER, 6);
+        List<Transaction> transactions = Arrays.asList(
+                transaction("income", TransactionType.INCOME, 850L, 6),
+                transaction("expense", TransactionType.EXPENSE, 300L, 6),
+                transaction("no-net", TransactionType.EXPENSE, 500L, 5),
+                transaction("no-net-income", TransactionType.INCOME, 500L, 5),
+                transaction("negative-net", 4));
+
+        List<DetailsListItem> items = DetailsListItem.fromTransactions(transactions, now);
+
+        assertEquals(550L, items.get(0).getNetAmountInCents());
+        assertEquals(0L, items.get(3).getNetAmountInCents());
+        assertEquals(-100L, items.get(6).getNetAmountInCents());
+    }
+
     private static Transaction transaction(String id, int day) {
-        return new Transaction(id, "ledger", TransactionType.EXPENSE, 100L, "餐饮", "",
+        return transaction(id, TransactionType.EXPENSE, 100L, day);
+    }
+
+    private static Transaction transaction(String id, TransactionType type, long cents, int day) {
+        return new Transaction(id, "ledger", type, cents, "餐饮", "",
                 noonUtc(2026, Calendar.SEPTEMBER, day));
     }
 

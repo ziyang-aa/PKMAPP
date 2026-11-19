@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +117,30 @@ public final class InMemoryLedgerRepository {
         return transaction;
     }
 
+    public Transaction updateTransaction(String transactionId, TransactionType type,
+            long amountInCents, String category, String note, long occurredAtMillis) {
+        String selectedId = requireId(transactionId);
+        Transaction updated = null;
+        synchronized (this) {
+            for (int index = 0; index < transactions.size(); index++) {
+                Transaction existing = transactions.get(index);
+                if (currentLedgerId.equals(existing.getLedgerId())
+                        && selectedId.equals(existing.getId())) {
+                    updated = new Transaction(existing.getId(), existing.getLedgerId(), type,
+                            amountInCents, category, note, occurredAtMillis);
+                    transactions.set(index, updated);
+                    break;
+                }
+            }
+        }
+        if (updated == null) {
+            throw new IllegalArgumentException("交易记录不存在");
+        }
+        persist();
+        notifyListeners();
+        return updated;
+    }
+
     public boolean deleteTransaction(String transactionId) {
         String selectedId = requireId(transactionId);
         boolean deleted = false;
@@ -135,6 +160,26 @@ public final class InMemoryLedgerRepository {
             notifyListeners();
         }
         return deleted;
+    }
+
+    public boolean deleteLedger(String ledgerId) {
+        String selectedId = requireId(ledgerId);
+        synchronized (this) {
+            if (!ledgers.containsKey(selectedId)) {
+                return false;
+            }
+            if (ledgers.size() == 1) {
+                throw new IllegalStateException("至少保留一本账本");
+            }
+            ledgers.remove(selectedId);
+            transactions.removeIf(transaction -> selectedId.equals(transaction.getLedgerId()));
+            if (selectedId.equals(currentLedgerId)) {
+                currentLedgerId = ledgers.keySet().iterator().next();
+            }
+        }
+        persist();
+        notifyListeners();
+        return true;
     }
 
     /** Restores the ledger repository to the same empty state as a first launch. */
@@ -159,6 +204,46 @@ public final class InMemoryLedgerRepository {
         }
         currentTransactions.sort(TRANSACTION_ORDER);
         return Collections.unmodifiableList(currentTransactions);
+    }
+
+    public synchronized List<Transaction> getAllTransactions() {
+        return Collections.unmodifiableList(new ArrayList<>(transactions));
+    }
+
+    public void replaceState(List<Ledger> restoredLedgers, List<Transaction> restoredTransactions,
+            String restoredCurrentLedgerId) {
+        if (restoredLedgers == null || restoredLedgers.isEmpty()
+                || restoredTransactions == null) {
+            throw new IllegalArgumentException("账本备份不能为空");
+        }
+        Map<String, Ledger> validatedLedgers = new LinkedHashMap<>();
+        for (Ledger ledger : restoredLedgers) {
+            if (ledger == null || validatedLedgers.put(ledger.getId(), ledger) != null) {
+                throw new IllegalArgumentException("备份中存在重复账本");
+            }
+        }
+        String selectedId = requireId(restoredCurrentLedgerId);
+        if (!validatedLedgers.containsKey(selectedId)) {
+            throw new IllegalArgumentException("当前账本不存在");
+        }
+        Set<String> transactionIds = new HashSet<>();
+        List<Transaction> validatedTransactions = new ArrayList<>();
+        for (Transaction transaction : restoredTransactions) {
+            if (transaction == null || !validatedLedgers.containsKey(transaction.getLedgerId())
+                    || !transactionIds.add(transaction.getId())) {
+                throw new IllegalArgumentException("备份中存在重复或无效交易");
+            }
+            validatedTransactions.add(transaction);
+        }
+        synchronized (this) {
+            ledgers.clear();
+            transactions.clear();
+            ledgers.putAll(validatedLedgers);
+            transactions.addAll(validatedTransactions);
+            currentLedgerId = selectedId;
+        }
+        persist();
+        notifyListeners();
     }
 
     public synchronized MonthlyTotals getCurrentMonthTotals(long referenceTimeMillis) {

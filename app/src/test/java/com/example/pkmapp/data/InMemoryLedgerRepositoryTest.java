@@ -111,6 +111,40 @@ public final class InMemoryLedgerRepositoryTest {
     }
 
     @Test
+    public void updateTransaction_replacesDetails_keepsIdAndPersists() {
+        MemoryPersistence persistence = new MemoryPersistence();
+        InMemoryLedgerRepository repository = InMemoryLedgerRepository.createForTest(persistence);
+        Transaction original = repository.addTransaction(TransactionType.EXPENSE, 2_580L, "餐饮", "午饭",
+                noonUtc(2026, Calendar.SEPTEMBER, 6));
+        AtomicInteger notifications = new AtomicInteger();
+        repository.addListener(notifications::incrementAndGet);
+
+        Transaction updated = repository.updateTransaction(original.getId(), TransactionType.INCOME,
+                100_000L, "工资", "补录收入", noonUtc(2026, Calendar.SEPTEMBER, 8));
+
+        assertEquals(original.getId(), updated.getId());
+        assertEquals(TransactionType.INCOME, updated.getType());
+        assertEquals(100_000L, updated.getAmountInCents());
+        assertEquals("工资", updated.getCategory());
+        assertEquals("补录收入", updated.getNote());
+        assertEquals(noonUtc(2026, Calendar.SEPTEMBER, 8), updated.getOccurredAtMillis());
+        assertEquals(1, repository.getTransactionsForCurrentLedger().size());
+        assertEquals("补录收入", repository.getTransactionsForCurrentLedger().get(0).getNote());
+        assertEquals(1, notifications.get());
+
+        InMemoryLedgerRepository afterRestart = InMemoryLedgerRepository.createForTest(persistence);
+        assertEquals(1, afterRestart.getTransactionsForCurrentLedger().size());
+        assertEquals(original.getId(), afterRestart.getTransactionsForCurrentLedger().get(0).getId());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void updateTransaction_unknownId_isRejected() {
+        InMemoryLedgerRepository.createForTest().updateTransaction("missing-transaction",
+                TransactionType.EXPENSE, 1_280L, "餐饮", "早餐",
+                noonUtc(2026, Calendar.SEPTEMBER, 9));
+    }
+
+    @Test
     public void resetToInitialState_replacesAllLedgersAndTransactions_andPersists() {
         MemoryPersistence persistence = new MemoryPersistence();
         InMemoryLedgerRepository repository = InMemoryLedgerRepository.createForTest(persistence);

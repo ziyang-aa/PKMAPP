@@ -1,0 +1,89 @@
+/* Shared forest-journal controls. The approved cottage entrance remains unchanged. */
+:root { --journal-green: #456444; --journal-line: #d5d6bf; }
+.phone .focus-card, .phone .chart-card {
+  border-radius: 18px 20px 17px 19px;
+  border: 1px solid #d6d8c2;
+  background: linear-gradient(150deg,#fffef8,#fffcf3);
+  box-shadow: inset 0 0 0 3px #fffdf7, inset 0 0 0 4px #ece8d8, 0 3px 0 #ded9c7, 0 9px 20px #52613c08;
+}
+.phone .hero { height: 150px; }
+.phone .timer { position: relative; height: 216px; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.phone .timer::before { content: "专 注 时 间"; position: relative; z-index: 1; font-size: 9px; color: var(--muted); margin-bottom: 11px; }
+.clock-dial { position: absolute; width: 216px; height: 216px; left: 50%; top: 50%; transform: translate(-50%,-50%); stroke-width: .8; overflow: visible; }
+.clock-dial .dial-progress { transform: rotate(-90deg); transform-origin: 110px 110px; stroke-linecap: round; transition: stroke-dasharray 1s linear; }
+.phone .clock { position: relative; z-index: 1; font-size: 30px; letter-spacing: 1px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.phone .timer-subject { position: relative; z-index: 1; max-width: 145px; font-size: 10px; margin-top: 10px; line-height: 1.6; }
+.phone .focus-card .goal-progress { display: none; }
+.primary-button { border-radius: 12px; background: linear-gradient(#59754f,#456444); border-color: #345439; box-shadow: inset 0 0 0 3px #ffffff08,inset 0 0 0 4px #e9f0c733,0 3px 0 #314d36,0 5px 9px #314d3612; letter-spacing: .6px; min-height: 46px; transition: transform .15s,box-shadow .15s; }
+.primary-button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 0 0 3px #ffffff08,inset 0 0 0 4px #e9f0c733,0 1px 0 #314d36; }
+.secondary-button, .goal-chip, .chart-tabs button { border-radius: 10px; background: linear-gradient(#fffef8,#f4f2e7); border: 1px solid var(--journal-line); box-shadow: 0 2px 0 #e0dbc8; transition: transform .15s; }
+.secondary-button:active,.goal-chip:active,.chart-tabs button:active { transform: translateY(1px); }
+.phone .goal-picker { margin-top: 5px; gap: 6px; }
+.phone .goal-chip { min-height: 32px; padding: 4px 9px; font-size: 10px; }
+.phone .goal-chip.active { background: #e8eddb; border-color: #9eaf88; color: #315e3a; box-shadow: inset 0 -2px #bbc9a5; }
+.phone .subject-button { min-height: 66px; padding: 18px 9px 10px; border-radius: 10px 11px 13px 10px; background: linear-gradient(#fffefa,#faf7ed); border-color: #dedfcb; box-shadow: 0 2px 0 #dfdac7; }
+.phone .subject-button::before { content: ""; position: absolute; left: 10px; top: -1px; width: 8px; height: 16px; background: var(--subject); clip-path: polygon(0 0,100% 0,100% 100%,50% 76%,0 100%); }
+.phone .subject-button.active { background: linear-gradient(#f6f8ec,#eaf0de); border-color: #9eaf88; box-shadow: 0 2px 0 #bac7a6; }
+.phone .subject-button .selected-dot { width: 12px; height: 12px; top: 6px; right: 6px; background: #456444; }
+.phone .subject-button .selected-dot::after { content: ""; position: absolute; width: 5px; height: 3px; left: 3px; top: 3px; border-left: 1px solid #fff; border-bottom: 1px solid #fff; transform: rotate(-45deg); }
+.phone .subject-button:disabled { opacity: .7; }
+.phone .subject-button.active:disabled { opacity: 1; }
+.phone .app-nav:not(.life-nav) { margin: 5px 10px 8px; padding: 5px 6px; height: 65px; border: 1px solid #d1d4bd; border-radius: 22px; box-shadow: inset 0 0 0 3px #fffdf7,inset 0 0 0 4px #ece8d8,0 3px 0 #dfdac7; }
+.phone .app-nav:not(.life-nav)::after { display: none; }
+.phone .app-nav:not(.life-nav) .nav-button { position: relative; margin: 0 3px; border-radius: 15px; font-size: 10px; transition: background .2s; }
+.phone .app-nav:not(.life-nav) .nav-button.active { background: #e8eddf; }
+.phone .app-nav:not(.life-nav) .nav-button.active svg { background: none; box-shadow: none; }
+.phone .app-nav:not(.life-nav) .nav-button.active span { margin-top: 0; }
+.phone .app-nav:not(.life-nav) .nav-button.active::after { content: ""; position: absolute; bottom: 2px; width: 20px; height: 2px; border-radius: 2px; background: #b39460; }
+dialog { border-radius: 22px 24px 21px 23px; background: #fffcf3 url('../app/src/main/res/drawable-nodpi/forest_paper_clean.webp') center/620px; box-shadow: inset 0 0 0 4px #fffcf3, inset 0 0 0 5px #e7e4d3,0 25px 90px #2b382944; }
+dialog .sheet-leaf { width: 36px; height: 36px; padding: 7px; background: #edf0df; border: 1px solid #d4dbc2; border-radius: 15px; }
+dialog input,dialog textarea { background: linear-gradient(#f9f8f0,#f3f2e6); box-shadow: inset 0 2px 3px #6f795908; }
+dialog input:focus,dialog textarea:focus { outline: 2px solid #9eaf8870; border-color: #8eaa77; outline-offset: 1px; }
+dialog .reward-result { border: 1px solid #d2dbc2; background: #edf1e3; }
+@media(prefers-reduced-motion: reduce) { .primary-button,.secondary-button,.goal-chip,.clock-dial .dial-progress { transition: none; } }
+
+/* Refinement: quieter surfaces, a reachable subject picker and short, cancellable feedback. */
+:root { --muted: #736c5d; }
+.phone .focus-card,.phone .chart-card { box-shadow: none; border-color: #dddcc9; background: #fffcf3; }
+.phone .hero { height: 104px; }
+.phone .hero-copy { padding-top: 10px; }
+.phone .hero-copy h2 { font-size: 24px; }
+.phone .timer { height: 188px; }
+.phone .timer::before { content: attr(data-status); font-size: 11px; }
+.phone .clock-dial { width: 188px; height: 188px; }
+.phone .clock { font-family: var(--sans); font-size: 27px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
+.phone .timer-subject { font-size: 12px; }
+.subject-selector { display: flex; align-items: center; gap: 10px; padding: 9px 3px; min-height: 48px; width: 100%; background: transparent; border: 0; color: var(--deep); }
+.subject-selector strong { font-size: 14px; font-weight: 500; }
+.subject-selector span { margin-left: auto; font-size: 11px; color: var(--muted); }
+.subject-selector:disabled { opacity: .85; }
+.primary-button { box-shadow: 0 1px 0 #314d36; background: linear-gradient(#56724e,#456444); min-height: 48px; transition: transform 150ms ease-out, filter 150ms; }
+.primary-button:active:not(:disabled) { box-shadow: none; transform: scale(.975); }
+.secondary-button,.goal-chip,.chart-tabs button { box-shadow: none; }
+.phone .subject-button,.phone .subject-button.active { box-shadow: none; }
+.phone .app-nav:not(.life-nav) { height: 60px; box-shadow: none; }
+.phone .gentle-note { font-size: 11px; }
+.phone .daily-summary { font-size: 13px; border-top: 0; }
+.phone .daily-summary small { font-size: 11px; }
+.press-feedback:not(:disabled) { transform: scale(.975) !important; }
+dialog { box-shadow: 0 18px 60px #2b38292b; }
+dialog .sheet-leaf { border: 0; background: transparent; padding: 4px; width: 28px; height: 28px; margin-bottom: 8px; }
+dialog h2 { font-size: 22px; }
+dialog p { font-size: 12px; }
+dialog.subject-sheet { margin: auto auto 0; width: min(100%,420px); max-width: 420px; max-height: 85dvh; border-radius: 22px 22px 0 0; padding: 29px 22px 28px; }
+dialog.subject-sheet::before { content: ""; position: absolute; top: 10px; left: calc(50% - 15px); width: 30px; height: 3px; border-radius: 2px; background: #ced5c0; }
+.subject-sheet .subject-button { min-height: 76px; font-size: 13px; box-shadow: none; }
+.subject-sheet .subject-button small { font-size: 11px; }
+.subject-sheet .subject-button::before { content: ""; position: absolute; top: 0; left: 10px; width: 8px; height: 16px; background: var(--subject); clip-path: polygon(0 0,100% 0,100% 100%,50% 76%,0 100%); }
+@media(prefers-reduced-motion: reduce) { .press-feedback:not(:disabled),.primary-button:active:not(:disabled) { transform: none !important; } }
+
+/* The phone owns the fixed backdrop. Only transparent content above it scrolls. */
+.screens .phone:not(.is-hub):not(.is-life) { position: relative; isolation: isolate; background: #f5f1e7 url('../app/src/main/res/drawable-nodpi/bg_fixed_forest.png') center/100% 100% no-repeat; }
+.screens .phone:not(.is-hub):not(.is-life) > * { position: relative; z-index: 1; }
+.screens .phone:not(.is-hub):not(.is-life) > .page-scroll { position: absolute; inset: 0; background: transparent; padding-top: 31px; padding-bottom: 86px; }
+.screens .phone:not(.is-hub):not(.is-life) > .status-bar { z-index: 3; pointer-events: none; }
+.screens .phone:not(.is-hub):not(.is-life) > .app-nav { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; }
+.screens .phone[data-page="focus"] .hero { background: transparent; }
+@media (max-width: 760px) {
+  .screens .phone:not(.is-hub):not(.is-life) > .page-scroll { padding-top: env(safe-area-inset-top, 0px); }
+}

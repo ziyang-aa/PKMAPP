@@ -48,6 +48,13 @@ public final class SavingsGoalStore {
         }
     }
 
+    public synchronized void replaceGoals(List<SavingsGoal> goals) {
+        if (goals == null) {
+            throw new IllegalArgumentException("攒钱目标不能为空");
+        }
+        save(goals);
+    }
+
     public synchronized SavingsGoal createGoal(String name, long targetCents) {
         SavingsGoal goal = new SavingsGoal(UUID.randomUUID().toString(), name, targetCents, 0L,
                 System.currentTimeMillis());

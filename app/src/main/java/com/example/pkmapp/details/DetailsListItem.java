@@ -1,6 +1,7 @@
 package com.example.pkmapp.details;
 
 import com.example.pkmapp.data.Transaction;
+import com.example.pkmapp.data.TransactionType;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,11 +18,14 @@ public final class DetailsListItem {
 
     private final Kind kind;
     private final String headerLabel;
+    private final long netAmountInCents;
     private final Transaction transaction;
 
-    private DetailsListItem(Kind kind, String headerLabel, Transaction transaction) {
+    private DetailsListItem(Kind kind, String headerLabel, long netAmountInCents,
+            Transaction transaction) {
         this.kind = kind;
         this.headerLabel = headerLabel;
+        this.netAmountInCents = netAmountInCents;
         this.transaction = transaction;
     }
 
@@ -34,14 +38,23 @@ public final class DetailsListItem {
             throw new IllegalArgumentException("当前日期不能为空");
         }
         List<DetailsListItem> items = new ArrayList<>();
-        String previousHeader = null;
-        for (Transaction transaction : transactions) {
-            String header = headerFor(transaction.getOccurredAtMillis(), nowMillis);
-            if (!header.equals(previousHeader)) {
-                items.add(new DetailsListItem(Kind.DATE_HEADER, header, null));
-                previousHeader = header;
+        for (int start = 0; start < transactions.size();) {
+            Transaction first = transactions.get(start);
+            int end = start + 1;
+            long netAmountInCents = netAmount(first);
+            while (end < transactions.size()
+                    && isSameCalendarDay(first.getOccurredAtMillis(),
+                            transactions.get(end).getOccurredAtMillis())) {
+                netAmountInCents += netAmount(transactions.get(end));
+                end++;
             }
-            items.add(new DetailsListItem(Kind.TRANSACTION, null, transaction));
+            items.add(new DetailsListItem(Kind.DATE_HEADER,
+                    headerFor(first.getOccurredAtMillis(), nowMillis), netAmountInCents, null));
+            for (int index = start; index < end; index++) {
+                items.add(new DetailsListItem(Kind.TRANSACTION, null, 0L,
+                        transactions.get(index)));
+            }
+            start = end;
         }
         return Collections.unmodifiableList(items);
     }
@@ -56,6 +69,23 @@ public final class DetailsListItem {
 
     public Transaction getTransaction() {
         return transaction;
+    }
+
+    public long getNetAmountInCents() {
+        return netAmountInCents;
+    }
+
+    private static long netAmount(Transaction transaction) {
+        return transaction.getType() == TransactionType.INCOME
+                ? transaction.getAmountInCents() : -transaction.getAmountInCents();
+    }
+
+    private static boolean isSameCalendarDay(long firstMillis, long secondMillis) {
+        Calendar first = Calendar.getInstance();
+        first.setTimeInMillis(firstMillis);
+        Calendar second = Calendar.getInstance();
+        second.setTimeInMillis(secondMillis);
+        return isSameDay(first, second);
     }
 
     private static String headerFor(long occurredAtMillis, long nowMillis) {

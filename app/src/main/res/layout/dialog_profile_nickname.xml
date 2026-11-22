@@ -90,27 +90,29 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
+            android:background="@drawable/bg_borrowing_calendar_cancel"
             android:clickable="true"
             android:contentDescription="取消修改昵称"
             android:focusable="true"
             android:gravity="center"
             android:text="取消"
             android:textColor="@color/wood_brown"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/profile_nickname_dialog_save"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginStart="@dimen/space_8"
-            android:layout_weight="1.4"
-            android:background="@drawable/bg_profile_asset_action"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1.35"
+            android:background="@drawable/bg_borrowing_calendar_confirm"
             android:clickable="true"
             android:contentDescription="保存昵称"
             android:focusable="true"
             android:gravity="center"
             android:text="保存昵称"
-            android:textColor="@color/forest_green"
+            android:textColor="@color/paper_light"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>

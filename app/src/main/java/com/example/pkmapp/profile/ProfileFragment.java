@@ -20,6 +20,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,15 +40,18 @@ import com.example.pkmapp.backup.BackupSnapshot;
 import com.example.pkmapp.data.AssetSnapshot;
 import com.example.pkmapp.data.AssetStore;
 import com.example.pkmapp.data.InMemoryLedgerRepository;
+import com.example.pkmapp.data.Ledger;
 import com.example.pkmapp.data.LedgerDataListener;
+import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentProfileBinding;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.borrowing.BorrowingRecordStore;
 import com.example.pkmapp.record.MoneyParser;
+import com.example.pkmapp.record.CategoryStore;
 import com.example.pkmapp.savings.SavingsGoalStore;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.example.pkmapp.forest.ForestDialogBuilder;
 
 import java.math.BigDecimal;
 import java.io.BufferedReader;
@@ -59,9 +63,11 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -88,6 +94,7 @@ public final class ProfileFragment extends Fragment {
     private FragmentProfileBinding binding;
     private SharedPreferences preferences;
     private AssetStore assetStore;
+    private CategoryStore categoryStore;
 
     @Nullable
     @Override
@@ -96,6 +103,7 @@ public final class ProfileFragment extends Fragment {
         binding = FragmentProfileBinding.inflate(inflater, container, false);
         preferences = requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         assetStore = new AssetStore(requireContext());
+        categoryStore = new CategoryStore(requireContext());
         return binding.getRoot();
     }
 
@@ -107,6 +115,8 @@ public final class ProfileFragment extends Fragment {
         binding.profileNicknameEdit.setOnClickListener(v -> showNicknameEditor());
         binding.profileCheckinButton.setOnClickListener(v -> showCheckInDialog());
         binding.profileManageAssetsButton.setOnClickListener(v -> showAssetManager());
+        binding.profileCategoryManageButton.setOnClickListener(v -> showCategoryManager());
+        binding.profileLedgerManageButton.setOnClickListener(v -> showLedgerManager());
         binding.profileExportDataButton.setOnClickListener(v -> startExport());
         binding.profileImportDataButton.setOnClickListener(v -> startImport());
         binding.profileClearDataButton.setOnClickListener(v -> confirmClearData());
@@ -144,6 +154,8 @@ public final class ProfileFragment extends Fragment {
                 + CheckInProgress.nameForLevel(level));
         boolean checkedToday = checkedDates().contains(formatDate(Calendar.getInstance()));
         binding.profileCheckinStatus.setText(checkedToday ? "今日已签到" : "去签到 ›");
+        binding.profileCategoryCount.setText(categoryStore.getCategoryCount() + " 个分类  ·›");
+        binding.profileLedgerCount.setText(repository.getLedgers().size() + " 本账本  ·›");
         renderAssetSummary();
     }
 
@@ -169,10 +181,19 @@ public final class ProfileFragment extends Fragment {
             return;
         }
         AssetSnapshot snapshot = currentAssetSnapshot();
+        long netFlow = repository.getCurrentLedgerNetFlowInCents();
         binding.profileAssetTotal.setText(MoneyParser.formatCents(
                 snapshot.getCurrentAssetsInCents()));
         binding.profileNetWorth.setText(MoneyParser.formatCents(snapshot.getNetWorthInCents()));
         binding.profileLiability.setText(MoneyParser.formatCents(snapshot.getLiabilitiesInCents()));
+        if (snapshot.getInitialAssetsInCents() == 0L && netFlow == 0L) {
+            binding.profileAssetSubtitle.setText("当前资产 · 记账后会自动更新");
+        } else {
+            String flowPrefix = netFlow > 0L ? "+" : "";
+            binding.profileAssetSubtitle.setText("初始资产 "
+                    + MoneyParser.formatCents(snapshot.getInitialAssetsInCents())
+                    + " · 历史账本累计 " + flowPrefix + MoneyParser.formatCents(netFlow));
+        }
     }
 
     private AssetSnapshot currentAssetSnapshot() {
@@ -238,7 +259,7 @@ public final class ProfileFragment extends Fragment {
                 + snapshot.getTransactions().size() + " 笔交易、"
                 + snapshot.getSavingsGoals().size() + " 个攒钱目标。\n\n"
                 + "请选择导入方式";
-        new MaterialAlertDialogBuilder(requireContext())
+        new ForestDialogBuilder(requireContext())
                 .setTitle("导入账单")
                 .setMessage(message)
                 .setNegativeButton("取消", null)
@@ -249,7 +270,7 @@ public final class ProfileFragment extends Fragment {
     }
 
     private void confirmOverwrite(BackupSnapshot snapshot) {
-        new MaterialAlertDialogBuilder(requireContext())
+        new ForestDialogBuilder(requireContext())
                 .setTitle("确认完全覆盖？")
                 .setMessage("当前账本、交易、攒钱目标、资产和借钱记录将被备份内容替换。")
                 .setNegativeButton("取消", null)
@@ -366,7 +387,7 @@ public final class ProfileFragment extends Fragment {
     }
 
     private void confirmClearData() {
-        new MaterialAlertDialogBuilder(requireContext())
+        new ForestDialogBuilder(requireContext())
                 .setTitle("清空全部数据？")
                 .setMessage("账本、交易、攒钱目标、资产、负债、借还记录和小屋资料都会恢复到初始状态，此操作无法撤销。")
                 .setNegativeButton("取消", null)
@@ -389,6 +410,206 @@ public final class ProfileFragment extends Fragment {
 
     private String currentNickname() {
         return preferences.getString(NICKNAME, DEFAULT_NICKNAME);
+    }
+
+    private void showCategoryManager() {
+        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        LinearLayout root = managementRoot("CATEGORY MANAGEMENT", "管理记账分类",
+                "删除只影响以后记账，历史账单会保留原分类。\n在记账页点击“自定义”可以新增分类。");
+        ScrollView listScroll = new ScrollView(requireContext());
+        LinearLayout list = new LinearLayout(requireContext());
+        list.setOrientation(LinearLayout.VERTICAL);
+        addCategorySection(list, TransactionType.EXPENSE, "支出分类");
+        addCategorySection(list, TransactionType.INCOME, "收入分类");
+        listScroll.addView(list, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(430));
+        scrollParams.topMargin = dp(12);
+        root.addView(listScroll, scrollParams);
+        TextView done = managementAction("完成", R.color.forest_green);
+        done.setOnClickListener(v -> dialog.dismiss());
+        LinearLayout.LayoutParams doneParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        doneParams.topMargin = dp(8);
+        root.addView(done, doneParams);
+        showPaperSheet(dialog, root);
+    }
+
+    private void addCategorySection(LinearLayout list, TransactionType type, String title) {
+        TextView section = managementLabel(title, 14, R.color.wood_brown);
+        LinearLayout.LayoutParams sectionParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(32));
+        sectionParams.topMargin = dp(8);
+        list.addView(section, sectionParams);
+        for (String category : categoryStore.getCategories(type)) {
+            LinearLayout row = new LinearLayout(requireContext());
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), 0, dp(8), 0);
+            row.setBackgroundResource(R.drawable.bg_details_picker_option);
+            TextView name = managementLabel(category, 14, R.color.ink);
+            row.addView(name, new LinearLayout.LayoutParams(0, dp(52), 1));
+            TextView delete = managementAction("删除", R.color.expense_red);
+            delete.setContentDescription("删除分类" + category);
+            delete.setOnClickListener(v -> confirmDeleteCategory(type, category));
+            row.addView(delete, new LinearLayout.LayoutParams(dp(56), dp(48)));
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+            rowParams.topMargin = dp(6);
+            list.addView(row, rowParams);
+        }
+    }
+
+    private void confirmDeleteCategory(TransactionType type, String category) {
+        new ForestDialogBuilder(requireContext())
+                .setTitle("删除分类？")
+                .setMessage("“" + category + "”会从以后记账的分类列表中移除，历史账单不会删除。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认删除", (dialog, which) -> {
+                    if (categoryStore.deleteCategory(type, category)) {
+                        renderProfileSummary();
+                        Toast.makeText(requireContext(), "分类已删除", Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
+    }
+
+    private void showLedgerManager() {
+        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
+        LinearLayout root = managementRoot("FOREST LEDGERS", "管理账本",
+                "点击账本名称可切换。删除账本会同时删除它的交易、资产和借还记录。");
+        LinearLayout list = new LinearLayout(requireContext());
+        list.setOrientation(LinearLayout.VERTICAL);
+        for (Ledger ledger : repository.getLedgers()) {
+            addLedgerRow(list, dialog, ledger);
+        }
+        root.addView(list, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView create = managementAction("＋  新建账本", R.color.forest_green);
+        create.setBackgroundResource(R.drawable.bg_details_picker_selected);
+        create.setOnClickListener(v -> {
+            dialog.dismiss();
+            showCreateLedgerDialog();
+        });
+        LinearLayout.LayoutParams createParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        createParams.topMargin = dp(12);
+        root.addView(create, createParams);
+        TextView done = managementAction("完成", R.color.wood_brown);
+        done.setOnClickListener(v -> dialog.dismiss());
+        root.addView(done, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+        showPaperSheet(dialog, root);
+    }
+
+    private void addLedgerRow(LinearLayout list, BottomSheetDialog dialog, Ledger ledger) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), 0, dp(8), 0);
+        row.setBackgroundResource(R.drawable.bg_details_picker_option);
+        TextView name = managementLabel(ledger.getName()
+                + (ledger.getId().equals(repository.getCurrentLedger().getId()) ? "  · 当前" : ""),
+                14, R.color.ink);
+        name.setContentDescription("切换到" + ledger.getName());
+        name.setOnClickListener(v -> {
+            repository.switchLedger(ledger.getId());
+            dialog.dismiss();
+        });
+        row.addView(name, new LinearLayout.LayoutParams(0, dp(52), 1));
+        TextView delete = managementAction("删除", R.color.expense_red);
+        delete.setContentDescription("删除账本" + ledger.getName());
+        delete.setOnClickListener(v -> confirmDeleteLedger(dialog, ledger));
+        row.addView(delete, new LinearLayout.LayoutParams(dp(56), dp(48)));
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        rowParams.topMargin = dp(6);
+        list.addView(row, rowParams);
+    }
+
+    private void confirmDeleteLedger(BottomSheetDialog managerDialog, Ledger ledger) {
+        int transactionCount = 0;
+        for (com.example.pkmapp.data.Transaction transaction : repository.getAllTransactions()) {
+            if (ledger.getId().equals(transaction.getLedgerId())) {
+                transactionCount++;
+            }
+        }
+        new ForestDialogBuilder(requireContext())
+                .setTitle("删除账本？")
+                .setMessage("将删除“" + ledger.getName() + "”及其中 " + transactionCount
+                        + " 笔交易、资产和借还记录，此操作无法撤销。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确认删除", (dialog, which) -> {
+                    try {
+                        if (repository.getLedgers().size() <= 1) {
+                            Toast.makeText(requireContext(), "至少保留一本账本", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        new BorrowingRecordStore(requireContext()).deleteForLedger(ledger.getId());
+                        assetStore.deleteStartingValues(ledger.getId());
+                        repository.deleteLedger(ledger.getId());
+                        managerDialog.dismiss();
+                        renderProfileSummary();
+                        Toast.makeText(requireContext(), "账本已删除", Toast.LENGTH_SHORT).show();
+                    } catch (IllegalStateException exception) {
+                        Toast.makeText(requireContext(), exception.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
+    }
+
+    private void showCreateLedgerDialog() {
+        EditText input = new EditText(requireContext());
+        input.setSingleLine(true);
+        input.setHint("例如：北京旅行账本");
+        new ForestDialogBuilder(requireContext())
+                .setTitle("新建账本")
+                .setView(input)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("创建并切换", (dialog, which) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(requireContext(), "请输入账本名称", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    repository.switchLedger(repository.createLedger(name).getId());
+                    renderProfileSummary();
+                    Toast.makeText(requireContext(), "账本已创建", Toast.LENGTH_SHORT).show();
+                }).show();
+    }
+
+    private LinearLayout managementRoot(String eyebrowText, String titleText, String hintText) {
+        LinearLayout root = new LinearLayout(requireContext());
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(20), dp(20), dp(16));
+        root.setBackgroundResource(R.drawable.bg_details_picker_sheet);
+        TextView eyebrow = managementLabel(eyebrowText, 9, R.color.forest_green);
+        eyebrow.setLetterSpacing(0.12f);
+        root.addView(eyebrow, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)));
+        TextView title = managementLabel(titleText, 21, R.color.wood_brown);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        root.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(34)));
+        TextView hint = managementLabel(hintText, 12, R.color.wood_brown);
+        root.addView(hint, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return root;
+    }
+
+    private TextView managementLabel(String value, int size, int color) {
+        TextView view = new TextView(requireContext());
+        view.setText(value);
+        view.setTextSize(size);
+        view.setTextColor(ContextCompat.getColor(requireContext(), color));
+        view.setGravity(Gravity.CENTER_VERTICAL);
+        return view;
+    }
+
+    private TextView managementAction(String value, int color) {
+        TextView view = managementLabel(value, 13, color);
+        view.setGravity(Gravity.CENTER);
+        view.setTypeface(null, android.graphics.Typeface.BOLD);
+        view.setClickable(true);
+        view.setFocusable(true);
+        return view;
     }
 
     private void showAvatarPreview() {

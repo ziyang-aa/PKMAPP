@@ -2,7 +2,6 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_fixed_forest_backdrop"
     android:clipToPadding="false"
     android:fillViewport="true"
     android:paddingBottom="88dp">
@@ -178,7 +177,7 @@
             <ImageView
                 android:layout_width="200dp"
                 android:layout_height="200dp"
-                android:contentDescription="正在休息的妙蛙种子"
+                android:contentDescription="正在休息的小熊"
                 android:scaleType="centerInside"
                 android:src="@drawable/bulbasaur_sleeping"
                 android:translationY="8dp" />
@@ -263,6 +262,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/profile_asset_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_4"
@@ -423,8 +423,13 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/profile_category_manage_button"
             android:layout_width="match_parent"
             android:layout_height="58dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:contentDescription="管理记账分类"
+            android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -448,6 +453,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/profile_category_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="22 个分类  ·›"
@@ -458,8 +464,13 @@
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#C2DDCF" />
 
         <LinearLayout
+            android:id="@+id/profile_ledger_manage_button"
             android:layout_width="match_parent"
             android:layout_height="58dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:contentDescription="管理账本"
+            android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -483,6 +494,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/profile_ledger_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="1 本账本  ·›"

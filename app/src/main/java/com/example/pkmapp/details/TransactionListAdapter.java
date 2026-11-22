@@ -24,13 +24,20 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
     private static final int VIEW_TYPE_TRANSACTION = 2;
     private final List<DetailsListItem> items = new ArrayList<>();
     private final OnDeleteRequested onDeleteRequested;
+    private final OnEditRequested onEditRequested;
 
-    public TransactionListAdapter(OnDeleteRequested onDeleteRequested) {
+    public TransactionListAdapter(OnDeleteRequested onDeleteRequested,
+            OnEditRequested onEditRequested) {
         this.onDeleteRequested = onDeleteRequested;
+        this.onEditRequested = onEditRequested;
     }
 
     public interface OnDeleteRequested {
         void onDeleteRequested(Transaction transaction);
+    }
+
+    public interface OnEditRequested {
+        void onEditRequested(Transaction transaction);
     }
 
     public void submit(List<DetailsListItem> newItems) {
@@ -60,10 +67,11 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         DetailsListItem item = items.get(position);
         if (holder instanceof HeaderViewHolder) {
-            ((HeaderViewHolder) holder).header.setText(item.getHeaderLabel());
+            ((HeaderViewHolder) holder).bind(item);
             return;
         }
-        ((TransactionViewHolder) holder).bind(item.getTransaction(), onDeleteRequested);
+        ((TransactionViewHolder) holder).bind(item.getTransaction(), onDeleteRequested,
+                onEditRequested);
     }
 
     @Override
@@ -73,10 +81,27 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
 
     private static final class HeaderViewHolder extends RecyclerView.ViewHolder {
         private final TextView header;
+        private final TextView netAmount;
 
         HeaderViewHolder(@NonNull View itemView) {
             super(itemView);
             header = itemView.findViewById(R.id.transaction_date_header);
+            netAmount = itemView.findViewById(R.id.transaction_date_net);
+        }
+
+        void bind(DetailsListItem item) {
+            header.setText(item.getHeaderLabel());
+            long net = item.getNetAmountInCents();
+            if (net == 0L) {
+                netAmount.setText("收支平衡");
+                netAmount.setTextColor(ContextCompat.getColor(itemView.getContext(),
+                        R.color.wood_brown));
+            } else {
+                String prefix = net > 0L ? "+" : "−";
+                netAmount.setText(prefix + MoneyParser.formatCents(Math.abs(net)));
+                netAmount.setTextColor(ContextCompat.getColor(itemView.getContext(), net > 0L
+                        ? R.color.forest_green : R.color.expense_red));
+            }
         }
     }
 
@@ -86,6 +111,7 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
         private final TextView note;
         private final TextView type;
         private final TextView amount;
+        private final TextView edit;
         private final TextView delete;
 
         TransactionViewHolder(@NonNull View itemView) {
@@ -95,10 +121,12 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
             note = itemView.findViewById(R.id.transaction_note);
             type = itemView.findViewById(R.id.transaction_type);
             amount = itemView.findViewById(R.id.transaction_amount);
+            edit = itemView.findViewById(R.id.transaction_edit);
             delete = itemView.findViewById(R.id.transaction_delete);
         }
 
-        void bind(Transaction transaction, OnDeleteRequested onDeleteRequested) {
+        void bind(Transaction transaction, OnDeleteRequested onDeleteRequested,
+                OnEditRequested onEditRequested) {
             boolean income = transaction.getType() == TransactionType.INCOME;
             boolean savingsDeposit = income && transaction.getCategory().startsWith("攒钱 · ");
             int color = ContextCompat.getColor(itemView.getContext(), income
@@ -120,6 +148,8 @@ public final class TransactionListAdapter extends RecyclerView.Adapter<RecyclerV
             amount.setText((income ? "＋" : "−")
                     + MoneyParser.formatCents(transaction.getAmountInCents()));
             amount.setTextColor(color);
+            edit.setContentDescription("编辑这笔" + transaction.getCategory() + "交易");
+            edit.setOnClickListener(view -> onEditRequested.onEditRequested(transaction));
             delete.setContentDescription("删除这笔" + transaction.getCategory() + "交易");
             delete.setOnClickListener(view -> onDeleteRequested.onDeleteRequested(transaction));
         }

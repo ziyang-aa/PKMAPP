@@ -58,6 +58,22 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/transaction_edit"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="@dimen/space_8"
+        android:background="@drawable/bg_transaction_edit"
+        android:clickable="true"
+        android:contentDescription="编辑交易"
+        android:focusable="true"
+        android:gravity="center"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:text="编辑"
+        android:textColor="@color/forest_green"
+        android:textSize="11sp" />
+
+    <TextView
         android:id="@+id/transaction_delete"
         android:layout_width="48dp"
         android:layout_height="48dp"

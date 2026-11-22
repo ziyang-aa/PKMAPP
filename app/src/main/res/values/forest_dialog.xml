@@ -1,0 +1,41 @@
+<resources>
+    <style name="ThemeOverlay.PkmAPP.ForestDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">#FFFCF3</item>
+        <item name="colorOnSurface">@color/forest_deep</item>
+        <item name="colorPrimary">@color/forest_green</item>
+        <item name="android:windowMinWidthMajor">0dp</item>
+        <item name="android:windowMinWidthMinor">0dp</item>
+        <item name="android:backgroundDimAmount">0.3</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+    <style name="ThemeOverlay.PkmAPP.ForestBottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.PkmAPP.ForestBottomSheet</item>
+        <item name="colorSurface">#FFFCF3</item>
+        <item name="colorOnSurface">@color/forest_deep</item>
+        <item name="colorPrimary">@color/forest_green</item>
+    </style>
+    <style name="Widget.PkmAPP.ForestBottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">#FFFCF3</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.PkmAPP.ForestBottomSheet</item>
+    </style>
+    <style name="ShapeAppearance.PkmAPP.ForestBottomSheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">22dp</item>
+        <item name="cornerSizeTopRight">22dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+    <style name="ThemeOverlay.PkmAPP.StudySheet" parent="ThemeOverlay.PkmAPP.ForestBottomSheet">
+        <item name="bottomSheetStyle">@style/Widget.PkmAPP.StudySheet</item>
+        <item name="colorSurface">#FDFAF0</item>
+    </style>
+    <style name="Widget.PkmAPP.StudySheet" parent="Widget.PkmAPP.ForestBottomSheet">
+        <item name="backgroundTint">#FDFAF0</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.PkmAPP.StudySheet</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
+    </style>
+    <style name="ShapeAppearance.PkmAPP.StudySheet" parent="ShapeAppearance.PkmAPP.ForestBottomSheet">
+        <item name="cornerSizeTopLeft">32dp</item>
+        <item name="cornerSizeTopRight">32dp</item>
+    </style>
+</resources>

@@ -1,0 +1,689 @@
+/* Shared forest-journal controls. The approved cottage entrance remains unchanged. */
+:root { --journal-green: #456444; --journal-line: #d5d6bf; }
+.phone .focus-card, .phone .chart-card {
+  border-radius: 18px 20px 17px 19px;
+  border: 1px solid #d6d8c2;
+  background: linear-gradient(150deg,#fffef8,#fffcf3);
+  box-shadow: inset 0 0 0 3px #fffdf7, inset 0 0 0 4px #ece8d8, 0 3px 0 #ded9c7, 0 9px 20px #52613c08;
+}
+.phone .hero { height: 150px; }
+.phone .timer { position: relative; height: 216px; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.phone .timer::before { content: "专 注 时 间"; position: relative; z-index: 1; font-size: 9px; color: var(--muted); margin-bottom: 11px; }
+.clock-dial { position: absolute; width: 216px; height: 216px; left: 50%; top: 50%; transform: translate(-50%,-50%); stroke-width: .8; overflow: visible; }
+.clock-dial .dial-progress { transform: rotate(-90deg); transform-origin: 110px 110px; stroke-linecap: round; transition: stroke-dasharray 1s linear; }
+.phone .clock { position: relative; z-index: 1; font-size: 30px; letter-spacing: 1px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.phone .timer-subject { position: relative; z-index: 1; max-width: 145px; font-size: 10px; margin-top: 10px; line-height: 1.6; }
+.phone .focus-card .goal-progress { display: none; }
+.primary-button { border-radius: 12px; background: linear-gradient(#59754f,#456444); border-color: #345439; box-shadow: inset 0 0 0 3px #ffffff08,inset 0 0 0 4px #e9f0c733,0 3px 0 #314d36,0 5px 9px #314d3612; letter-spacing: .6px; min-height: 46px; transition: transform .15s,box-shadow .15s; }
+.primary-button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 0 0 3px #ffffff08,inset 0 0 0 4px #e9f0c733,0 1px 0 #314d36; }
+.secondary-button, .goal-chip { border-radius: 11px; background: linear-gradient(#fffef8,#f4f1e5); border: 1px solid var(--journal-line); box-shadow: 0 2px 0 #e0dbc8; transition: transform .15s, background .15s, border-color .15s; }
+.secondary-button:active,.goal-chip:active { transform: translateY(1px); }
+.phone .goal-picker { margin-top: 5px; gap: 6px; }
+.phone .goal-chip { min-height: 32px; padding: 4px 9px; font-size: 10px; }
+.phone .goal-chip.active { background: #e8eddb; border-color: #9eaf88; color: #315e3a; box-shadow: inset 0 -2px #bbc9a5; }
+.phone .subject-button { min-height: 66px; padding: 18px 9px 10px; border-radius: 10px 11px 13px 10px; background: linear-gradient(#fffefa,#faf7ed); border-color: #dedfcb; box-shadow: 0 2px 0 #dfdac7; }
+.phone .subject-button::before { content: ""; position: absolute; left: 10px; top: -1px; width: 8px; height: 16px; background: var(--subject); clip-path: polygon(0 0,100% 0,100% 100%,50% 76%,0 100%); }
+.phone .subject-button.active { background: linear-gradient(#f6f8ec,#eaf0de); border-color: #9eaf88; box-shadow: 0 2px 0 #bac7a6; }
+.phone .subject-button .selected-dot { width: 12px; height: 12px; top: 6px; right: 6px; background: #456444; }
+.phone .subject-button .selected-dot::after { content: ""; position: absolute; width: 5px; height: 3px; left: 3px; top: 3px; border-left: 1px solid #fff; border-bottom: 1px solid #fff; transform: rotate(-45deg); }
+.phone .subject-button:disabled { opacity: .7; }
+.phone .subject-button.active:disabled { opacity: 1; }
+.phone .app-nav:not(.life-nav) { margin: 5px 10px 8px; padding: 5px 6px; height: 65px; border: 1px solid #d1d4bd; border-radius: 22px; box-shadow: inset 0 0 0 3px #fffdf7,inset 0 0 0 4px #ece8d8,0 3px 0 #dfdac7; }
+.phone .app-nav:not(.life-nav)::after { display: none; }
+.phone .app-nav:not(.life-nav) .nav-button { position: relative; margin: 0 3px; border-radius: 15px; font-size: 10px; transition: background .2s; }
+.phone .app-nav:not(.life-nav) .nav-button.active { background: #e8eddf; }
+.phone .app-nav:not(.life-nav) .nav-button.active svg { background: none; box-shadow: none; }
+.phone .app-nav:not(.life-nav) .nav-button.active span { margin-top: 0; }
+.phone .app-nav:not(.life-nav) .nav-button.active::after { content: ""; position: absolute; bottom: 2px; width: 20px; height: 2px; border-radius: 2px; background: #b39460; }
+dialog { border-radius: 22px 24px 21px 23px; background: #fffcf3 url('../app/src/main/res/drawable-nodpi/forest_paper_clean.webp') center/620px; box-shadow: inset 0 0 0 4px #fffcf3, inset 0 0 0 5px #e7e4d3,0 25px 90px #2b382944; }
+dialog .sheet-leaf { width: 36px; height: 36px; padding: 7px; background: #edf0df; border: 1px solid #d4dbc2; border-radius: 15px; }
+dialog input,dialog textarea { background: linear-gradient(#f9f8f0,#f3f2e6); box-shadow: inset 0 2px 3px #6f795908; }
+dialog input:focus,dialog textarea:focus { outline: 2px solid #9eaf8870; border-color: #8eaa77; outline-offset: 1px; }
+dialog .reward-result { border: 1px solid #d2dbc2; background: #edf1e3; }
+@media(prefers-reduced-motion: reduce) { .primary-button,.secondary-button,.goal-chip,.clock-dial .dial-progress { transition: none; } }
+
+/* Refinement: quieter surfaces, a reachable subject picker and short, cancellable feedback. */
+:root { --muted: #736c5d; }
+.phone .focus-card,.phone .chart-card { box-shadow: none; border-color: #dddcc9; background: #fffcf3; }
+.phone .hero { height: 104px; }
+.phone .hero-copy { padding-top: 10px; }
+.phone .hero-copy h2 { font-size: 24px; }
+.phone .timer { height: 188px; }
+.phone .timer::before { content: attr(data-status); font-size: 11px; }
+.phone .clock-dial { width: 188px; height: 188px; }
+.phone .clock { font-family: var(--sans); font-size: 27px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
+.phone .timer-subject { font-size: 12px; }
+.subject-selector { display: flex; align-items: center; gap: 10px; padding: 9px 3px; min-height: 48px; width: 100%; background: transparent; border: 0; color: var(--deep); }
+.subject-selector strong { font-size: 14px; font-weight: 500; }
+.subject-selector span { margin-left: auto; font-size: 11px; color: var(--muted); }
+.subject-selector:disabled { opacity: .85; }
+.primary-button { box-shadow: 0 1px 0 #314d36; background: linear-gradient(#56724e,#456444); min-height: 48px; transition: transform 150ms ease-out, filter 150ms; }
+.primary-button:active:not(:disabled) { box-shadow: none; transform: scale(.975); }
+.secondary-button,.goal-chip,.chart-tabs button { box-shadow: none; }
+.phone .subject-button,.phone .subject-button.active { box-shadow: none; }
+.phone .app-nav:not(.life-nav) { height: 60px; box-shadow: none; }
+.phone .gentle-note { font-size: 11px; }
+.phone .daily-summary { font-size: 13px; border-top: 0; }
+.phone .daily-summary small { font-size: 11px; }
+.press-feedback:not(:disabled) { transform: scale(.975) !important; }
+dialog { box-shadow: 0 18px 60px #2b38292b; }
+dialog .sheet-leaf { border: 0; background: transparent; padding: 4px; width: 28px; height: 28px; margin-bottom: 8px; }
+dialog h2 { font-size: 22px; }
+dialog p { font-size: 12px; }
+dialog.subject-sheet { margin: auto auto 0; width: min(100%,420px); max-width: 420px; max-height: 85dvh; border-radius: 22px 22px 0 0; padding: 29px 22px 28px; }
+dialog.subject-sheet::before { content: ""; position: absolute; top: 10px; left: calc(50% - 15px); width: 30px; height: 3px; border-radius: 2px; background: #ced5c0; }
+.subject-sheet .subject-button { min-height: 76px; font-size: 13px; box-shadow: none; }
+.subject-sheet .subject-button small { font-size: 11px; }
+.subject-sheet .subject-button::before { content: ""; position: absolute; top: 0; left: 10px; width: 8px; height: 16px; background: var(--subject); clip-path: polygon(0 0,100% 0,100% 100%,50% 76%,0 100%); }
+@media(prefers-reduced-motion: reduce) { .press-feedback:not(:disabled),.primary-button:active:not(:disabled) { transform: none !important; } }
+
+/* The phone owns the fixed backdrop. Only transparent content above it scrolls. */
+.screens .phone:not(.is-hub):not(.is-life) { position: relative; isolation: isolate; background: #f5f1e7 url('../app/src/main/res/drawable-nodpi/bg_fixed_forest.png') center/100% 100% no-repeat; }
+.screens .phone:not(.is-hub):not(.is-life) > * { position: relative; z-index: 1; }
+.screens .phone:not(.is-hub):not(.is-life) > .page-scroll { position: absolute; inset: 0; background: transparent; padding-top: 31px; padding-bottom: 86px; }
+.screens .phone:not(.is-hub):not(.is-life) > .status-bar { z-index: 3; pointer-events: none; }
+.screens .phone:not(.is-hub):not(.is-life) > .app-nav { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; }
+.screens .phone[data-page="focus"] .hero { background: transparent; }
+@media (max-width: 760px) {
+  .screens .phone:not(.is-hub):not(.is-life) > .page-scroll { padding-top: env(safe-area-inset-top, 0px); }
+}
+
+/* ==========================================================================
+   Redesigned UI Controls: Segmented Toggles, Forest Checkboxes, Switches & Dialogs
+   ========================================================================== */
+
+/* 1. Unified Forest Segmented Controls (.forest-seg, .period-picker, .chart-tabs) */
+.forest-seg,
+.period-picker,
+.chart-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px;
+  border-radius: 14px;
+  border: 1px solid #d7d3bf;
+  background: #ebe6d7;
+  box-shadow: inset 0 1px 2px rgba(68, 60, 42, 0.07);
+}
+.chart-tabs {
+  margin: 13px 0 10px;
+}
+.forest-seg button,
+.period-picker button,
+.chart-tabs button {
+  flex: 1;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 10.5px;
+  background: transparent;
+  color: #736c5d;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: none;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+.forest-seg button:hover:not(.active):not([aria-pressed="true"]),
+.period-picker button:hover:not(.active),
+.chart-tabs button:hover:not(.active) {
+  color: #315e3a;
+  background: rgba(255, 252, 243, 0.45);
+}
+.forest-seg button.active,
+.forest-seg button[aria-pressed="true"],
+.period-picker button.active,
+.chart-tabs button.active {
+  background: linear-gradient(180deg, #fffef9 0%, #f1f5e7 100%);
+  border-color: #b4c29e;
+  color: #283f2c;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(49, 94, 58, 0.09), 0 1px 0 #c6cfb3;
+}
+.forest-seg.moss-active button.active,
+.forest-seg.moss-active button[aria-pressed="true"] {
+  background: linear-gradient(180deg, #eef3e4 0%, #e1ead2 100%);
+  border-color: #9bb084;
+  color: #263f2a;
+}
+.forest-seg .seg-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+  transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+}
+.forest-seg button.active .seg-dot,
+.forest-seg button[aria-pressed="true"] .seg-dot {
+  background: #456444;
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* Goal Chips in Focus Card & Dialogs */
+.phone .goal-picker,
+.goal-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 13px;
+  background: #f4f0e4;
+  border: 1px solid #e3dfd0;
+}
+.phone .goal-chip,
+.goal-chip {
+  min-height: 32px;
+  padding: 4px 11px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #736c5d;
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: none;
+}
+.phone .goal-chip.active,
+.goal-chip.active {
+  background: #e6eed8;
+  border-color: #9fb289;
+  color: #283f2c;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(49, 94, 58, 0.08);
+}
+
+/* 2. Forest Hand-Journal Checkboxes & Multi-Select Rows */
+.forest-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.forest-check-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 13px;
+  border-radius: 14px;
+  border: 1px solid #dedbc9;
+  background: #faf7ee;
+  color: #283f2c;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background 160ms ease, border-color 160ms ease, transform 120ms ease, box-shadow 160ms ease;
+}
+.forest-check-row:hover:not(.is-disabled) {
+  border-color: #b7c3a3;
+  background: #f5f7ec;
+}
+.forest-check-row:active:not(.is-disabled) {
+  transform: scale(0.985);
+}
+.forest-check-row.checked,
+.forest-check-row[aria-checked="true"] {
+  background: linear-gradient(180deg, #eff4e5 0%, #e6eed9 100%);
+  border-color: #95aa7d;
+  box-shadow: 0 1px 3px rgba(69, 100, 68, 0.08);
+}
+.forest-check-row.is-disabled {
+  opacity: 0.72;
+  background: #f3f0e5;
+  border-style: dashed;
+  cursor: default;
+}
+.forest-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1.5px solid #b3bba1;
+  background: #fffcf3;
+  box-shadow: inset 0 1px 2px rgba(59, 53, 44, 0.05);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: transparent;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.forest-checkbox svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+  transform: scale(0.5);
+  opacity: 0;
+  transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 140ms ease;
+}
+.forest-check-row.checked .forest-checkbox,
+.forest-check-row[aria-checked="true"] .forest-checkbox {
+  background: linear-gradient(180deg, #58784f 0%, #456444 100%);
+  border-color: #345439;
+  color: #fffcf3;
+  box-shadow: 0 2px 4px rgba(69, 100, 68, 0.2), 0 0 0 3px rgba(158, 175, 136, 0.22);
+}
+.forest-check-row.checked .forest-checkbox svg,
+.forest-check-row[aria-checked="true"] .forest-checkbox svg {
+  transform: scale(1);
+  opacity: 1;
+}
+.forest-check-body {
+  flex: 1;
+  min-width: 0;
+}
+.forest-check-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #283f2c;
+  line-height: 1.35;
+}
+.forest-check-row.checked .forest-check-title,
+.forest-check-row[aria-checked="true"] .forest-check-title {
+  font-weight: 600;
+}
+.forest-check-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #736c5d;
+  line-height: 1.4;
+}
+.course-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  border: 1px solid #d5d1be;
+  background: #efece0;
+  color: #5b5446;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.forest-check-row.checked .course-code,
+.forest-check-row[aria-checked="true"] .course-code {
+  background: #dce6cb;
+  border-color: #adc098;
+  color: #283f2c;
+}
+.course-tag {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: #e6ebe0;
+  color: #5f7053;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* 3. Forest Pill Switch Row (.forest-switch-row & .forest-switch) */
+.forest-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid #dedbc9;
+  background: #faf7ee;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.forest-switch-row[aria-checked="true"],
+.forest-switch-row.checked {
+  background: #f1f5e8;
+  border-color: #b4c29e;
+}
+.forest-switch-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.forest-switch-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #e9eedc;
+  color: #315e3a;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.forest-switch-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.forest-switch {
+  position: relative;
+  width: 44px;
+  height: 25px;
+  border-radius: 99px;
+  border: 1px solid #c5c0ab;
+  background: #dfdBC9;
+  flex-shrink: 0;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.forest-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #fffcf3;
+  box-shadow: 0 1px 3px rgba(40, 48, 36, 0.24);
+  transition: transform 180ms cubic-bezier(0.2, 0.85, 0.32, 1.15);
+}
+.forest-switch-row[aria-checked="true"] .forest-switch,
+.forest-switch-row.checked .forest-switch {
+  background: #456444;
+  border-color: #345439;
+}
+.forest-switch-row[aria-checked="true"] .forest-switch::after,
+.forest-switch-row.checked .forest-switch::after {
+  transform: translateX(19px);
+}
+
+/* 4. Refined Dialog & Bottom Sheet Layouts */
+dialog,
+.forest-dialog-card {
+  position: relative;
+  border-radius: 24px;
+  border: 1px solid #c9cfb2;
+  background: #fffcf3 url('../app/src/main/res/drawable-nodpi/forest_paper_clean.webp') center/560px;
+  box-shadow: inset 0 0 0 3px #fffcf3, inset 0 0 0 4px #ebe7d6, 0 20px 55px rgba(38, 52, 36, 0.22);
+  padding: 22px 22px 20px;
+  color: #283f2c;
+}
+.dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+  padding-right: 36px;
+}
+.dialog-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #e8eedb;
+  border: 1px solid #ced8bc;
+  color: #315e3a;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.dialog-badge.danger {
+  background: #f6e7e2;
+  border-color: #e2c5bc;
+  color: #8d4836;
+}
+.dialog-badge svg {
+  width: 19px;
+  height: 19px;
+}
+.dialog-head-copy {
+  flex: 1;
+  min-width: 0;
+}
+.dialog-head-copy .dialog-kicker {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #6b7d59;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.dialog-head-copy .dialog-kicker.danger {
+  color: #9e5643;
+}
+.dialog-head-copy h2,
+.dialog-head-copy h3 {
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 500;
+  color: #283f2c;
+  margin: 0;
+  line-height: 1.25;
+}
+.close-sheet,
+.dialog-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 11px;
+  border: 1px solid #e1dece;
+  background: #f4f1e4;
+  color: #736c5d;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: background 150ms ease, color 150ms ease;
+}
+.close-sheet:hover,
+.dialog-close-btn:hover {
+  background: #e7edda;
+  color: #283f2c;
+}
+.dialog-callout {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #dcd8c5;
+  background: #f5f2e6;
+  font-size: 12px;
+  color: #5c5547;
+  line-height: 1.6;
+}
+.dialog-callout strong {
+  color: #283f2c;
+  font-weight: 600;
+}
+.dialog-callout.danger {
+  background: #faf0ec;
+  border-color: #e6cdc5;
+  color: #774133;
+}
+.dialog-callout.danger strong {
+  color: #8d4836;
+}
+.focus-receipt-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #c9d5b8;
+  background: linear-gradient(145deg, #edf3e2 0%, #e3ecd4 100%);
+}
+.focus-receipt-card .receipt-subject {
+  font-size: 11.5px;
+  color: #566849;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.focus-receipt-card .receipt-duration {
+  font-family: var(--serif);
+  font-size: 28px;
+  color: #283f2c;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.focus-receipt-card .receipt-edit {
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid #bdcaa9;
+  background: #fffcf3;
+  color: #315e3a;
+  font-size: 11px;
+  font-weight: 500;
+  min-height: 32px;
+}
+.preset-chips {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+.preset-chip {
+  flex: 1;
+  min-height: 34px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  border: 1px solid #d8d5c2;
+  background: #f5f2e6;
+  color: #5d5749;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.preset-chip.active,
+.preset-chip:hover {
+  background: #e7edda;
+  border-color: #9eaf88;
+  color: #283f2c;
+  font-weight: 600;
+}
+.dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.32fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+.dialog-actions .primary-button,
+.dialog-actions .secondary-button,
+.dialog-actions .danger-button {
+  margin-top: 0 !important;
+  width: 100%;
+  min-height: 46px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
+  border: 1px solid #7d3b2b;
+  background: linear-gradient(180deg, #a75542 0%, #8d4836 100%);
+  color: #fffcf3;
+  box-shadow: 0 2px 0 #632e21;
+  padding: 10px 14px;
+  transition: transform 150ms ease, filter 150ms ease;
+}
+.danger-button:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+/* 5. Bottom Sheet Drawer Specimen (.forest-sheet-card) */
+.forest-sheet-card {
+  border-radius: 30px 30px 20px 20px;
+  border: 1px solid #cfd4bc;
+  background: #fdfaf0;
+  box-shadow: 0 16px 40px rgba(43, 56, 41, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sheet-grip {
+  width: 36px;
+  height: 4px;
+  border-radius: 99px;
+  background: #b8c0a8;
+  margin: 10px auto 4px;
+}
+.sheet-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px 12px;
+}
+.sheet-nav-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 11px;
+  border: 1px solid #e0ddcd;
+  background: #f4f0e3;
+  color: #315e3a;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.sheet-search-box {
+  position: relative;
+  margin: 0 18px 10px;
+}
+.sheet-search-box input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 36px 9px 36px;
+  border-radius: 13px;
+  border: 1px solid #d1cfb9;
+  background: #f6f3e8;
+  color: #283f2c;
+  font-size: 13px;
+}
+.sheet-search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #736c5d;
+  pointer-events: none;
+}
+.sheet-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid #e4e1d0;
+  background: #faf6ea;
+}
+.sheet-footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sheet-footer-meta strong {
+  font-size: 13px;
+  color: #283f2c;
+}
+.sheet-footer-meta button {
+  border: 0;
+  background: none;
+  padding: 0;
+  min-height: 20px;
+  color: #456444;
+  font-size: 11px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -40,7 +40,11 @@
     <style name="Widget.PkmAPP.ChartToggleButton" parent="Widget.Material3.Button.TextButton">
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="android:minHeight">48dp</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:checkable">true</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="strokeColor">@color/nav_item_border</item>
+        <item name="strokeWidth">0dp</item>
         <item name="backgroundTint">@color/chart_toggle_button_tint</item>
         <item name="android:textColor">@color/chart_toggle_text</item>
         <item name="android:textSize">15sp</item>
@@ -61,14 +65,14 @@
     <style name="Widget.PkmAPP.DatePickerBox">
         <item name="android:background">@drawable/bg_date_picker_box</item>
         <item name="android:gravity">center_vertical|start</item>
-        <item name="android:paddingStart">16dp</item>
-        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">8dp</item>
         <item name="android:textColor">@color/wood_brown</item>
         <item name="android:textSize">16sp</item>
         <item name="android:maxLines">1</item>
         <item name="android:singleLine">true</item>
         <item name="android:drawableEnd">@drawable/ic_chevron_down</item>
-        <item name="android:drawablePadding">8dp</item>
+        <item name="android:drawablePadding">4dp</item>
     </style>
 
     <style name="Widget.PkmAPP.CalculatorKey" parent="Widget.Material3.Button.TextButton">

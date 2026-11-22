@@ -264,6 +264,42 @@
     .month-row .month-button { width: auto; color: var(--forest); }
     .month-row .month-button:last-child { padding: 0 8px; border: 0; background: transparent; font-size: 12px; }
 
+    /* Details screen: compact controls, stronger ledger hierarchy, lighter list chrome. */
+    .screen[data-screen="details"] .screen-header { min-height: 66px; }
+    .details-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 5px; }
+    .details-toolbar .ledger-button { min-height: 48px; width: auto; border-radius: 14px; }
+    .details-toolbar .month-row { display: flex; align-items: center; gap: 6px; margin-top: 0; }
+    .details-toolbar .month-button { min-height: 48px; padding: 0 10px; border-radius: 14px; white-space: nowrap; }
+    .details-toolbar .month-row .month-button:first-child { width: auto; }
+    .details-toolbar .month-row .month-button:last-child { min-width: 45px; padding: 0 8px; border: 1px solid rgba(123,92,59,.14); background: rgba(255,248,223,.7); font-size: 11px; }
+    .screen[data-screen="details"] .balance-card { margin-top: 14px; padding: 18px; border-radius: 22px; }
+    .screen[data-screen="details"] .balance-card h3 { font-size: 30px; letter-spacing: -.04em; }
+    .screen[data-screen="details"] .balance-meta { margin-top: 14px; padding-top: 12px; }
+    .screen[data-screen="details"] .balance-meta small { letter-spacing: .02em; }
+    .screen[data-screen="details"] .balance-meta b { font-size: 15px; }
+    .screen[data-screen="details"] .balance-meta .income b { color: #d8f0bd; }
+    .screen[data-screen="details"] .balance-meta .out b { color: #ffd0c1; }
+    .details-tools-section { margin-top: 18px; }
+    .details-tools-section .section-heading { margin-top: 0; margin-bottom: 8px; }
+    .details-tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .details-tool-button { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 8px 10px; border-radius: 14px; }
+    .details-tool-button .icon { flex: 0 0 auto; width: 20px; height: 20px; }
+    .details-tool-button strong { margin-top: 0; font-size: 11px; white-space: nowrap; }
+    .details-tool-button small { margin-top: 1px; font-size: 9px; white-space: nowrap; }
+    .details-transaction-section { margin-top: 20px; }
+    .details-transaction-section .section-heading { margin-top: 0; }
+    .details-transaction-list { border-top: 1px solid rgba(123,92,59,.14); }
+    .details-date-group + .details-date-group { margin-top: 8px; }
+    .details-date-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 9px 2px 3px; color: var(--wood); }
+    .details-date-heading strong { font-size: 12px; }
+    .details-date-heading span { color: var(--muted); font-size: 10px; }
+    .details-transaction-list .list-row { min-height: 62px; padding: 9px 2px; }
+    .details-transaction-list .list-icon { width: 32px; height: 32px; border-radius: 11px; }
+    .details-transaction-list .list-row b { display: flex; flex-direction: column; align-items: end; gap: 2px; font-size: 14px; }
+    .details-transaction-list .list-row b small { margin-top: 0; color: currentColor; font-size: 9px; font-weight: 650; opacity: .7; }
+    .details-transaction-list .list-row.income b { color: var(--forest); }
+    .details-transaction-list .list-row.expense b { color: var(--expense); }
+
     .balance-card { margin-top: 15px; padding: 20px; background: var(--forest); color: #fff8df; }
     .balance-card .balance-label { color: rgba(255,248,223,.75); font-size: 12px; }
     .balance-card h3 { margin-top: 4px; font-size: 31px; letter-spacing: -.05em; }
@@ -278,9 +314,10 @@
     .tool-button strong { display: block; margin-top: 7px; color: var(--wood); font-size: 12px; }
     .tool-button small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
 
-    .record-toggle, .chart-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--paper-deep); }
-    .toggle-button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; font-size: 13px; font-weight: 800; }
-    .toggle-button[aria-pressed="true"] { color: var(--forest); background: var(--paper-light); box-shadow: var(--small-shadow); }
+    .record-toggle, .chart-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; border: 1px solid #d7d2be; border-radius: 15px; background: #ebe5d5; box-shadow: inset 0 1px 2px rgba(68, 60, 42, .07); }
+    .toggle-button { min-height: 48px; border: 1px solid transparent; border-radius: 11px; color: #736c5d; background: transparent; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+    .toggle-button:hover:not([aria-pressed="true"]) { color: var(--forest); background: rgba(255, 252, 243, .45); }
+    .toggle-button[aria-pressed="true"] { color: #283f2c; border-color: #b4c29e; background: linear-gradient(180deg, #fffef9 0%, #f1f5e7 100%); box-shadow: 0 2px 5px rgba(49, 94, 58, .1), 0 1px 0 #c6cfb3; font-weight: 800; }
     .category-head { display: flex; align-items: center; justify-content: space-between; margin: 17px 2px 10px; }
     .category-head h3 { color: var(--wood); font-size: 15px; }
     .category-head small { color: var(--muted); font-size: 11px; }
@@ -332,16 +369,66 @@
     .savings-hero h3 { position: relative; z-index: 1; color: var(--forest); font-family: Georgia, "Songti SC", serif; font-size: 23px; }
     .savings-hero p { position: relative; z-index: 1; max-width: 190px; margin-top: 8px; color: var(--wood); font-size: 12px; line-height: 1.6; }
     .savings-hero img { position: absolute; z-index: 1; right: 8px; bottom: 3px; width: 130px; height: 130px; object-fit: contain; }
-    .goal-card { padding: 16px; margin-top: 11px; }
-    .goal-top { display: flex; align-items: center; gap: 10px; }
-    .goal-top img { width: 42px; height: 42px; object-fit: contain; }
-    .goal-top strong { display: block; font-size: 13px; }
-    .goal-top small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
-    .goal-amount { margin-left: auto; color: var(--forest); font-size: 12px; font-weight: 850; }
-    .progress-track { height: 9px; margin-top: 13px; overflow: hidden; border-radius: 99px; background: var(--paper-deep); }
-    .progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--orange); }
-    .goal-bottom { display: flex; justify-content: space-between; margin-top: 8px; color: var(--muted); font-size: 10px; }
-    .add-goal { display: flex; align-items: center; justify-content: center; min-height: 56px; margin-top: 12px; border: 1px dashed var(--forest); border-radius: 16px; color: var(--forest); background: rgba(255,248,223,.5); font-size: 12px; font-weight: 800; }
+    .savings-chooser { margin-top: 17px; }
+    .savings-chooser .section-heading { margin-bottom: 9px; }
+    .savings-chooser .section-heading span { color: var(--muted); }
+    .goal-variant-toggle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px; border: 1px solid rgba(123,92,59,.14); border-radius: 17px; background: rgba(238,228,204,.56); }
+    .goal-variant-button { min-height: 48px; padding: 5px 3px; border: 0; border-radius: 13px; color: var(--muted); background: transparent; cursor: pointer; font-size: 10px; font-weight: 800; line-height: 1.25; }
+    .goal-variant-button small { display: block; margin-top: 2px; color: inherit; font-size: 9px; font-weight: 600; opacity: .76; }
+    .goal-variant-button[aria-selected="true"], .goal-variant-button:hover, .goal-variant-button:focus-visible { color: var(--forest); background: var(--paper-light); box-shadow: var(--small-shadow); }
+    .screen[data-screen="savings"] .screen-content { padding-bottom: 150px; scroll-padding-bottom: 150px; }
+    .goal-card { position: relative; margin-top: 11px; margin-bottom: 12px; padding: 16px; overflow: visible; background: #fff8df; }
+    .goal-card::before { content: ""; position: absolute; z-index: 0; right: -40px; top: -48px; width: 130px; height: 130px; border-radius: 50%; background: rgba(168,213,140,.22); }
+    .goal-card > * { position: relative; z-index: 1; }
+    .goal-card[data-goal-theme="treasure"]::before { background: rgba(212,138,74,.2); }
+    .goal-card[data-goal-theme="journal"]::before { background: rgba(123,92,59,.14); }
+    .goal-card-kicker, .goal-card-main, .goal-editor, .goal-deposit, .goal-empty-note { position: relative; z-index: 1; }
+    .goal-card-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--forest); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .goal-card-kicker span:last-child { padding: 4px 7px; border-radius: 999px; color: var(--wood); background: rgba(255,248,223,.72); font-size: 9px; letter-spacing: 0; text-transform: none; }
+    .goal-card-main { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 12px; margin-top: 12px; }
+    .goal-art { display: block; width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 7px 5px rgba(92,69,38,.13)); }
+    .goal-card[data-goal-theme="treasure"] .goal-art { transform: rotate(-3deg); }
+    .goal-card[data-goal-theme="journal"] .goal-art { width: 104px; height: 104px; margin-left: -4px; }
+    .goal-empty-note strong, .goal-summary strong { display: block; color: var(--wood); font-family: Georgia, "Songti SC", serif; font-size: 19px; line-height: 1.15; }
+    .goal-empty-note p, .goal-summary p { margin-top: 6px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .goal-summary[hidden], .goal-editor[hidden], .goal-deposit[hidden], .goal-stat-line[hidden], .progress-track[hidden], .goal-bottom[hidden] { display: none; }
+    .goal-summary strong[data-goal-title]:empty::before { content: "未命名目标"; color: var(--muted); }
+    .goal-stat-line { display: flex; align-items: end; justify-content: space-between; gap: 8px; margin-top: 14px; }
+    .goal-stat-line small { display: block; color: var(--muted); font-size: 10px; }
+    .goal-stat-line b { display: block; margin-top: 3px; color: var(--forest); font-size: 17px; }
+    .goal-stat-line .goal-percent { color: var(--orange); font-size: 22px; }
+    .progress-track { height: 10px; margin-top: 11px; overflow: hidden; border-radius: 99px; background: var(--paper-deep); }
+    .progress-track i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--orange); transition: width 240ms var(--ease); }
+    .goal-card[data-goal-theme="seedling"] .progress-track i { background: var(--forest); }
+    .goal-bottom { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 10px; }
+    .goals-list { margin-top: 11px; }
+    .goals-list .goal-card { margin-top: 0; }
+    .goals-list .goal-card + .goal-card { margin-top: 12px; }
+    .goal-editor { display: grid; grid-template-columns: 1fr 118px; gap: 9px; margin-top: 14px; padding-top: 13px; border-top: 1px dashed rgba(123,92,59,.24); }
+    .goal-editor .field { margin-top: 0; }
+    .goal-editor .field label { font-size: 10px; }
+    .goal-editor input { min-height: 46px; padding: 0 11px; font-size: 12px; }
+    .goal-target-wrap { position: relative; }
+    .goal-target-wrap span { position: absolute; top: 12px; left: 11px; z-index: 1; color: var(--forest); font-weight: 850; }
+    .goal-target-wrap input { padding-left: 25px; }
+    .goal-save { grid-column: 1 / -1; min-height: 46px; margin-top: 0; border: 0; border-radius: 14px; color: #fff8df; background: var(--forest); box-shadow: 0 6px 14px rgba(78,129,70,.18); cursor: pointer; font-size: 12px; font-weight: 850; }
+    .goal-save:hover, .goal-save:focus-visible { filter: brightness(1.06); transform: translateY(-1px); }
+    .goal-deposit { display: grid; grid-template-columns: 1fr 92px; gap: 8px; align-items: end; margin-top: 12px; }
+    .goal-deposit .field { margin-top: 0; }
+    .goal-deposit label { display: block; margin: 0 0 5px 2px; color: var(--wood); font-size: 10px; font-weight: 800; }
+    .deposit-wrap { position: relative; }
+    .deposit-wrap span { position: absolute; top: 12px; left: 11px; z-index: 1; color: var(--orange); font-weight: 850; }
+    .deposit-wrap input { min-height: 46px; padding-left: 25px; border: 1px solid rgba(212,138,74,.34); border-radius: 13px; color: var(--ink); background: var(--paper-light); }
+    .deposit-submit { min-height: 46px; border: 1px solid var(--orange); border-radius: 13px; color: var(--orange); background: rgba(255,248,223,.7); cursor: pointer; font-size: 11px; font-weight: 850; }
+    .deposit-submit:hover, .deposit-submit:focus-visible { color: #fff8df; background: var(--orange); }
+    .goal-message { min-height: 16px; margin-top: 7px; color: var(--forest); font-size: 10px; line-height: 1.5; }
+    .goal-message.is-error { color: var(--expense); }
+    .goal-new { width: 100%; min-height: 42px; margin-top: 9px; border: 1px dashed rgba(78,129,70,.5); border-radius: 13px; color: var(--forest); background: rgba(255,248,223,.54); cursor: pointer; font-size: 11px; font-weight: 850; }
+    .goal-new[hidden] { display: none; }
+    .goal-new:hover, .goal-new:focus-visible { border-style: solid; background: #edf6dc; }
+    .goal-card[data-goal-theme="journal"] { background: #fffaf0; }
+    .goal-card[data-goal-theme="journal"] .goal-card-kicker { color: var(--wood); }
+    .goal-card[data-goal-theme="treasure"] .goal-card-kicker { color: var(--orange); }
 
     .profile-hero { position: relative; isolation: isolate; min-height: 166px; overflow: hidden; padding: 22px 18px; border-radius: 28px; background: radial-gradient(circle at 88% 84%, rgba(168,213,140,.72) 0 54px, transparent 55px), radial-gradient(circle at 75% 18%, rgba(255,248,223,.48) 0 24px, transparent 25px), linear-gradient(135deg, #e2efcf 0%, #c6e1aa 100%); }
     .profile-hero::before { content: ""; position: absolute; z-index: -1; right: -34px; bottom: -78px; width: 210px; height: 150px; border-radius: 50% 50% 0 0; background: rgba(78,129,70,.12); transform: rotate(-12deg); }
@@ -365,6 +452,44 @@
     .profile-row span { flex: 1; font-size: 13px; font-weight: 700; }
     .profile-row b { color: var(--muted); font-size: 12px; font-weight: 500; }
     .screen[data-screen="profile"] .screen-header h2 { font-size: 23px; letter-spacing: -.02em; }
+    .profile-checkin { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 64px; margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(78,129,70,.22); border-radius: 18px; color: var(--ink); background: rgba(255,248,223,.74); text-align: left; cursor: pointer; transition: transform 160ms var(--ease), background 160ms ease, border-color 160ms ease; }
+    .profile-checkin:hover, .profile-checkin:focus-visible { border-color: var(--forest); background: #edf6dc; transform: translateY(-1px); }
+    .checkin-icon { display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 13px; color: var(--forest); background: var(--leaf); }
+    .checkin-icon .icon { width: 21px; height: 21px; }
+    .profile-checkin-copy { flex: 1; min-width: 0; }
+    .profile-checkin-copy strong { display: block; color: var(--wood); font-size: 13px; }
+    .profile-checkin-copy small { display: block; margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .profile-checkin-status { flex: 0 0 auto; color: var(--forest); font-size: 11px; font-weight: 850; }
+    .checkin-modal { position: absolute; z-index: 10; inset: 0; display: flex; align-items: end; padding: 12px; background: rgba(59,53,44,.52); backdrop-filter: blur(2px); }
+    .checkin-modal[hidden] { display: none; }
+    .checkin-backdrop { position: absolute; inset: 0; }
+    .checkin-dialog { position: relative; width: 100%; max-height: calc(100% - 24px); overflow-y: auto; padding: 17px 15px 15px; border: 1px solid rgba(255,248,223,.78); border-radius: 25px; background: #fffaf0; box-shadow: 0 14px 34px rgba(59,53,44,.24); animation: settle-in 220ms var(--ease); }
+    .checkin-dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .checkin-dialog-kicker { color: var(--forest); font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+    .checkin-dialog h3 { margin-top: 4px; color: var(--wood); font-family: Georgia, "Songti SC", serif; font-size: 21px; }
+    .checkin-close { display: grid; place-items: center; width: 40px; min-width: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 13px; color: var(--wood); background: var(--paper-deep); cursor: pointer; font-size: 22px; }
+    .checkin-close:hover, .checkin-close:focus-visible { color: var(--forest); background: #e3f1d4; }
+    .checkin-level { margin-top: 13px; padding: 11px 12px; border-radius: 16px; background: #e3f0cf; }
+    .checkin-level-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--forest); font-size: 11px; font-weight: 850; }
+    .checkin-progress { height: 7px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #cbdcb6; }
+    .checkin-progress i { display: block; width: 60%; height: 100%; border-radius: inherit; background: var(--forest); transition: width 220ms var(--ease); }
+    .checkin-level small { display: block; margin-top: 6px; color: #5f7951; font-size: 10px; }
+    .checkin-calendar { margin-top: 13px; padding: 13px 11px 11px; border-radius: 19px; background: rgba(238,228,204,.42); }
+    .checkin-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .checkin-calendar-head strong { color: var(--wood); font-size: 13px; }
+    .checkin-month-button { display: grid; place-items: center; width: 34px; min-width: 34px; min-height: 34px; padding: 0; border: 0; border-radius: 11px; color: var(--forest); background: var(--paper-light); cursor: pointer; font-size: 18px; }
+    .checkin-month-button:hover, .checkin-month-button:focus-visible { background: #e3f1d4; }
+    .checkin-week, .checkin-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; text-align: center; }
+    .checkin-week { color: var(--muted); font-size: 9px; }
+    .checkin-day { display: grid; place-items: center; min-height: 30px; border-radius: 10px; color: var(--muted); font-size: 10px; }
+    .checkin-day.is-checked { color: #fff8df; background: var(--forest); font-weight: 850; }
+    .checkin-day.is-today { box-shadow: inset 0 0 0 2px var(--orange); }
+    .checkin-day.is-outside { color: #b8aa90; }
+    .checkin-legend { display: flex; gap: 11px; margin-top: 11px; color: var(--muted); font-size: 9px; }
+    .checkin-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 3px; border-radius: 3px; vertical-align: -1px; background: var(--forest); }
+    .checkin-legend i.empty { background: var(--paper-deep); }
+    .checkin-action { width: 100%; min-height: 46px; margin-top: 13px; border: 0; border-radius: 14px; color: #fff8df; background: var(--forest); box-shadow: 0 7px 14px rgba(78,129,70,.18); cursor: pointer; font-weight: 850; }
+    .checkin-action:disabled { color: #6b8061; background: #d9e8c8; box-shadow: none; cursor: default; }
 
     .bottom-nav { position: absolute; z-index: 5; right: 10px; bottom: 10px; left: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; min-height: 68px; padding: 6px; border: 1px solid rgba(123,92,59,.16); border-radius: 22px; background: rgba(255,248,223,.96); box-shadow: var(--shadow); }
     .nav-item { min-width: 48px; min-height: 48px; padding: 7px 3px; border: 0; border-radius: 16px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
@@ -432,13 +557,23 @@
       <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>明细</h2></div>
-          <button class="ledger-button" type="button" aria-label="切换或新建账本"><span>日常森林账本</span><span>⌄</span></button>
-          <div class="month-row"><button class="month-button" type="button" aria-label="选择查看月份">2026年09月</button><button class="month-button" type="button">本月</button></div>
-          <div class="balance-card paper-card"><span class="balance-label">本月结余</span><h3>¥ 2,860.40</h3><div class="balance-meta"><div><small>收入</small><b>¥ 4,500.00</b></div><div class="out"><small>支出</small><b>¥ 1,639.60</b></div></div></div>
-          <div class="section-heading"><h3>森林小工具</h3><span>即将开放</span></div>
-          <div class="tool-grid"><button class="tool-button" type="button" aria-label="汇率换算工具"><svg class="icon" aria-hidden="true"><use href="#i-swap"></use></svg><strong>汇率换算</strong><small>离线基础流程</small></button><button class="tool-button" type="button" aria-label="借钱统计工具"><svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg><strong>借钱统计</strong><small>记录来往关系</small></button></div>
-          <div class="section-heading"><h3>交易记录</h3><span>按日期归档</span></div>
-          <div class="paper-card"><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-bowl"></use></svg></div><div><strong>森林食堂</strong><small>今天 · 支出</small></div><b>− ¥32.00</b></div><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg></div><div><strong>本月零花</strong><small>昨天 · 收入</small></div><b style="color:var(--forest)">＋ ¥500.00</b></div><div class="list-row"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg></div><div><strong>森林图书馆</strong><small>09月03日 · 支出</small></div><b>− ¥68.00</b></div></div>
+          <div class="details-toolbar">
+            <button class="ledger-button" type="button" aria-label="切换或新建账本"><span>日常森林账本</span><span>⌄</span></button>
+            <div class="month-row" aria-label="月份筛选"><button class="month-button" type="button" aria-label="选择查看月份">2026年9月⌄</button><button class="month-button" type="button" aria-label="回到本月">本月</button></div>
+          </div>
+          <div class="balance-card paper-card"><span class="balance-label">本月结余</span><h3>¥2,860.40</h3><div class="balance-meta"><div class="income"><small>↑ 收入</small><b>¥4,500.00</b></div><div class="out"><small>↓ 支出</small><b>¥1,639.60</b></div></div></div>
+          <div class="details-tools-section">
+            <div class="section-heading"><h3>森林小工具</h3><span>轻量入口</span></div>
+            <div class="details-tool-grid"><button class="tool-button details-tool-button" type="button" aria-label="汇率换算工具"><svg class="icon" aria-hidden="true"><use href="#i-swap"></use></svg><span><strong>汇率换算</strong><small>离线基础流程</small></span></button><button class="tool-button details-tool-button" type="button" aria-label="借钱统计工具"><svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg><span><strong>借钱统计</strong><small>记录来往关系</small></span></button></div>
+          </div>
+          <div class="details-transaction-section">
+            <div class="section-heading"><h3>交易记录</h3><span>按日期归档</span></div>
+            <div class="details-transaction-list">
+              <div class="details-date-group"><div class="details-date-heading"><strong>9月8日 · 今天</strong><span>今日支出 ¥32.00</span></div><div class="list-row expense"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-bowl"></use></svg></div><div><strong>森林食堂</strong><small>午餐和咖啡</small></div><b>−¥32.00<small>支出</small></b></div></div>
+              <div class="details-date-group"><div class="details-date-heading"><strong>9月7日 · 昨天</strong><span>昨日收入 ¥500.00</span></div><div class="list-row income"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-gift"></use></svg></div><div><strong>本月零花</strong><small>家庭零花</small></div><b>＋¥500.00<small>收入</small></b></div></div>
+              <div class="details-date-group"><div class="details-date-heading"><strong>9月3日</strong><span>支出 ¥68.00</span></div><div class="list-row expense"><div class="list-icon"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg></div><div><strong>森林图书馆</strong><small>绘本收纳盒</small></div><b>−¥68.00<small>支出</small></b></div></div>
+            </div>
+          </div>
         </div>
         <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
       </div>
@@ -449,7 +584,7 @@
       <div class="phone fixed-page-background">
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>图表</h2></div>
-          <div class="chart-toggle chart-type-toggle" aria-label="收支类型"><img src="../宝可梦账本素材/草苗龟与储蓄罐插画生成.png" alt="草苗龟支出插画"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button><img src="../宝可梦账本素材/儿童插画：持放大镜观察金币.png" alt="木守宫收入插画"></div>
+          <div class="chart-toggle chart-type-toggle" aria-label="收支类型"><img src="../宝可梦账本素材/装饰素材/支持与收入卡通人物/支出%20.png" alt="草苗龟支出插画"><button class="toggle-button" type="button" aria-pressed="true">支出</button><button class="toggle-button" type="button" aria-pressed="false">收入</button><img src="../宝可梦账本素材/装饰素材/支持与收入卡通人物/收入.png" alt="木守宫收入插画"></div>
           <div class="chart-toggle" aria-label="时间范围"><button class="toggle-button" type="button" aria-pressed="false">周</button><button class="toggle-button" type="button" aria-pressed="true">月</button><button class="toggle-button" type="button" aria-pressed="false">年</button></div>
           <div class="chart-card paper-card"><div class="chart-summary"><div><small>支出趋势 · 本月</small><strong>¥ 1,639.60</strong></div><span>较上月 −8.4%</span></div><svg class="chart-svg" viewBox="0 0 330 170" role="img" aria-label="本月支出趋势折线图"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a8d58c" stop-opacity=".55"/><stop offset="1" stop-color="#a8d58c" stop-opacity="0"/></linearGradient></defs><line class="chart-gridline" x1="8" y1="30" x2="322" y2="30"/><line class="chart-gridline" x1="8" y1="75" x2="322" y2="75"/><line class="chart-gridline" x1="8" y1="120" x2="322" y2="120"/><path class="chart-area" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29 L319,137 L10,137 Z"/><path class="chart-line" d="M10,121 C43,111 49,83 76,96 S111,124 139,81 S180,67 198,91 S231,58 250,72 S285,42 319,29"/><circle class="chart-dot" cx="10" cy="121" r="4"/><circle class="chart-dot" cx="76" cy="96" r="4"/><circle class="chart-dot" cx="139" cy="81" r="4"/><circle class="chart-dot" cx="198" cy="91" r="4"/><circle class="chart-dot" cx="250" cy="72" r="4"/><circle class="chart-dot" cx="319" cy="29" r="4"/><text class="chart-axis" x="8" y="157">01日</text><text class="chart-axis" x="151" y="157">15日</text><text class="chart-axis" x="294" y="157">30日</text></svg></div>
           <div class="section-heading"><h3>分类排行榜</h3><span>支出占比</span></div>
@@ -534,10 +669,36 @@
         <div class="screen-content">
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>攒钱</h2></div>
           <div class="savings-hero paper-card"><h3>给未来留一片<br>更大的森林</h3><p>把想去的地方、想做的事，分成一小步一小步。</p><img src="../app/src/main/res/drawable-nodpi/turtwig_carrying_acorn_jar.webp" alt="草苗龟抱着橡果罐"></div>
-          <div class="section-heading"><h3>正在靠近的目标</h3><span>2 个目标</span></div>
-          <div class="goal-card paper-card"><div class="goal-top"><img src="../app/src/main/res/drawable-nodpi/turtwig_carrying_acorn_jar.webp" alt=""><div><strong>秋日旅行</strong><small>目标 ¥ 6,000.00</small></div><span class="goal-amount">42%</span></div><div class="progress-track"><i style="width:42%"></i></div><div class="goal-bottom"><span>已存 ¥ 2,520.00</span><span>还差 ¥ 3,480.00</span></div></div>
-          <div class="goal-card paper-card"><div class="goal-top"><img src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt=""><div><strong>森林小屋</strong><small>目标 ¥ 12,000.00</small></div><span class="goal-amount">18%</span></div><div class="progress-track"><i style="width:18%; background:var(--forest)"></i></div><div class="goal-bottom"><span>已存 ¥ 2,160.00</span><span>还差 ¥ 9,840.00</span></div></div>
-          <button class="add-goal" type="button" aria-label="创建新的攒钱目标">＋ 创建一个新目标</button>
+          <div class="savings-chooser" data-goal-storage="pkmapp-savings-goal">
+            <div class="section-heading"><h3>目标卡片方案</h3><span>先选一版喜欢的</span></div>
+            <div class="goal-variant-toggle" role="tablist" aria-label="目标卡片样式">
+              <button class="goal-variant-button" type="button" role="tab" data-goal-variant-switch="seedling" data-goal-variant="seedling" aria-selected="true">A · 幼苗成长<small>一点点长大</small></button>
+              <button class="goal-variant-button" type="button" role="tab" data-goal-variant-switch="treasure" data-goal-variant="treasure" aria-selected="false">B · 森林宝箱<small>收集宝藏</small></button>
+              <button class="goal-variant-button" type="button" role="tab" data-goal-variant-switch="journal" data-goal-variant="journal" aria-selected="false">C · 森林账本<small>写下愿望</small></button>
+            </div>
+          </div>
+          <div class="goals-list" data-goals-list></div>
+          <button class="goal-new" type="button" data-goal-new hidden>＋ 新建目标</button>
+          <template data-goal-template>
+            <article class="goal-card paper-card" data-goal-card data-goal-theme="seedling" aria-live="polite">
+              <div class="goal-card-kicker"><span data-goal-kicker>GOAL CARD · SEEDLING</span><span data-goal-state>空白目标</span></div>
+              <div class="goal-card-main">
+                <img class="goal-art" data-goal-art data-goal-progress-art src="../宝可梦账本素材/装饰素材/重新生成版/第一株小幼苗.png" alt="第一株小幼苗">
+                <div class="goal-empty-note" data-goal-empty><strong>种下一颗愿望</strong><p>给它一个名字和金额，今天就可以开始慢慢靠近。</p></div>
+                <div class="goal-summary" data-goal-summary hidden><strong data-goal-title></strong><p>每一次存入，都会让这张卡片长出新的叶子。</p></div>
+              </div>
+              <div class="goal-stat-line" data-goal-stats hidden><div><small>目标金额</small><b data-goal-target-label>¥ 0.00</b></div><div><small>已存入</small><b data-goal-saved-label>¥ 0.00</b></div><b class="goal-percent" data-goal-percent>0%</b></div>
+              <div class="progress-track" data-goal-progress-track hidden><i data-goal-progress></i></div>
+              <div class="goal-bottom" data-goal-bottom hidden><span data-goal-saved-caption>已存 ¥ 0.00</span><span data-goal-remaining>还差 ¥ 0.00</span></div>
+              <form class="goal-editor" data-goal-editor>
+                <div class="field"><label data-goal-name-label>目标名称</label><input data-goal-name maxlength="18" placeholder="例如：周末去看海" autocomplete="off"></div>
+                <div class="field"><label data-goal-target-label-input>目标金额</label><div class="goal-target-wrap"><span>¥</span><input data-goal-target type="number" min="1" step="0.01" placeholder="3000" inputmode="decimal"></div></div>
+                <button class="goal-save" type="submit" data-goal-save>保存这张目标卡</button>
+              </form>
+              <div class="goal-deposit" data-goal-deposit hidden><div class="field"><label data-deposit-label>存入一笔</label><div class="deposit-wrap"><span>¥</span><input data-deposit-amount type="number" min="0.01" step="0.01" placeholder="今天想存多少？" inputmode="decimal"></div></div><button class="deposit-submit" type="button" data-deposit-submit>放进罐子</button></div>
+              <p class="goal-message" data-goal-message aria-live="polite"></p>
+            </article>
+          </template>
         </div>
         <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
       </div>
@@ -550,11 +711,21 @@
           <div class="screen-header"><button class="door-button" type="button" data-jump="home" aria-label="返回首页"><img src="../app/src/main/res/drawable-nodpi/return_home_door.webp" alt=""></button><h2>森林档案</h2></div>
           <div class="profile-hero"><div class="profile-identity"><span class="profile-kicker">MY FOREST FILE</span><h3>森林守护员</h3><p>已在这里生活 27 天</p><span class="profile-level"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>Lv.4 · 小树林守护者</span></div><img class="profile-avatar" src="../app/src/main/res/drawable-nodpi/bulbasaur_sleeping.webp" alt="正在休息的妙蛙种子"></div>
           <div class="asset-card paper-card"><small>森林资产总览</small><strong>¥ 18,420.80</strong><div class="balance-meta"><div><small>现金与存款</small><b style="color:var(--forest)">¥ 15,900.80</b></div><div><small>目标储蓄</small><b style="color:var(--orange)">¥ 2,520.00</b></div></div></div>
+          <button class="profile-checkin" type="button" data-checkin-open aria-haspopup="dialog" aria-controls="checkin-modal"><span class="checkin-icon"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg></span><span class="profile-checkin-copy"><strong>每日签到</strong><small data-checkin-summary>累计打卡 27 天 · Lv.4 小树林守护者</small></span><b class="profile-checkin-status" data-checkin-status>去签到 ›</b></button>
           <div class="section-heading profile-section-heading"><h3>小屋管理</h3><span>轻轻调整</span></div>
           <div class="profile-list"><button class="profile-row" type="button" aria-label="编辑头像和昵称"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg><span>头像与昵称</span><b>森林守护员 ·›</b></button><button class="profile-row" type="button" aria-label="管理分类"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>分类管理</span><b>22 个分类 ·›</b></button><button class="profile-row" type="button" aria-label="导出账本"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出账本</span><b>CSV ·›</b></button></div>
           <div class="section-heading profile-section-heading"><h3>其他</h3><span>关于森林账本</span></div>
           <div class="profile-list"><button class="profile-row" type="button" aria-label="关于森林账本"><svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg><span>关于森林账本</span><b>v0.1 ·›</b></button></div>
           <p class="micro-note">愿每一笔记录，都让生活更清楚一点。</p>
+        </div>
+        <div class="checkin-modal" id="checkin-modal" data-checkin-modal hidden>
+          <div class="checkin-backdrop" data-checkin-close></div>
+          <div class="checkin-dialog" role="dialog" aria-modal="true" aria-labelledby="checkin-dialog-title">
+            <div class="checkin-dialog-head"><div><span class="checkin-dialog-kicker">DAILY FOREST LOG</span><h3 id="checkin-dialog-title">打卡记录</h3></div><button class="checkin-close" type="button" data-checkin-close aria-label="关闭打卡记录">×</button></div>
+            <div class="checkin-level"><div class="checkin-level-top"><span data-checkin-level>Lv.4 · 小树林守护者</span><span data-checkin-progress-label>27 / 45 天</span></div><div class="checkin-progress"><i data-checkin-progress></i></div><small data-checkin-next>再坚持 18 天，升级为 Lv.5 · 森林巡游者</small></div>
+            <div class="checkin-calendar"><div class="checkin-calendar-head"><button class="checkin-month-button" type="button" data-checkin-month="previous" aria-label="上一个月">‹</button><strong data-checkin-month-label>2026 年 09 月</strong><button class="checkin-month-button" type="button" data-checkin-month="next" aria-label="下一个月">›</button></div><div class="checkin-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div class="checkin-days" data-checkin-days></div><div class="checkin-legend"><span><i></i>已签到</span><span><i class="empty"></i>未签到</span></div></div>
+            <button class="checkin-action" type="button" data-checkin-action>今日签到</button>
+          </div>
         </div>
         <div class="bottom-nav" aria-label="主导航"><button class="nav-item" data-jump="details" type="button"><svg class="icon" aria-hidden="true"><use href="#i-list"></use></svg>明细</button><button class="nav-item" data-jump="charts" type="button"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg>图表</button><button class="nav-item" data-jump="record" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>记账</button><button class="nav-item" data-jump="savings" type="button"><svg class="icon" aria-hidden="true"><use href="#i-leaf"></use></svg>攒钱</button><button class="nav-item" data-jump="profile" type="button" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>我的</button></div>
       </div>
@@ -590,12 +761,263 @@
     const calcDisplayNode = document.querySelector('[data-calc-display]');
     const amountInput = document.querySelector('#amount');
     const panorama = document.querySelector('[data-panorama-track]');
+    const goalsList = document.querySelector('[data-goals-list]');
+    const goalTemplate = document.querySelector('[data-goal-template]');
+    const goalNewButton = document.querySelector('[data-goal-new]');
+    const goalStorage = (() => {
+      try { return window.localStorage; } catch { return null; }
+    })();
+    const goalStorageKey = document.querySelector('[data-goal-storage]')?.dataset.goalStorage || 'pkmapp-savings-goal';
+    const goalVariantConfig = {
+      seedling: { kicker: 'GOAL CARD · SEEDLING', stages: [
+        { max: 49, art: '../宝可梦账本素材/装饰素材/重新生成版/第一株小幼苗.png', alt: '第一株小幼苗' },
+        { max: 99, art: '../宝可梦账本素材/装饰素材/重新生成版/第二株小幼苗.png', alt: '第二株小幼苗' },
+        { max: 100, art: '../宝可梦账本素材/装饰素材/重新生成版/小树.png', alt: '小树' }
+      ] },
+      treasure: { kicker: 'GOAL CARD · TREASURE', art: '../宝可梦账本素材/装饰素材/重新生成版/宝箱.png', alt: '森林宝箱和金币' },
+      journal: { kicker: 'GOAL CARD · JOURNAL', art: '../宝可梦账本素材/森林绘本风金币入罐插画.png', alt: '森林绘本风金币入罐插画' }
+    };
+    const createDraftGoal = (variant = 'seedling') => ({ id: 'draft', name: '', target: 0, saved: 0, variant });
+    const normalizeGoal = (value, index) => ({
+      id: String(value.id || `goal-${index + 1}`),
+      name: typeof value.name === 'string' ? value.name : '',
+      target: Number.isFinite(Number(value.target)) ? Math.max(0, Number(value.target)) : 0,
+      saved: Number.isFinite(Number(value.saved)) ? Math.max(0, Number(value.saved)) : 0,
+      variant: goalVariantConfig[value.variant] ? value.variant : 'seedling'
+    });
+    const readGoals = () => {
+      try {
+        const value = JSON.parse(goalStorage?.getItem(goalStorageKey) || 'null');
+        const values = Array.isArray(value) ? value : value && typeof value === 'object' && (value.name || value.target) ? [value] : [];
+        return values.map(normalizeGoal).filter((goal) => goal.name && goal.target > 0);
+      } catch { return []; }
+    };
+    let goalList = readGoals();
+    let draftGoal = goalList.length ? null : createDraftGoal();
+    let activeGoalVariant = goalList.at(-1)?.variant || 'seedling';
+    const formatGoalMoney = (value) => `¥ ${Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const saveGoals = () => {
+      try { goalStorage?.setItem(goalStorageKey, JSON.stringify(goalList)); } catch { /* local preview may disallow storage; the current session still works */ }
+    };
+    const setCardMessage = (card, message, isError = false) => {
+      const node = card.querySelector('[data-goal-message]');
+      node.textContent = message;
+      node.classList.toggle('is-error', isError);
+    };
+    const renderGoalCard = (card, goal, isDraft) => {
+      const config = goalVariantConfig[goal.variant];
+      const hasGoal = Boolean(goal.name && goal.target > 0);
+      const percent = hasGoal ? Math.min(100, Math.round((goal.saved / goal.target) * 100)) : 0;
+      const isComplete = hasGoal && percent >= 100;
+      const artState = goal.variant === 'seedling' ? config.stages.find((stage) => percent <= stage.max) : config;
+      card.dataset.goalTheme = goal.variant;
+      card.dataset.goalId = goal.id;
+      card.dataset.goalDraft = String(isDraft);
+      card.querySelector('[data-goal-kicker]').textContent = config.kicker;
+      card.querySelector('[data-goal-art]').src = artState.art;
+      card.querySelector('[data-goal-art]').alt = artState.alt;
+      card.querySelector('[data-goal-state]').textContent = isComplete ? '已经完成' : hasGoal ? '进行中' : '空白目标';
+      card.querySelector('[data-goal-empty]').hidden = hasGoal;
+      card.querySelector('[data-goal-summary]').hidden = !hasGoal;
+      card.querySelector('[data-goal-title]').textContent = goal.name;
+      card.querySelector('[data-goal-stats]').hidden = !hasGoal;
+      card.querySelector('[data-goal-progress-track]').hidden = !hasGoal;
+      card.querySelector('[data-goal-bottom]').hidden = !hasGoal;
+      card.querySelector('[data-goal-deposit]').hidden = !hasGoal;
+      card.querySelector('[data-goal-target-label]').textContent = formatGoalMoney(goal.target);
+      card.querySelector('[data-goal-saved-label]').textContent = formatGoalMoney(goal.saved);
+      card.querySelector('[data-goal-percent]').textContent = `${percent}%`;
+      card.querySelector('[data-goal-progress]').style.width = `${percent}%`;
+      card.querySelector('[data-goal-saved-caption]').textContent = `已存 ${formatGoalMoney(goal.saved)}`;
+      card.querySelector('[data-goal-remaining]').textContent = `还差 ${formatGoalMoney(Math.max(0, goal.target - goal.saved))}`;
+      const nameInput = card.querySelector('[data-goal-name]');
+      const targetInput = card.querySelector('[data-goal-target]');
+      const depositInput = card.querySelector('[data-deposit-amount]');
+      const nameId = `goal-name-${goal.id}`;
+      const targetId = `goal-target-${goal.id}`;
+      const depositId = `deposit-amount-${goal.id}`;
+      nameInput.id = nameId;
+      targetInput.id = targetId;
+      depositInput.id = depositId;
+      card.querySelector('[data-goal-name-label]').htmlFor = nameId;
+      card.querySelector('[data-goal-target-label-input]').htmlFor = targetId;
+      card.querySelector('[data-deposit-label]').htmlFor = depositId;
+      nameInput.value = goal.name;
+      targetInput.value = goal.target || '';
+      card.querySelector('[data-goal-save]').textContent = hasGoal ? '保存修改' : '保存这张目标卡';
+      setCardMessage(card, goal.message || '');
+    };
+    const createGoalCard = (goal, isDraft) => {
+      const card = goalTemplate.content.firstElementChild.cloneNode(true);
+      card.querySelector('[data-goal-editor]').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const nameInput = card.querySelector('[data-goal-name]');
+        const targetInput = card.querySelector('[data-goal-target]');
+        const name = nameInput.value.trim();
+        const target = Number(targetInput.value);
+        if (!name) { setCardMessage(card, '先给这颗愿望写一个名字。', true); nameInput.focus(); return; }
+        if (!Number.isFinite(target) || target <= 0) { setCardMessage(card, '目标金额需要大于 0。', true); targetInput.focus(); return; }
+        goal.name = name;
+        goal.target = target;
+        goal.message = '目标已保存，今天也向它靠近一点。';
+        if (isDraft) {
+          goal.id = `goal-${Date.now()}`;
+          goalList.push({ ...goal });
+          draftGoal = null;
+        }
+        saveGoals();
+        renderGoals();
+      });
+      card.querySelector('[data-deposit-submit]').addEventListener('click', () => {
+        const depositInput = card.querySelector('[data-deposit-amount]');
+        const amount = Number(depositInput.value);
+        if (!Number.isFinite(amount) || amount <= 0) { setCardMessage(card, '输入一笔大于 0 的金额。', true); depositInput.focus(); return; }
+        goal.saved += amount;
+        goal.message = goal.saved >= goal.target ? `已存入 ${formatGoalMoney(amount)}，累计 ${formatGoalMoney(goal.saved)}，目标已达到。` : `已存入 ${formatGoalMoney(amount)}，继续保持。`;
+        saveGoals();
+        renderGoals();
+      });
+      renderGoalCard(card, goal, isDraft);
+      return card;
+    };
+    const renderGoals = () => {
+      if (!goalsList || !goalTemplate) return;
+      goalsList.replaceChildren(...goalList.map((goal) => createGoalCard(goal, false)), ...(draftGoal ? [createGoalCard(draftGoal, true)] : []));
+      goalNewButton.hidden = !goalList.length || Boolean(draftGoal);
+      document.querySelectorAll('[data-goal-variant-switch]').forEach((button) => button.setAttribute('aria-selected', String(button.dataset.goalVariantSwitch === activeGoalVariant)));
+    };
+    document.querySelectorAll('[data-goal-variant-switch]').forEach((button) => button.addEventListener('click', () => {
+      activeGoalVariant = button.dataset.goalVariantSwitch;
+      if (draftGoal) draftGoal.variant = activeGoalVariant;
+      renderGoals();
+    }));
+    goalNewButton?.addEventListener('click', () => {
+      if (draftGoal) return;
+      draftGoal = createDraftGoal(activeGoalVariant);
+      renderGoals();
+      goalsList.querySelector('[data-goal-draft="true"] [data-goal-name]')?.focus();
+    });
+    renderGoals();
     let calculatorExpression = '';
     let calculatorJustEvaluated = false;
     let panoramaX = 0;
     let panoramaPointerId = null;
     let panoramaStartX = 0;
     let panoramaStartOffset = 0;
+    const checkinModal = document.querySelector('[data-checkin-modal]');
+    const checkinOpenButton = document.querySelector('[data-checkin-open]');
+    const checkinAction = document.querySelector('[data-checkin-action]');
+    const checkinStatus = document.querySelector('[data-checkin-status]');
+    const checkinSummary = document.querySelector('[data-checkin-summary]');
+    const checkinLevel = document.querySelector('[data-checkin-level]');
+    const checkinProgressLabel = document.querySelector('[data-checkin-progress-label]');
+    const checkinProgress = document.querySelector('[data-checkin-progress]');
+    const checkinNext = document.querySelector('[data-checkin-next]');
+    const checkinCalendarLabel = document.querySelector('[data-checkin-month-label]');
+    const checkinDaysGrid = document.querySelector('[data-checkin-days]');
+    const checkinPreviousMonth = document.querySelector('[data-checkin-month="previous"]');
+    const checkinNextMonth = document.querySelector('[data-checkin-month="next"]');
+    const checkinStorage = (() => {
+      try { return window.localStorage; } catch { return null; }
+    })();
+    const checkinLevels = [
+      { level: 1, name: '林间新芽', threshold: 0 },
+      { level: 2, name: '见习护林员', threshold: 7 },
+      { level: 3, name: '青叶学徒', threshold: 14 },
+      { level: 4, name: '小树林守护者', threshold: 21 },
+      { level: 5, name: '森林巡游者', threshold: 45 },
+      { level: 6, name: '古树伙伴', threshold: 90 },
+      { level: 7, name: '森林领主', threshold: 180 },
+      { level: 8, name: '森林贤者', threshold: 365 }
+    ];
+    const checkinDefaultDates = ['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05', '2026-09-06'];
+    const savedCheckinDates = (() => {
+      try {
+        const value = JSON.parse(checkinStorage?.getItem('pkmapp-checkin-dates') || 'null');
+        return Array.isArray(value) ? value : checkinDefaultDates;
+      } catch { return checkinDefaultDates; }
+    })();
+    const checkinDates = new Set(savedCheckinDates);
+    const savedCheckinCount = checkinStorage?.getItem('pkmapp-checkin-count');
+    let checkinCount = savedCheckinCount && Number.isFinite(Number(savedCheckinCount)) ? Number(savedCheckinCount) : 27;
+    const checkinTodayKey = '2026-09-07';
+    const checkinTodayDate = new Date(`${checkinTodayKey}T12:00:00`);
+    let checkinViewDate = new Date(checkinTodayDate.getFullYear(), checkinTodayDate.getMonth(), 1);
+
+    const getCheckinLevel = () => checkinLevels.reduce((current, item) => checkinCount >= item.threshold ? item : current, checkinLevels[0]);
+    const formatCheckinDateKey = (year, month, day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const renderCheckinCalendar = () => {
+      const year = checkinViewDate.getFullYear();
+      const month = checkinViewDate.getMonth();
+      const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const previousMonthDays = new Date(year, month, 0).getDate();
+      const cellCount = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+      const cells = [];
+      for (let index = 0; index < cellCount; index += 1) {
+        const dayNumber = index - firstWeekday + 1;
+        if (dayNumber < 1) {
+          cells.push(`<span class="checkin-day is-outside">${previousMonthDays + dayNumber}</span>`);
+          continue;
+        }
+        if (dayNumber > daysInMonth) {
+          cells.push(`<span class="checkin-day is-outside">${dayNumber - daysInMonth}</span>`);
+          continue;
+        }
+        const dateKey = formatCheckinDateKey(year, month, dayNumber);
+        const state = [checkinDates.has(dateKey) ? 'is-checked' : '', dateKey === checkinTodayKey ? 'is-today' : ''].filter(Boolean).join(' ');
+        cells.push(`<span class="checkin-day ${state}" data-checkin-date="${dateKey}" aria-label="${year}年${month + 1}月${dayNumber}日${checkinDates.has(dateKey) ? '，已签到' : '，未签到'}">${dayNumber}</span>`);
+      }
+      checkinCalendarLabel.textContent = `${year} 年 ${String(month + 1).padStart(2, '0')} 月`;
+      checkinDaysGrid.innerHTML = cells.join('');
+    };
+    const renderCheckin = () => {
+      const currentLevel = getCheckinLevel();
+      const nextLevel = checkinLevels.find((item) => item.threshold > checkinCount);
+      const isCheckedToday = checkinDates.has(checkinTodayKey);
+      const progress = nextLevel ? ((checkinCount - currentLevel.threshold) / (nextLevel.threshold - currentLevel.threshold)) * 100 : 100;
+      checkinLevel.textContent = `Lv.${currentLevel.level} · ${currentLevel.name}`;
+      checkinProgressLabel.textContent = nextLevel ? `${checkinCount} / ${nextLevel.threshold} 天` : `${checkinCount} 天 · 已达上限`;
+      checkinProgress.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+      checkinNext.textContent = nextLevel ? `再坚持 ${nextLevel.threshold - checkinCount} 天，升级为 Lv.${nextLevel.level} · ${nextLevel.name}` : '已达到最高等级，森林会一直记得你的脚印。';
+      checkinSummary.textContent = `累计打卡 ${checkinCount} 天 · Lv.${currentLevel.level} ${currentLevel.name}`;
+      checkinStatus.textContent = isCheckedToday ? '今日已签到' : '去签到 ›';
+      checkinAction.textContent = isCheckedToday ? '今日已签到' : '今日签到';
+      checkinAction.disabled = isCheckedToday;
+      renderCheckinCalendar();
+    };
+    const openCheckin = () => {
+      checkinModal.hidden = false;
+      checkinModal.querySelector('.checkin-close')?.focus();
+    };
+    const closeCheckin = () => {
+      checkinModal.hidden = true;
+      checkinOpenButton?.focus();
+    };
+    checkinOpenButton?.addEventListener('click', openCheckin);
+    checkinModal?.addEventListener('click', (event) => {
+      if (event.target.matches('[data-checkin-close]')) closeCheckin();
+    });
+    checkinAction?.addEventListener('click', () => {
+      if (checkinDates.has(checkinTodayKey)) return;
+      checkinDates.add(checkinTodayKey);
+      checkinCount += 1;
+      try {
+        checkinStorage?.setItem('pkmapp-checkin-dates', JSON.stringify([...checkinDates]));
+        checkinStorage?.setItem('pkmapp-checkin-count', String(checkinCount));
+      } catch { /* local preview may disallow storage; the current session still works */ }
+      renderCheckin();
+    });
+    const shiftCheckinMonth = (offset) => {
+      checkinViewDate = new Date(checkinViewDate.getFullYear(), checkinViewDate.getMonth() + offset, 1);
+      renderCheckinCalendar();
+    };
+    checkinPreviousMonth?.addEventListener('click', () => shiftCheckinMonth(-1));
+    checkinNextMonth?.addEventListener('click', () => shiftCheckinMonth(1));
+    document.addEventListener('keydown', (event) => {
+      if (!checkinModal?.hidden && event.key === 'Escape') closeCheckin();
+    });
+    renderCheckin();
 
     const setRecordState = (state) => {
       categoriesState?.classList.add('active');

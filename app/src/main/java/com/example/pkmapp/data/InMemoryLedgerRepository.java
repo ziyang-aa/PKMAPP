@@ -117,6 +117,30 @@ public final class InMemoryLedgerRepository {
         return transaction;
     }
 
+    public Transaction updateTransaction(String transactionId, TransactionType type,
+            long amountInCents, String category, String note, long occurredAtMillis) {
+        String selectedId = requireId(transactionId);
+        Transaction updated = null;
+        synchronized (this) {
+            for (int index = 0; index < transactions.size(); index++) {
+                Transaction existing = transactions.get(index);
+                if (currentLedgerId.equals(existing.getLedgerId())
+                        && selectedId.equals(existing.getId())) {
+                    updated = new Transaction(existing.getId(), existing.getLedgerId(), type,
+                            amountInCents, category, note, occurredAtMillis);
+                    transactions.set(index, updated);
+                    break;
+                }
+            }
+        }
+        if (updated == null) {
+            throw new IllegalArgumentException("交易记录不存在");
+        }
+        persist();
+        notifyListeners();
+        return updated;
+    }
+
     public boolean deleteTransaction(String transactionId) {
         String selectedId = requireId(transactionId);
         boolean deleted = false;
@@ -136,6 +160,26 @@ public final class InMemoryLedgerRepository {
             notifyListeners();
         }
         return deleted;
+    }
+
+    public boolean deleteLedger(String ledgerId) {
+        String selectedId = requireId(ledgerId);
+        synchronized (this) {
+            if (!ledgers.containsKey(selectedId)) {
+                return false;
+            }
+            if (ledgers.size() == 1) {
+                throw new IllegalStateException("至少保留一本账本");
+            }
+            ledgers.remove(selectedId);
+            transactions.removeIf(transaction -> selectedId.equals(transaction.getLedgerId()));
+            if (selectedId.equals(currentLedgerId)) {
+                currentLedgerId = ledgers.keySet().iterator().next();
+            }
+        }
+        persist();
+        notifyListeners();
+        return true;
     }
 
     /** Restores the ledger repository to the same empty state as a first launch. */

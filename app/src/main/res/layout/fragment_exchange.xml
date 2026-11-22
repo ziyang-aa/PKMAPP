@@ -2,7 +2,6 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_fixed_forest_backdrop"
     android:clipToPadding="false"
     android:fillViewport="true"
     android:paddingBottom="88dp">
@@ -23,12 +22,13 @@
 
             <ImageButton
                 android:id="@+id/exchange_back_button"
-                android:layout_width="72dp"
-                android:layout_height="64dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_borrowing_top_icon"
                 android:contentDescription="返回明细"
+                android:padding="10dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/return_home_door" />
+                android:src="@drawable/ic_arrow_back_forest" />
 
             <TextView
                 android:layout_width="0dp"

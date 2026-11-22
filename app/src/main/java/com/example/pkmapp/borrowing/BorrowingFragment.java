@@ -138,13 +138,15 @@ public final class BorrowingFragment extends Fragment {
         if (lendButton == null) return;
         boolean lend = direction == BorrowingDirection.LEND;
         lendButton.setBackgroundResource(lend ? R.drawable.bg_details_picker_selected
-                : R.drawable.bg_details_picker_option);
-        borrowButton.setBackgroundResource(lend ? R.drawable.bg_details_picker_option
+                : android.R.color.transparent);
+        borrowButton.setBackgroundResource(lend ? android.R.color.transparent
                 : R.drawable.bg_details_picker_selected);
         lendButton.setTextColor(ContextCompat.getColor(requireContext(),
-                lend ? R.color.forest_green : R.color.wood_brown));
+                lend ? R.color.forest_deep : R.color.wood_brown));
         borrowButton.setTextColor(ContextCompat.getColor(requireContext(),
-                lend ? R.color.wood_brown : R.color.forest_green));
+                lend ? R.color.wood_brown : R.color.forest_deep));
+        lendButton.setTypeface(null, lend ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        borrowButton.setTypeface(null, lend ? android.graphics.Typeface.NORMAL : android.graphics.Typeface.BOLD);
         modeHint.setText(lend ? "现在：借出" : "现在：借入");
     }
 

@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>芽叶记 · 森林手账 UI 组件与弹窗设计规范</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="study-forest.css">
+  <link rel="stylesheet" href="forest-journal.css">
+  <style>
+    body {
+      background: #eeeade url('../app/src/main/res/drawable-nodpi/forest_paper_clean.webp') center/640px;
+      color: #283f2c;
+    }
+    .atelier {
+      max-width: 1220px;
+      margin: auto;
+      padding: 40px 32px 68px;
+    }
+    .mast {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid #d6d6c1;
+      padding-bottom: 20px;
+      color: #647653;
+      font-size: 11px;
+      letter-spacing: 2px;
+    }
+    .mast-links {
+      display: flex;
+      gap: 18px;
+    }
+    .mast a {
+      color: #456444;
+      letter-spacing: 0;
+      text-decoration: none;
+      border-bottom: 1px solid #a8b493;
+      padding: 6px 0;
+      font-weight: 600;
+    }
+    .intro {
+      padding: 30px 0 26px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .intro h1 {
+      font-size: 35px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+    .intro p {
+      font-size: 13px;
+      color: #736c5d;
+      line-height: 1.85;
+      max-width: 560px;
+      margin-top: 10px;
+    }
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 99px;
+      background: #fffcf3cc;
+      border: 1px solid #dedcc9;
+      font-size: 11px;
+      color: #6e6656;
+    }
+    .swatch i {
+      height: 12px;
+      width: 12px;
+      border-radius: 50%;
+      background: var(--c);
+      border: 1px solid #0002;
+    }
+    .workbench {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .specimen {
+      background: #fffcf3d9;
+      border: 1px solid #dbd9c5;
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(70, 87, 59, 0.04);
+      display: flex;
+      flex-direction: column;
+    }
+    .specimen.span-2 {
+      grid-column: 1 / -1;
+    }
+    .specimen header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .specimen header small {
+      font-family: Georgia, serif;
+      font-size: 13px;
+      color: #9c8c64;
+      background: #f2eee0;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .specimen h2 {
+      font-family: var(--serif);
+      font-size: 21px;
+      font-weight: 500;
+      color: #283f2c;
+    }
+    .specimen-tag {
+      margin-left: auto;
+      font-size: 11px;
+      color: #5f7252;
+      background: #e8eedb;
+      padding: 3px 9px;
+      border-radius: 99px;
+    }
+    .specimen-desc {
+      font-size: 12px;
+      color: #736c5d;
+      line-height: 1.75;
+      margin-top: 16px;
+    }
+    .sub-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b6353;
+      margin: 14px 0 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sub-label:first-of-type {
+      margin-top: 0;
+    }
+    .sub-label span {
+      font-weight: 400;
+      color: #8a8270;
+      font-size: 10.5px;
+    }
+    .dialog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    .sheet-showcase {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 26px;
+      align-items: start;
+    }
+    .track-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .track-card {
+      padding: 13px;
+      border-radius: 15px;
+      border: 1px solid #d8d5c0;
+      background: #f4ece0;
+      text-align: left;
+      transition: transform 140ms ease, border-color 140ms ease;
+    }
+    .track-card.science {
+      background: #e7edda;
+      border-color: #c5d1b2;
+    }
+    .track-card.active {
+      border-color: #456444;
+      box-shadow: inset 0 0 0 1px #456444;
+    }
+    .track-card strong {
+      display: block;
+      font-family: var(--serif);
+      font-size: 17px;
+      color: #283f2c;
+    }
+    .track-card small {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #6e6757;
+    }
+    .major-list {
+      border-radius: 15px;
+      border: 1px solid #dedbc9;
+      background: #fffcf3;
+      overflow: hidden;
+    }
+    .major-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 48px;
+      padding: 10px 14px;
+      border: 0;
+      border-bottom: 1px solid #eae6d7;
+      background: transparent;
+      font-size: 13px;
+      color: #283f2c;
+      text-align: left;
+    }
+    .major-row:last-child {
+      border-bottom: 0;
+    }
+    .major-row:hover {
+      background: #f3f6ea;
+    }
+    .major-row span:last-child {
+      font-size: 11.5px;
+      color: #456444;
+      font-weight: 600;
+    }
+    .field-group {
+      margin-top: 12px;
+    }
+    .field-group label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #5d5546;
+      margin-bottom: 6px;
+    }
+    .forest-input {
+      width: 100%;
+      min-height: 46px;
+      padding: 10px 13px;
+      border-radius: 12px;
+      border: 1px solid #c9ceb6;
+      background: #f8f5ea;
+      color: #283f2c;
+      font-size: 13.5px;
+    }
+    .forest-input:focus {
+      outline: 2px solid #9eaf8870;
+      border-color: #456444;
+      background: #fffcf3;
+    }
+    .specimen .phone {
+      background: transparent;
+      box-shadow: none;
+      border: 0;
+      border-radius: 0;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      padding: 0;
+      overflow: visible;
+    }
+    .specimen .subjects {
+      gap: 10px;
+    }
+    .specimen .subject-button {
+      min-height: 76px;
+      padding: 20px 10px 12px;
+      font-size: 12px;
+    }
+    .specimen .subject-button small {
+      font-size: 10px;
+    }
+    .specimen .app-nav {
+      margin: 0 !important;
+      width: 100%;
+    }
+    .mini-feedback {
+      min-height: 20px;
+      font-size: 11.5px;
+      color: #456444;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    .end-note {
+      margin-top: 28px;
+      color: #736c5d;
+      font-size: 12px;
+      line-height: 1.85;
+      text-align: center;
+    }
+    @media (max-width: 960px) {
+      .workbench,
+      .dialog-grid,
+      .sheet-showcase {
+        grid-template-columns: 1fr;
+      }
+      .atelier {
+        padding: 24px 16px 48px;
+      }
+      .intro h1 {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg class="icon-library" aria-hidden="true">
+    <symbol id="leaf" viewBox="0 0 24 24"><path d="M20 3C11 2 3 6 4 13c1 8 15 10 16-10ZM3 21 15 9M8 16l-1-6m5 2 5 1"/></symbol>
+    <symbol id="book" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 2 4v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-7-1-10 1Zm0 0v15M5 8l4 1m6 0 4-1"/></symbol>
+    <symbol id="chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15v-4m5 4V6m5 9V9"/></symbol>
+    <symbol id="seed" viewBox="0 0 24 24"><path d="M12 21v-9C6 13 3 9 3 4c6-1 9 3 9 8 0-6 4-9 9-8 0 5-3 8-9 8M6 21h12"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19.5 6.5"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="back" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="alert" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></symbol>
+    <symbol id="drop" viewBox="0 0 24 24"><path d="M12 2C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-13Z"/><path d="M8 15c0 2 1 3 3 3"/></symbol>
+  </svg>
+
+  <main class="atelier">
+    <div class="mast">
+      <span>芽叶记 · 森林手账 UI 组件与弹窗规范 V2</span>
+      <div class="mast-links">
+        <a href="study-forest.html">进入学习小屋完整原型 ↗</a>
+        <a href="pkmapp-visual-redesign.html">进入生活小屋记账视觉板 ↗</a>
+      </div>
+    </div>
+
+    <div class="intro">
+      <div>
+        <h1>告别生硬原生控件，<br>让切换、勾选与弹窗都像翻开手账。</h1>
+        <p>针对安卓端原先粗糙的复选框、直角切边切换按钮和拥挤的弹窗按钮排布进行了重设计：统一采用暖纸凹槽分段器、圆角方框手绘对勾、胶囊拨片开关以及主次分明的横向双按钮弹窗布局。</p>
+      </div>
+      <div class="swatches">
+        <span class="swatch" style="--c:#456444"><i></i>松针绿 #456444</span>
+        <span class="swatch" style="--c:#fffcf3"><i></i>奶油纸 #FFFCF3</span>
+        <span class="swatch" style="--c:#e7edda"><i></i>浅苔绿 #E7EDDA</span>
+        <span class="swatch" style="--c:#ebe6d7"><i></i>凹槽纸 #EBE6D7</span>
+        <span class="swatch" style="--c:#8d4836"><i></i>暗陶红 #8D4836</span>
+      </div>
+    </div>
+
+    <div class="workbench">
+      <!-- 01. 分段切换按钮与胶囊开关 -->
+      <section class="specimen">
+        <header>
+          <small>01</small>
+          <h2>分段切换器与目标胶囊</h2>
+          <span class="specimen-tag">告别直角切边与双层边框</span>
+        </header>
+
+        <div class="sub-label">二段模式切换 <span>记账收支 / 科目库模板 / 借还方向</span></div>
+        <div class="forest-seg" role="group" aria-label="收支类型切换" data-seg-group>
+          <button type="button" class="active" aria-pressed="true"><i class="seg-dot"></i>支出记录</button>
+          <button type="button" aria-pressed="false"><i class="seg-dot"></i>收入入账</button>
+        </div>
+
+        <div class="sub-label">三段与四段统计切换 <span>学习足迹周期 / 图表维度 / 趋势视图</span></div>
+        <div class="forest-seg moss-active" role="group" aria-label="统计周期切换" data-seg-group>
+          <button type="button" aria-pressed="false">今天</button>
+          <button type="button" class="active" aria-pressed="true">近 7 天</button>
+          <button type="button" aria-pressed="false">近 30 天</button>
+          <button type="button" aria-pressed="false">全部</button>
+        </div>
+        <div class="forest-seg" style="margin-top:8px" role="group" aria-label="图表类型切换" data-seg-group>
+          <button type="button" class="active" aria-pressed="true">环形时长</button>
+          <button type="button" aria-pressed="false">科目时长</button>
+          <button type="button" aria-pressed="false">每日趋势</button>
+        </div>
+
+        <div class="sub-label">专注目标轻胶囊 <span>专注卡片内嵌快捷时长</span></div>
+        <div class="goal-picker" role="group" aria-label="专注目标分钟" data-seg-group>
+          <span style="font-size:11px;color:#736c5d;padding:0 4px">本次目标</span>
+          <button type="button" class="goal-chip">25 分钟</button>
+          <button type="button" class="goal-chip active">45 分钟</button>
+          <button type="button" class="goal-chip">60 分钟</button>
+        </div>
+
+        <p class="specimen-desc">
+          外层使用 <code>#EBE6D7</code> 暖纸压痕凹槽，每个选项保持完整的 10.5dp 柔和四角圆弧；选中项浮起一层奶油纸色或浅苔绿并带细微底边，彻底解决原先左右直角拼接与三按钮边框打架的问题。
+        </p>
+      </section>
+
+      <!-- 02. 森林复选框与胶囊拨片开关 -->
+      <section class="specimen">
+        <header>
+          <small>02</small>
+          <h2>森林复选框与胶囊开关</h2>
+          <span class="specimen-tag">替代安卓默认方框 CheckBox</span>
+        </header>
+
+        <div class="sub-label">科目与待办多选行 <span>点击整行即可勾选，带科目代码徽章</span></div>
+        <div class="forest-check-list" id="demo-check-list">
+          <button type="button" class="forest-check-row checked" role="checkbox" aria-checked="true">
+            <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+            <span class="forest-check-body">
+              <span class="forest-check-title"><span class="course-code">408</span>计算机学科专业基础</span>
+              <span class="forest-check-sub">数据结构 · 计组 · 操作系统 · 计网</span>
+            </span>
+          </button>
+
+          <button type="button" class="forest-check-row checked" role="checkbox" aria-checked="true">
+            <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+            <span class="forest-check-body">
+              <span class="forest-check-title"><span class="course-code">301</span>高等数学与线性代数</span>
+              <span class="forest-check-sub">同济七版 · 第一轮基础题集</span>
+            </span>
+          </button>
+
+          <button type="button" class="forest-check-row" role="checkbox" aria-checked="false">
+            <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+            <span class="forest-check-body">
+              <span class="forest-check-title"><span class="course-code">201</span>考研英语一</span>
+              <span class="forest-check-sub">每日长难句与阅读真题精读</span>
+            </span>
+          </button>
+
+          <button type="button" class="forest-check-row is-disabled" role="checkbox" aria-checked="true" disabled>
+            <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+            <span class="forest-check-body">
+              <span class="forest-check-title"><span class="course-code">101</span>思想政治理论</span>
+            </span>
+            <span class="course-tag">已加入书架</span>
+          </button>
+        </div>
+
+        <div class="sub-label" style="margin-top:14px">胶囊拨片开关 <span>用于截止提醒、继承日期等设置项</span></div>
+        <button type="button" class="forest-switch-row checked" role="switch" aria-checked="true" id="demo-switch">
+          <span class="forest-switch-lead">
+            <span class="forest-switch-icon"><svg><use href="#bell"/></svg></span>
+            <span class="forest-check-body">
+              <span class="forest-check-title">在考试或截止前一天傍晚提醒</span>
+              <span class="forest-check-sub">已开启 · 18:00 发送森林自习提醒</span>
+            </span>
+          </span>
+          <span class="forest-switch" aria-hidden="true"></span>
+        </button>
+
+        <p class="specimen-desc">
+          7dp 圆角方框配手绘粗线条对勾与浅苔绿外发光，勾选后整行切换为浅苔绿纸底；科目代码独立成章，已添加科目用胶囊角标清晰区分。
+        </p>
+      </section>
+
+      <!-- 03. 32dp 顶角底部面板与科目库抽屉 -->
+      <section class="specimen span-2">
+        <header>
+          <small>03</small>
+          <h2>32dp 顶角底部抽屉面板（StudySheet · 科目库与计划管理）</h2>
+          <span class="specimen-tag">顶栏返回栈 + 搜索分段 + 底部固定汇总栏</span>
+        </header>
+
+        <div class="sheet-showcase">
+          <!-- 左侧：可交互的科目库底部抽屉 -->
+          <div class="forest-sheet-card" aria-label="科目库底部面板预览">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-topbar">
+              <button type="button" class="sheet-nav-btn" aria-label="返回上一步"><svg style="width:18px;height:18px"><use href="#back"/></svg></button>
+              <div class="dialog-badge"><svg><use href="#book"/></svg></div>
+              <div class="dialog-head-copy">
+                <span class="dialog-kicker">COURSE CATALOG</span>
+                <h3>从科目库添加</h3>
+              </div>
+              <button type="button" class="sheet-nav-btn" aria-label="关闭面板"><svg style="width:18px;height:18px"><use href="#close"/></svg></button>
+            </div>
+
+            <div class="sheet-search-box">
+              <svg><use href="#search"/></svg>
+              <input type="search" id="sheet-search" placeholder="搜索科目名称、代码（如 408）或专业">
+            </div>
+
+            <div style="padding: 0 18px 10px">
+              <div class="forest-seg" role="group" aria-label="科目库分类">
+                <button type="button" class="active" data-catalog-tab="graduate" aria-pressed="true"><i class="seg-dot"></i>考研模板</button>
+                <button type="button" data-catalog-tab="finals" aria-pressed="false"><i class="seg-dot"></i>期末课程</button>
+              </div>
+            </div>
+
+            <!-- 考研模板列表 -->
+            <div id="catalog-graduate-pane" style="padding: 4px 18px 6px">
+              <div class="sub-label" style="margin-top:2px">
+                <span>计算机技术 0854 · 初试四门科目</span>
+                <span style="color:#456444">2027 招生目录示例</span>
+              </div>
+              <div class="forest-check-list" id="sheet-course-checks">
+                <button type="button" class="forest-check-row checked" data-course-item role="checkbox" aria-checked="true">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">101</span>思想政治理论</span>
+                  </span>
+                </button>
+                <button type="button" class="forest-check-row checked" data-course-item role="checkbox" aria-checked="true">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">204</span>英语（二）</span>
+                  </span>
+                </button>
+                <button type="button" class="forest-check-row checked" data-course-item role="checkbox" aria-checked="true">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">302</span>数学（二）</span>
+                  </span>
+                </button>
+                <button type="button" class="forest-check-row" data-course-item role="checkbox" aria-checked="false">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">408</span>计算机学科专业基础</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 期末课程文理分流 -->
+            <div id="catalog-finals-pane" style="padding: 4px 18px 6px" hidden>
+              <div class="sub-label" style="margin-top:2px">
+                <span>先选学科方向，再按专业勾选当学期课程</span>
+              </div>
+              <div class="track-grid">
+                <button type="button" class="track-card science active" data-track-select="理工农医">
+                  <strong>理工农医</strong>
+                  <small>5 个专业 · 27 门核心课</small>
+                </button>
+                <button type="button" class="track-card" data-track-select="人文社科">
+                  <strong>人文社科</strong>
+                  <small>2 个专业 · 11 门核心课</small>
+                </button>
+              </div>
+              <div class="major-list">
+                <button type="button" class="major-row"><span>计算机 / 软件工程</span><span>5 门 ›</span></button>
+                <button type="button" class="major-row"><span>电子信息 / 通信工程</span><span>5 门 ›</span></button>
+                <button type="button" class="major-row"><span>机械设计制造及其自动化</span><span>5 门 ›</span></button>
+                <button type="button" class="major-row"><span>临床医学</span><span>7 门 ›</span></button>
+              </div>
+            </div>
+
+            <div class="sheet-footer-bar">
+              <div class="sheet-footer-meta">
+                <strong id="sheet-selected-count">已选 3 门科目</strong>
+                <button type="button" id="sheet-select-all">全选本组科目</button>
+              </div>
+              <button type="button" class="primary-button" id="sheet-apply-btn" style="width:auto;min-width:168px;padding:10px 22px">
+                <svg><use href="#check"/></svg>加入书架
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧：开启下一轮 / 今天安排抽屉布局预览 -->
+          <div class="forest-sheet-card" aria-label="开启下一轮与待办继承面板预览">
+            <div class="sheet-grip" aria-hidden="true"></div>
+            <div class="sheet-topbar">
+              <button type="button" class="sheet-nav-btn" aria-label="返回"><svg style="width:18px;height:18px"><use href="#back"/></svg></button>
+              <div class="dialog-badge"><svg><use href="#seed"/></svg></div>
+              <div class="dialog-head-copy">
+                <span class="dialog-kicker">NEXT ROUND</span>
+                <h3>完成并开启下一轮</h3>
+              </div>
+              <button type="button" class="sheet-nav-btn" aria-label="关闭"><svg style="width:18px;height:18px"><use href="#close"/></svg></button>
+            </div>
+
+            <div style="padding: 0 18px 14px">
+              <div class="dialog-callout" style="margin-top:0">
+                沿用「408 一轮」的 <strong>4 门科目书架与学习伙伴</strong>，新一轮统计从零开始，一轮足迹自动归档保留。
+              </div>
+
+              <div class="field-group">
+                <label for="next-round-name">下一轮计划名称</label>
+                <input id="next-round-name" class="forest-input" type="text" value="408 二轮冲刺">
+              </div>
+
+              <div class="sub-label" style="margin-top:14px">
+                <span>继承设置与未完成事项（选填）</span>
+              </div>
+              <div class="forest-check-list">
+                <button type="button" class="forest-check-row checked" role="checkbox" aria-checked="true">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title">沿用各科考试或提交截止日期</span>
+                  </span>
+                </button>
+                <button type="button" class="forest-check-row checked" role="checkbox" aria-checked="true">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">数据结构</span>刷完图论与查找真题</span>
+                    <span class="forest-check-sub">来自一轮待办 · 带入新一轮继续</span>
+                  </span>
+                </button>
+                <button type="button" class="forest-check-row" role="checkbox" aria-checked="false">
+                  <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                  <span class="forest-check-body">
+                    <span class="forest-check-title"><span class="course-code">操作系统</span>整理虚拟内存页面置换笔记</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div class="sheet-footer-bar">
+              <button type="button" class="secondary-button" style="flex:1">仅归档当前</button>
+              <button type="button" class="primary-button" style="flex:1.4">归档并开启二轮</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04. 居中纸张弹窗体系（三类核心弹窗并排对比） -->
+      <section class="specimen span-2">
+        <header>
+          <small>04</small>
+          <h2>居中纸张弹窗布局体系（完成收录 · 确认删除 · 目标设定）</h2>
+          <span class="specimen-tag">横向主次双按钮 · 结构化信息提示框</span>
+        </header>
+
+        <div class="dialog-grid">
+          <!-- 弹窗 A：保存专注记录 -->
+          <article class="forest-dialog-card" aria-label="保存专注弹窗设计">
+            <button type="button" class="dialog-close-btn" aria-label="关闭"><svg style="width:16px;height:16px"><use href="#close"/></svg></button>
+            <div class="dialog-head">
+              <div class="dialog-badge"><svg><use href="#leaf"/></svg></div>
+              <div class="dialog-head-copy">
+                <span class="dialog-kicker">FOCUS RECEIPT</span>
+                <h3>保存这段专注</h3>
+              </div>
+            </div>
+
+            <div class="focus-receipt-card">
+              <div>
+                <div class="receipt-subject"><span class="course-code">408</span>数据结构</div>
+                <div class="receipt-duration">45 分钟</div>
+              </div>
+              <button type="button" class="receipt-edit">修正时长 ›</button>
+            </div>
+
+            <div class="field-group">
+              <label for="demo-focus-note">学习手记（选填）</label>
+              <input id="demo-focus-note" class="forest-input" type="text" placeholder="记一件今天学懂的小事…" value="完成了二叉树非递归遍历与线索化">
+            </div>
+
+            <div style="margin-top:10px">
+              <button type="button" class="forest-check-row checked" role="checkbox" aria-checked="true">
+                <span class="forest-checkbox"><svg><use href="#check"/></svg></span>
+                <span class="forest-check-body">
+                  <span class="forest-check-title">本次目标已完成</span>
+                  <span class="forest-check-sub">树的遍历 · 第 5–8 题</span>
+                </span>
+              </button>
+            </div>
+
+            <div class="dialog-actions">
+              <button type="button" class="secondary-button">稍后继续</button>
+              <button type="button" class="primary-button"><svg><use href="#check"/></svg>保存学习</button>
+            </div>
+          </article>
+
+          <!-- 弹窗 B：删除/危险操作确认 -->
+          <article class="forest-dialog-card" aria-label="删除确认弹窗设计">
+            <button type="button" class="dialog-close-btn" aria-label="关闭"><svg style="width:16px;height:16px"><use href="#close"/></svg></button>
+            <div class="dialog-head">
+              <div class="dialog-badge danger"><svg><use href="#alert"/></svg></div>
+              <div class="dialog-head-copy">
+                <span class="dialog-kicker danger">CONFIRM DELETE</span>
+                <h3>删除「408 一轮」？</h3>
+              </div>
+            </div>
+
+            <p style="font-size:12.5px;color:#6e6656;line-height:1.7">
+              删除后该计划无法直接恢复，但你在小林地已经种下的树木与水滴会继续保留。
+            </p>
+
+            <div class="dialog-callout danger">
+              <strong>受影响的数据范围：</strong><br>
+              将从本机移除该计划书架及关联的 <strong>16 条学习记录（含手记）</strong>。建议删除前先导出学习备份。
+            </div>
+
+            <div class="dialog-actions">
+              <button type="button" class="secondary-button">保留计划</button>
+              <button type="button" class="danger-button">确认删除</button>
+            </div>
+          </article>
+
+          <!-- 弹窗 C：输入与快捷预设芯片 -->
+          <article class="forest-dialog-card" aria-label="每日目标输入弹窗设计">
+            <button type="button" class="dialog-close-btn" aria-label="关闭"><svg style="width:16px;height:16px"><use href="#close"/></svg></button>
+            <div class="dialog-head">
+              <div class="dialog-badge"><svg><use href="#seed"/></svg></div>
+              <div class="dialog-head-copy">
+                <span class="dialog-kicker">DAILY FOREST GOAL</span>
+                <h3>每日学习目标</h3>
+              </div>
+            </div>
+
+            <p style="font-size:12.5px;color:#6e6656;line-height:1.7">
+              目标只是温柔的路标。每天首次达成目标时长，森林会送给你 <strong>1 颗新种子</strong>。
+            </p>
+
+            <div class="field-group">
+              <label for="demo-goal-input">目标时长（10–720 分钟）</label>
+              <input id="demo-goal-input" class="forest-input" type="number" min="10" max="720" step="15" value="120">
+              <div class="preset-chips" id="demo-preset-chips">
+                <button type="button" class="preset-chip" data-preset="60">60 分钟</button>
+                <button type="button" class="preset-chip active" data-preset="120">120 分钟</button>
+                <button type="button" class="preset-chip" data-preset="180">180 分钟</button>
+              </div>
+            </div>
+
+            <div class="dialog-actions">
+              <button type="button" class="secondary-button">取消</button>
+              <button type="button" class="primary-button" id="demo-open-reward">保存并预览奖励 ↗</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- 05. 彩色书签与底部磨砂导航 -->
+      <section class="specimen">
+        <header>
+          <small>05</small>
+          <h2>把科目，夹进彩色书签</h2>
+          <span class="specimen-tag">左侧书签色带 + 右上勾选印记</span>
+        </header>
+        <div class="phone">
+          <div class="subjects" id="sample-subjects">
+            <button class="subject-button" style="--subject:#b69b63" aria-pressed="false"><span>英语<small>单词 · 阅读</small></span></button>
+            <button class="subject-button" style="--subject:#8ca477" aria-pressed="false"><span>高等数学<small>微积分</small></span></button>
+            <button class="subject-button active" style="--subject:#628774" aria-pressed="true"><span>数据结构<small>408 专业基础</small></span><i class="selected-dot"></i></button>
+          </div>
+        </div>
+        <div class="mini-feedback" id="bookmark-feedback">当前选中：数据结构 · 点击任意书签体验切换。</div>
+      </section>
+
+      <section class="specimen">
+        <header>
+          <small>06</small>
+          <h2>三段旅程，一条轻盈的磨砂导航</h2>
+          <span class="specimen-tag">学习与生活模块共用磨砂层</span>
+        </header>
+        <div class="phone">
+          <nav class="app-nav" id="sample-nav" aria-label="学习模块">
+            <button class="nav-button active" aria-current="page"><svg><use href="#book"/></svg><span>专注</span></button>
+            <button class="nav-button"><svg><use href="#chart"/></svg><span>学习足迹</span></button>
+            <button class="nav-button"><svg><use href="#seed"/></svg><span>小林地</span></button>
+          </nav>
+        </div>
+        <p class="specimen-desc">
+          统一细线图标，浅苔绿选中底色与麦穗金短线相互呼应。
+        </p>
+      </section>
+      <!-- 07. 开源灵感实验室：Uiverse / Motion Primitives / Origin UI / Vaul 流行微交互复用 -->
+      <section class="specimen span-2" id="oss-lab">
+        <header>
+          <small>07</small>
+          <h2>开源组件灵感实验室（Uiverse · Motion Primitives · Origin UI · Vaul）</h2>
+          <span class="specimen-tag">高人气微交互 · 可直接点击体验并复用到安卓</span>
+        </header>
+
+        <style>
+          .oss-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+          }
+          .oss-card {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid #DCD9C6;
+            background: #FAF8EF;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          .oss-source {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10.5px;
+            color: #6B7D59;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+          }
+          .oss-source code {
+            background: #EAE6D7;
+            padding: 2px 7px;
+            border-radius: 6px;
+            color: #4D4638;
+            font-weight: 500;
+          }
+
+          /* 灵感 A: Motion Primitives 弹性滑动胶囊分段器 (Sliding Pill Segmented Control) */
+          .sliding-seg {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(var(--cols, 3), 1fr);
+            padding: 4px;
+            border-radius: 15px;
+            background: #E8E3D3;
+            border: 1px solid #D5D0BC;
+            box-shadow: inset 0 1px 3px rgba(60, 52, 36, 0.08);
+            isolation: isolate;
+          }
+          .sliding-seg-indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc((100% - 8px) / var(--cols, 3));
+            border-radius: 11px;
+            background: linear-gradient(180deg, #FFFEF9 0%, #EFF4E5 100%);
+            border: 1px solid #AEC097;
+            box-shadow: 0 3px 8px rgba(49, 94, 58, 0.12), 0 1px 0 #C4CEB0;
+            transform: translateX(calc(var(--active-idx, 0) * 100%));
+            transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 0;
+          }
+          .sliding-seg button {
+            position: relative;
+            z-index: 1;
+            min-height: 40px;
+            border: 0;
+            background: transparent;
+            color: #736C5D;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 11px;
+            transition: color 180ms ease, font-weight 180ms ease;
+          }
+          .sliding-seg button.active {
+            color: #283F2C;
+            font-weight: 700;
+          }
+
+          /* 灵感 B: Uiverse.io 钢笔手绘描边生长复选框 + 划痕完成态 */
+          .uiverse-check-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            min-height: 52px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid #DFDCCB;
+            background: #FFFCF3;
+            text-align: left;
+            transition: background 200ms ease, border-color 200ms ease;
+          }
+          .uiverse-check-item.checked {
+            background: #EDF3E2;
+            border-color: #9BB084;
+          }
+          .uiverse-box {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            border: 1.8px solid #A8B296;
+            background: #FAF7EE;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            transition: background 200ms ease, border-color 200ms ease, transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+          }
+          .uiverse-check-item.checked .uiverse-box {
+            background: #456444;
+            border-color: #345439;
+            transform: scale(1.06);
+            box-shadow: 0 0 0 4px rgba(158, 175, 136, 0.28);
+          }
+          .uiverse-box svg {
+            width: 15px;
+            height: 15px;
+            stroke: #FFFCF3;
+            stroke-width: 2.6;
+            stroke-dasharray: 24;
+            stroke-dashoffset: 24;
+            transition: stroke-dashoffset 260ms cubic-bezier(0.22, 1, 0.36, 1) 40ms;
+          }
+          .uiverse-check-item.checked .uiverse-box svg {
+            stroke-dashoffset: 0;
+          }
+          .uiverse-label {
+            position: relative;
+            font-size: 13.5px;
+            color: #283F2C;
+            font-weight: 500;
+            transition: color 200ms ease;
+          }
+          .uiverse-check-item.checked.strike-on-check .uiverse-label {
+            color: #6B785E;
+          }
+          .uiverse-label::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 52%;
+            width: 0;
+            height: 1.5px;
+            background: #6B785E;
+            transition: width 240ms ease;
+          }
+          .uiverse-check-item.checked.strike-on-check .uiverse-label::after {
+            width: 100%;
+          }
+
+          /* 灵感 C: Uiverse.io 森林昼夜/叶片旋转场景拨片 (Botanical Morphing Switch) */
+          .botanical-switch-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 58px;
+            padding: 10px 14px;
+            border-radius: 15px;
+            border: 1px solid #DFDCCB;
+            background: #FFFCF3;
+            text-align: left;
+            transition: background 200ms ease, border-color 200ms ease;
+          }
+          .botanical-switch-btn.checked {
+            background: #EFF4E4;
+            border-color: #9BB084;
+          }
+          .botanical-track {
+            position: relative;
+            width: 54px;
+            height: 30px;
+            border-radius: 99px;
+            background: #DDD8C5;
+            border: 1px solid #C6C0AA;
+            padding: 3px;
+            transition: background 240ms ease, border-color 240ms ease;
+            flex-shrink: 0;
+          }
+          .botanical-switch-btn.checked .botanical-track {
+            background: linear-gradient(135deg, #4E8146 0%, #395D38 100%);
+            border-color: #2E4D2D;
+          }
+          .botanical-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #FFFCF3;
+            box-shadow: 0 2px 5px rgba(35, 45, 30, 0.25);
+            display: grid;
+            place-items: center;
+            color: #8A7B65;
+            transform: translateX(0) rotate(0deg);
+            transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), color 200ms ease;
+          }
+          .botanical-thumb svg {
+            width: 13px;
+            height: 13px;
+          }
+          .botanical-switch-btn.checked .botanical-thumb {
+            transform: translateX(24px) rotate(360deg);
+            color: #456444;
+          }
+
+          /* 灵感 D: Vaul + 邮票齿孔手账票据弹窗 (Perforated Stamp Receipt Modal) */
+          .stamp-dialog-preview {
+            position: relative;
+            border-radius: 22px;
+            border: 1px solid #C8CEB2;
+            background: #FFFCF3;
+            padding: 16px 18px 16px;
+            box-shadow: 0 10px 26px rgba(43, 56, 41, 0.08);
+          }
+          .stamp-ticket {
+            position: relative;
+            margin: 8px 0 12px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #EBF1DF;
+            border: 1px dashed #9EB088;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .stamp-seal {
+            padding: 4px 9px;
+            border: 1.5px solid #456444;
+            border-radius: 8px;
+            color: #315E3A;
+            font-size: 10.5px;
+            font-weight: 800;
+            transform: rotate(-6deg);
+            background: rgba(255, 252, 243, 0.85);
+          }
+          .vaul-floating-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px;
+            border-radius: 16px;
+            background: #F2EFE3;
+            border: 1px solid #DCD8C4;
+          }
+          .vaul-floating-bar button {
+            min-height: 40px;
+            border-radius: 12px;
+            font-size: 12.5px;
+            font-weight: 600;
+          }
+          @media (max-width: 860px) {
+            .oss-grid { grid-template-columns: 1fr; }
+          }
+        </style>
+
+        <div class="oss-grid">
+          <!-- 卡片 A：Motion Primitives 滑动胶囊分段器 -->
+          <div class="oss-card">
+            <div class="oss-source">
+              <span>A · 弹簧滑动底块分段器（Sliding Pill Tabs）</span>
+              <code>Motion Primitives / Origin UI</code>
+            </div>
+            <div class="sliding-seg" style="--cols:3; --active-idx:1" data-sliding-seg>
+              <div class="sliding-seg-indicator" aria-hidden="true"></div>
+              <button type="button" data-idx="0">环形时长</button>
+              <button type="button" class="active" data-idx="1">科目时长</button>
+              <button type="button" data-idx="2">每日趋势</button>
+            </div>
+            <div class="sliding-seg" style="--cols:2; --active-idx:0" data-sliding-seg>
+              <div class="sliding-seg-indicator" aria-hidden="true"></div>
+              <button type="button" class="active" data-idx="0">支出账单</button>
+              <button type="button" data-idx="1">收入入账</button>
+            </div>
+            <p class="specimen-desc" style="margin-top:2px">
+              <strong>复用亮点</strong>：选中底块不是生硬闪烁，而是带弹簧阻尼跟随手指滑动到目标项；Android 原生可在 <code>ForestSurface</code> 中用 150ms <code>ValueAnimator</code> 平滑插值选中框左右边界。
+            </p>
+          </div>
+
+          <!-- 卡片 B：Uiverse 钢笔描边画勾复选框 -->
+          <div class="oss-card">
+            <div class="oss-source">
+              <span>B · 钢笔一笔画出对勾 + 待办完成横线</span>
+              <code>Uiverse.io (SVG Dash-Draw)</code>
+            </div>
+            <button type="button" class="uiverse-check-item checked" data-uiverse-check>
+              <span class="uiverse-box"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19.5 6.5"/></svg></span>
+              <span class="forest-check-body">
+                <span class="uiverse-label"><span class="course-code" style="margin-right:6px">408</span>数据结构与算法导论</span>
+              </span>
+              <span class="course-tag">多选选课态</span>
+            </button>
+            <button type="button" class="uiverse-check-item checked strike-on-check" data-uiverse-check>
+              <span class="uiverse-box"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19.5 6.5"/></svg></span>
+              <span class="forest-check-body">
+                <span class="uiverse-label">刷完二叉树非递归遍历第 5–8 题</span>
+              </span>
+              <span class="course-tag">待办划掉态</span>
+            </button>
+            <p class="specimen-desc" style="margin-top:2px">
+              <strong>复用亮点</strong>：勾选瞬间方框微弹（1.06x），对勾像墨水钢笔一样从左到右一笔画出；用于「今日安排」待办时还可附带温柔的手绘横线划掉动画。
+            </p>
+          </div>
+
+          <!-- 卡片 C：Uiverse 叶片旋转胶囊拨片开关 -->
+          <div class="oss-card">
+            <div class="oss-source">
+              <span>C · 森林叶片旋转胶囊开关（Morphing Leaf Switch）</span>
+              <code>Uiverse.io (Scene Toggle)</code>
+            </div>
+            <button type="button" class="botanical-switch-btn checked" data-botanical-switch>
+              <span class="forest-switch-lead">
+                <span class="forest-switch-icon"><svg><use href="#bell"/></svg></span>
+                <span class="forest-check-body">
+                  <span class="forest-check-title">截止前一天 18:00 森林提醒</span>
+                  <span class="forest-check-sub" data-switch-status>已开启 · 滑块叶片旋转展开</span>
+                </span>
+              </span>
+              <span class="botanical-track" aria-hidden="true">
+                <span class="botanical-thumb"><svg><use href="#leaf"/></svg></span>
+              </span>
+            </button>
+            <p class="specimen-desc" style="margin-top:2px">
+              <strong>复用亮点</strong>：把生硬的圆点开关变成带森林小叶片印记的圆钮，拨动时圆钮一面滑动一面 360° 轻巧旋转，轨道渐变为深松绿。
+            </p>
+          </div>
+
+          <!-- 卡片 D：Vaul 悬浮胶囊底栏 + 手账邮票收据弹窗 -->
+          <div class="oss-card">
+            <div class="oss-source">
+              <span>D · 手账盖章票据卡 + 悬浮胶囊操作栏弹窗</span>
+              <code>Vaul Drawer / Origin UI</code>
+            </div>
+            <div class="stamp-dialog-preview">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <strong style="font-family:var(--serif);font-size:17px;color:#283F2C">今日专注已记入手账</strong>
+                <span class="stamp-seal">✓ 已收录 · +2 水滴</span>
+              </div>
+              <div class="stamp-ticket">
+                <div>
+                  <small style="font-size:10.5px;color:#5F7053;display:block">408 · 数据结构</small>
+                  <strong style="font-family:var(--serif);font-size:22px;color:#283F2C">00:45:00</strong>
+                </div>
+                <span style="font-size:11px;color:#456444;font-weight:600">修正时长 ›</span>
+              </div>
+              <div class="vaul-floating-bar">
+                <button type="button" class="secondary-button" style="flex:1;border:0;background:transparent">稍后继续</button>
+                <button type="button" class="primary-button" style="flex:1.35">收好并去林地 →</button>
+              </div>
+            </div>
+            <p class="specimen-desc" style="margin-top:2px">
+              <strong>复用亮点</strong>：借鉴 Vaul 移动端弹窗的「底部内嵌悬浮托盘（Floating Action Tray）」与手账虚线票据 + 倾斜印章，让确认弹窗彻底摆脱系统原生 AlertDialog 的机械感。
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="end-note">以上组件、复选框、分段切换器与弹窗布局均可直接点击交互；确认视觉效果后即可一键同步到 Android 原生组件（<code>ForestUi</code> / <code>ForestDialogBuilder</code> / <code>StudySheet</code> / XML 布局）。</p>
+  </main>
+
+  <!-- 模态奖励回信弹窗演示 -->
+  <dialog id="reward-sheet">
+    <button class="close-sheet" aria-label="关闭弹窗"><svg style="width:16px;height:16px"><use href="#close"/></svg></button>
+    <div class="dialog-head">
+      <div class="dialog-badge"><svg><use href="#seed"/></svg></div>
+      <div class="dialog-head-copy">
+        <span class="dialog-kicker">FOREST REWARD</span>
+        <h2>一分耕耘，一点新绿。</h2>
+      </div>
+    </div>
+    <p>已收好「数据结构」的 45 分钟。<br>把水滴带去林地，给小树一点滋养吧。</p>
+    <div class="reward-result"><svg><use href="#drop"/></svg> +2 水滴 · 达成目标 +1 种子</div>
+    <div class="dialog-actions">
+      <button class="secondary-button" id="close-reward">继续专注</button>
+      <button class="primary-button" id="go-garden-reward">去看看小树 →</button>
+    </div>
+  </dialog>
+
+  <script>
+    // 1. 分段切换器通用交互
+    document.querySelectorAll('[data-seg-group]').forEach(group => {
+      group.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        group.querySelectorAll('button').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('active', active);
+          if (b.hasAttribute('aria-pressed')) b.setAttribute('aria-pressed', String(active));
+        });
+      });
+    });
+
+    // 2. 森林复选框通用点击切换
+    document.addEventListener('click', e => {
+      const checkRow = e.target.closest('.forest-check-row');
+      if (checkRow && !checkRow.disabled && !checkRow.classList.contains('is-disabled')) {
+        const next = !checkRow.classList.contains('checked');
+        checkRow.classList.toggle('checked', next);
+        checkRow.setAttribute('aria-checked', String(next));
+        updateSheetSelectionCount();
+      }
+      const switchRow = e.target.closest('.forest-switch-row');
+      if (switchRow) {
+        const next = !switchRow.classList.contains('checked');
+        switchRow.classList.toggle('checked', next);
+        switchRow.setAttribute('aria-checked', String(next));
+        const sub = switchRow.querySelector('.forest-check-sub');
+        if (sub) sub.textContent = next ? '已开启 · 18:00 发送森林自习提醒' : '已关闭 · 可随时在今日安排中开启';
+      }
+    });
+
+    // 3. 科目库底部抽屉交互（考研模板 / 期末课程切换 + 搜索 + 计数）
+    const gradPane = document.getElementById('catalog-graduate-pane');
+    const finalsPane = document.getElementById('catalog-finals-pane');
+    document.querySelectorAll('[data-catalog-tab]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const isGrad = tab.dataset.catalogTab === 'graduate';
+        document.querySelectorAll('[data-catalog-tab]').forEach(t => {
+          const active = t === tab;
+          t.classList.toggle('active', active);
+          t.setAttribute('aria-pressed', String(active));
+        });
+        gradPane.hidden = !isGrad;
+        finalsPane.hidden = isGrad;
+      });
+    });
+
+    document.querySelectorAll('[data-track-select]').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('[data-track-select]').forEach(c => c.classList.toggle('active', c === card));
+      });
+    });
+
+    function updateSheetSelectionCount() {
+      const items = [...document.querySelectorAll('#sheet-course-checks [data-course-item]')];
+      const checked = items.filter(i => i.classList.contains('checked')).length;
+      const label = document.getElementById('sheet-selected-count');
+      const applyBtn = document.getElementById('sheet-apply-btn');
+      if (label) label.textContent = `已选 ${checked} 门科目`;
+      if (applyBtn) applyBtn.disabled = checked === 0;
+    }
+
+    document.getElementById('sheet-select-all').addEventListener('click', () => {
+      document.querySelectorAll('#sheet-course-checks [data-course-item]').forEach(item => {
+        item.classList.add('checked');
+        item.setAttribute('aria-checked', 'true');
+      });
+      updateSheetSelectionCount();
+    });
+
+    document.getElementById('sheet-search').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll('#sheet-course-checks [data-course-item]').forEach(item => {
+        item.hidden = q && !item.textContent.toLowerCase().includes(q);
+      });
+    });
+
+    // 4. 预设时长芯片与弹窗演示
+    const goalInput = document.getElementById('demo-goal-input');
+    document.querySelectorAll('#demo-preset-chips [data-preset]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        goalInput.value = chip.dataset.preset;
+        document.querySelectorAll('#demo-preset-chips [data-preset]').forEach(c => c.classList.toggle('active', c === chip));
+      });
+    });
+
+    // 5. 书签与导航
+    document.querySelectorAll('#sample-subjects button').forEach(button => {
+      button.onclick = () => {
+        document.querySelectorAll('#sample-subjects button').forEach(b => {
+          b.classList.toggle('active', b === button);
+          b.setAttribute('aria-pressed', String(b === button));
+          b.querySelector('i')?.remove();
+        });
+        const check = document.createElement('i');
+        check.className = 'selected-dot';
+        button.append(check);
+        document.getElementById('bookmark-feedback').textContent =
+          `当前选中：${button.querySelector('span').firstChild.textContent} · 书签色带与右上勾选同步更新。`;
+      };
+    });
+
+    document.querySelectorAll('#sample-nav button').forEach(button => {
+      button.onclick = () => {
+        document.querySelectorAll('#sample-nav button').forEach(b => {
+          b.classList.toggle('active', b === button);
+          b.removeAttribute('aria-current');
+        });
+        button.setAttribute('aria-current', 'page');
+      };
+    });
+
+    const rewardDialog = document.getElementById('reward-sheet');
+    document.getElementById('demo-open-reward').onclick = () => rewardDialog.showModal();
+    document.querySelector('#reward-sheet .close-sheet').onclick = () => rewardDialog.close();
+    document.getElementById('close-reward').onclick = () => rewardDialog.close();
+    document.getElementById('go-garden-reward').onclick = () => rewardDialog.close();
+
+    // 6. 开源灵感实验室微交互绑定
+    document.querySelectorAll('[data-sliding-seg]').forEach(seg => {
+      seg.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-idx]');
+        if (!btn) return;
+        seg.style.setProperty('--active-idx', btn.dataset.idx);
+        seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    document.querySelectorAll('[data-uiverse-check]').forEach(item => {
+      item.addEventListener('click', () => {
+        item.classList.toggle('checked');
+      });
+    });
+
+    document.querySelectorAll('[data-botanical-switch]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const next = !btn.classList.contains('checked');
+        btn.classList.toggle('checked', next);
+        const status = btn.querySelector('[data-switch-status]');
+        if (status) status.textContent = next ? '已开启 · 滑块叶片旋转展开' : '已关闭 · 轻触唤醒森林提醒';
+      });
+    });
+  </script>
+</body>
+</html>

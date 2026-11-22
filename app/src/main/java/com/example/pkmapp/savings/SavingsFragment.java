@@ -25,7 +25,7 @@ import com.example.pkmapp.record.MoneyParser;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.example.pkmapp.forest.ForestDialogBuilder;
 
 public final class SavingsFragment extends Fragment {
     private FragmentSavingsBinding binding;
@@ -195,7 +195,7 @@ public final class SavingsFragment extends Fragment {
     }
 
     private void confirmDeleteGoal(SavingsGoal goal) {
-        new MaterialAlertDialogBuilder(requireContext())
+        new ForestDialogBuilder(requireContext())
                 .setTitle("删除「" + goal.getName() + "」？")
                 .setMessage("目标卡会删除，但已存入的记录会保留在资产、明细和图表中。")
                 .setNegativeButton("取消", null)

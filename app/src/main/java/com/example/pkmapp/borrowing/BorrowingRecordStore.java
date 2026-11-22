@@ -56,6 +56,15 @@ public final class BorrowingRecordStore {
         preferences.edit().putString(RECORDS_KEY, BorrowingRecordCodec.encode(records)).apply();
     }
 
+    public synchronized void deleteForLedger(String ledgerId) {
+        if (ledgerId == null || ledgerId.trim().isEmpty()) {
+            return;
+        }
+        List<BorrowingRecord> records = new ArrayList<>(getAllRecords());
+        records.removeIf(record -> ledgerId.equals(record.getLedgerId()));
+        preferences.edit().putString(RECORDS_KEY, BorrowingRecordCodec.encode(records)).apply();
+    }
+
     public synchronized void clear() {
         preferences.edit().clear().apply();
     }

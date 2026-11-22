@@ -5,6 +5,8 @@
         <item name="android:navigationBarColor">@color/cream_background</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.PkmAPP.ForestDialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.PkmAPP.ForestBottomSheet</item>
         <item name="colorPrimary">@color/forest_green</item>
         <item name="colorOnPrimary">@color/paper_card</item>
         <item name="colorSecondary">@color/warm_orange</item>

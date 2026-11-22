@@ -58,6 +58,14 @@ public final class AssetStore {
         preferences.edit().clear().apply();
     }
 
+    public void deleteStartingValues(String ledgerId) {
+        String safeLedgerId = requireLedgerId(ledgerId);
+        preferences.edit()
+                .remove(INITIAL_ASSETS_PREFIX + safeLedgerId)
+                .remove(LIABILITIES_PREFIX + safeLedgerId)
+                .apply();
+    }
+
     private static String requireLedgerId(String ledgerId) {
         if (ledgerId == null || ledgerId.trim().isEmpty()) {
             throw new IllegalArgumentException("账本编号不能为空");

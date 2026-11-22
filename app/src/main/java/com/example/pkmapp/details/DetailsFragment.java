@@ -2,6 +2,9 @@ package com.example.pkmapp.details;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,7 +62,8 @@ public final class DetailsFragment extends Fragment {
             selectedMonth.setTimeInMillis(DetailsPickerLabels.monthStart(now).getTimeInMillis());
             render();
         });
-        transactionAdapter = new TransactionListAdapter(this::confirmDeleteTransaction);
+        transactionAdapter = new TransactionListAdapter(this::confirmDeleteTransaction,
+                transaction -> ((MainActivity) requireActivity()).showEditTransaction(transaction));
         binding.detailsTransactionList.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.detailsTransactionList.setAdapter(transactionAdapter);
         binding.detailsTransactionList.setNestedScrollingEnabled(false);
@@ -171,9 +175,12 @@ public final class DetailsFragment extends Fragment {
         MonthlyTotals totals = repository.getCurrentMonthTotals(selectedMonth.getTimeInMillis());
         binding.detailsLedgerSwitchButton.setText(repository.getCurrentLedger().getName() + "  ▾");
         binding.detailsLedgerName.setText("当前账本 · " + repository.getCurrentLedger().getName());
-        binding.detailsIncome.setText("↑ 收入\n" + MoneyParser.formatCents(totals.getIncomeInCents()));
-        binding.detailsExpense.setText("↓ 支出\n" + MoneyParser.formatCents(totals.getExpenseInCents()));
-        binding.detailsBalance.setText(MoneyParser.formatCents(totals.getBalanceInCents()));
+        binding.detailsIncome.setText(flowText("↑ 收入", totals.getIncomeInCents(),
+                R.color.forest_green), TextView.BufferType.SPANNABLE);
+        binding.detailsExpense.setText(flowText("↓ 支出", totals.getExpenseInCents(),
+                R.color.expense_red), TextView.BufferType.SPANNABLE);
+        binding.detailsBalance.setText(balanceText(totals.getBalanceInCents()),
+                TextView.BufferType.SPANNABLE);
 
         binding.detailsMonthPickerButton.setText(DetailsPickerLabels.monthButtonText(
                 selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH)));
@@ -294,6 +301,33 @@ public final class DetailsFragment extends Fragment {
                 selected ? R.color.forest_green : R.color.wood_brown));
         option.setContentDescription("选择" + text);
         return option;
+    }
+
+    private CharSequence balanceText(long balanceInCents) {
+        long absolute = balanceInCents == Long.MIN_VALUE
+                ? Long.MAX_VALUE : Math.abs(balanceInCents);
+        String amount = MoneyParser.formatCents(absolute);
+        if (balanceInCents >= 0L) {
+            return amount;
+        }
+        SpannableString text = new SpannableString("−" + amount);
+        text.setSpan(new ForegroundColorSpan(ContextCompat.getColor(requireContext(),
+                        R.color.expense_red)),
+                0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return text;
+    }
+
+    private CharSequence flowText(String label, long amountInCents, int amountColor) {
+        long absolute = amountInCents == Long.MIN_VALUE
+                ? Long.MAX_VALUE : Math.abs(amountInCents);
+        String amount = MoneyParser.formatCents(absolute);
+        SpannableString text = new SpannableString(label + "\n" + amount);
+        text.setSpan(new ForegroundColorSpan(ContextCompat.getColor(requireContext(),
+                        R.color.wood_brown)),
+                0, label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(ContextCompat.getColor(requireContext(), amountColor)),
+                label.length() + 1, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return text;
     }
 
     private TextView pickerLabel(String text, int size, int color) {

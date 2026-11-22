@@ -42,27 +42,29 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="@drawable/bg_record_success_secondary_action"
             android:clickable="true"
             android:contentDescription="暂不加入借钱统计"
             android:focusable="true"
             android:gravity="center"
             android:text="暂不统计"
             android:textColor="@color/wood_brown"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/borrowing_prompt_fill"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_marginStart="@dimen/space_8"
-            android:layout_weight="1"
-            android:background="@drawable/bg_details_picker_selected"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1.25"
+            android:background="@drawable/bg_savings_save"
             android:clickable="true"
             android:contentDescription="填写借钱统计详情"
             android:focusable="true"
             android:gravity="center"
             android:text="去填写"
-            android:textColor="@color/forest_green"
+            android:textColor="@color/paper_light"
             android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>

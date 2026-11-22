@@ -10,14 +10,24 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <LinearLayout
+    <View
+        android:id="@+id/bottom_nav_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="88dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_bottom_nav_scrim"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+    <com.example.pkmapp.forest.FrostedNavigationBar
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"
         android:layout_height="88dp"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
         android:layout_marginBottom="10dp"
-        android:background="@drawable/bg_bottom_bar"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:elevation="8dp"
@@ -149,5 +159,5 @@
                 android:textColor="@color/nav_item_tint"
                 android:textSize="12sp" />
         </LinearLayout>
-    </LinearLayout>
+    </com.example.pkmapp.forest.FrostedNavigationBar>
 </FrameLayout>

@@ -15,12 +15,9 @@ import androidx.fragment.app.FragmentManager;
 import com.example.pkmapp.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.datepicker.MaterialDatePicker;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.function.Consumer;
 
 final class StudyWorkDialogs {
@@ -132,20 +129,8 @@ final class StudyWorkDialogs {
     }
 
     private void calendar(String label, String day, Consumer<String> accept) {
-        if (fragments.isStateSaved() || fragments.findFragmentByTag("study-calendar") != null) return;
-        Calendar local = StudyFormat.day(day);
-        Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        utc.clear();
-        utc.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH));
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText(label).setSelection(utc.getTimeInMillis()).build();
-        picker.addOnPositiveButtonClickListener(value -> {
-            utc.setTimeInMillis(value);
-            accept.accept(String.format(Locale.ROOT, "%04d-%02d-%02d", utc.get(Calendar.YEAR),
-                utc.get(Calendar.MONTH) + 1, utc.get(Calendar.DAY_OF_MONTH)));
-        });
         sheet.hideKeyboard();
-        picker.show(fragments, "study-calendar");
+        sheet.pushDatePicker(label, day, accept);
     }
 
     void recordForm(StudyPlan initial, StudyNotebook.Record record, Runnable saved) {
@@ -376,39 +361,30 @@ final class StudyWorkDialogs {
         });
         syncPills.run();
 
-        // 4. Clean hairline reminder toggle + inline lead-time strip (no heavy outer box!)
-        android.view.View remindRule = new android.view.View(context);
-        remindRule.setBackgroundColor(0xffe8e4d6);
-        add(pane.body, remindRule, 12);
+        // 4. Clean hairline reminder toggle + inline lead-time strip (no nested card box!)
+        StudySheet.addHairline(pane.body, 12, 2);
 
-        MaterialCheckBox remindSwitch = com.example.pkmapp.forest.ForestUi.switchWithSubtitle(
+        MaterialCheckBox remindSwitch = com.example.pkmapp.forest.ForestUi.flatSwitchRow(
             context,
             "在截止时间前发送消息提醒",
             remindSubtitle(initialRemind, leadMinutes[0], plan.remindTime)
         );
-        remindSwitch.setBackground(ripple(context, rounded(context, android.graphics.Color.TRANSPARENT, 0, 12), false));
-        remindSwitch.setPadding(dp(context, 2), dp(context, 10), dp(context, 2), dp(context, 10));
         remindSwitch.setChecked(initialRemind);
-        add(pane.body, remindSwitch, 4);
+        pane.body.addView(remindSwitch, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout leadRow = row(context);
         int[] leadValues = {15, 30, 60, 1440};
-        String[] leadLabels = {"提前15分", "提前30分", "提前1小时", "前一天傍晚"};
+        String[] leadLabels = {"提前15分", "提前30分", "提前1小时", "前一天"};
         List<TextView> leadButtons = new ArrayList<>();
         Runnable updateLeadUi = () -> {
             boolean on = remindSwitch.isChecked();
             leadRow.setVisibility(on ? android.view.View.VISIBLE : android.view.View.GONE);
-            com.example.pkmapp.forest.ForestUi.updateSwitchSubtitle(
+            com.example.pkmapp.forest.ForestUi.updateFlatSwitchSubtitle(
                 remindSwitch,
                 remindSubtitle(on, leadMinutes[0], plan.remindTime)
             );
             for (int i = 0; i < leadButtons.size(); i++) {
-                boolean active = leadMinutes[0] == leadValues[i];
-                TextView btn = leadButtons.get(i);
-                btn.setTextColor(active ? 0xff243624 : 0xff6b7568);
-                btn.setBackground(ripple(context, rounded(context,
-                    active ? 0xffe6efe2 : 0xfff3efe3,
-                    active ? 0xff96b392 : 0xffdcd8c8, 999), false));
+                StudySheet.styleChoiceChip(leadButtons.get(i), leadMinutes[0] == leadValues[i]);
             }
         };
         for (int i = 0; i < leadValues.length; i++) {
@@ -419,14 +395,15 @@ final class StudyWorkDialogs {
             });
             btn.setTextSize(11);
             btn.setMinimumHeight(dp(context, 32));
+            btn.setPadding(dp(context, 6), dp(context, 5), dp(context, 6), dp(context, 5));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) lp.setMarginStart(dp(context, 5));
+            if (i > 0) lp.setMarginStart(dp(context, 6));
             leadRow.addView(btn, lp);
             leadButtons.add(btn);
         }
         remindSwitch.setOnCheckedChangeListener((b, checked) -> updateLeadUi.run());
         updateLeadUi.run();
-        add(pane.body, leadRow, 2);
+        add(pane.body, leadRow, 4);
 
         if (task != null) {
             LinearLayout extraRow = row(context);
@@ -459,8 +436,6 @@ final class StudyWorkDialogs {
                 });
                 saved.run();
             }));
-        } else {
-            pane.secondary("取消", sheet::dismiss);
         }
         pane.primary("保存事项", () -> save(() -> {
             String cleanTime = StudyWork.Task.validateTime(value(dueTimeInput));

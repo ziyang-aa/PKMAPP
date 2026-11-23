@@ -2,74 +2,85 @@ package com.example.pkmapp.study;
 
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
-import com.example.pkmapp.forest.ForestUi;
 
-/** An engraved dial; its progress represents elapsed study time against the chosen goal. */
+/** Editorial precision progress rail representing elapsed study time against the chosen goal. */
 public final class StudyClockFace extends Drawable {
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF trackRect = new RectF();
+    private final RectF fillRect = new RectF();
     private float progress;
 
     public void setProgress(float value) {
-        progress = Math.max(0, Math.min(1, value));
+        float clamped = Math.max(0f, Math.min(1f, value));
+        if (Math.abs(clamped - progress) < 0.0005f) return;
+        progress = clamped;
         invalidateSelf();
     }
 
     @Override
     public void draw(Canvas canvas) {
-        canvas.save();
-        canvas.translate(getBounds().centerX(), getBounds().centerY());
-        float scale = Math.min(getBounds().width(), getBounds().height()) / 220f;
-        canvas.scale(scale, scale);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(0xffdbe5bf);
-        canvas.drawCircle(0, 2, 103, paint);
-        paint.setColor(0xfff3f5e5);
-        canvas.drawCircle(0, 0, 103, paint);
+        Rect bounds = getBounds();
+        int w = bounds.width();
+        int h = bounds.height();
+        if (w <= 0 || h <= 0) return;
+
+        float radius = h / 2f;
+        trackRect.set(bounds.left, bounds.top, bounds.right, bounds.bottom);
+
+        // Warm linen recessed track
         paint.setShader(null);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(1.3f);
-        paint.setColor(0xffc3c8ab);
-        canvas.drawCircle(0, 0, 103, paint);
-        canvas.drawOval(new RectF(-100, -98, 99, 101), paint);
-        for (int i = 0; i < 12; i++) {
-            canvas.save();
-            canvas.rotate(i * 30);
-            paint.setStrokeWidth(i % 5 == 0 ? 1.3f : .7f);
-            paint.setColor(i % 5 == 0 ? 0xff9b9f7d : 0xffd4d4bd);
-            canvas.drawLine(0, -93, 0, i % 5 == 0 ? -86 : -90, paint);
-            canvas.restore();
-        }
-        paint.setStrokeWidth(2);
-        paint.setColor(0xffe0e5d2);
-        canvas.drawCircle(0, 0, 78, paint);
-        if (progress > 0) {
-            paint.setColor(ForestUi.GREEN);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            canvas.drawArc(new RectF(-78, -78, 78, 78), -90, progress * 360, false, paint);
-            double angle = Math.toRadians(-90 + progress * 360);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle((float) Math.cos(angle) * 78, (float) Math.sin(angle) * 78, 3, paint);
-            paint.setStrokeCap(Paint.Cap.BUTT);
-        }
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(0xffb8a171);
-        canvas.drawCircle(0, -58, 2, paint);
-        canvas.restore();
+        paint.setColor(0xffece8dc);
+        canvas.drawRoundRect(trackRect, radius, radius, paint);
+
+        // Subtle precision quarter notches along empty rail
+        paint.setColor(0x24736c5d);
+        float notchW = Math.max(1.5f, h * 0.16f);
+        for (int i = 1; i <= 3; i++) {
+            float nx = bounds.left + (w * i) / 4f;
+            canvas.drawRect(nx - notchW / 2f, bounds.top + h * 0.24f, nx + notchW / 2f, bounds.bottom - h * 0.24f, paint);
+        }
+
+        // Smooth forest sage-to-pine gradient fill
+        if (progress > 0f) {
+            float fillW = Math.max(h, w * progress);
+            fillRect.set(bounds.left, bounds.top, Math.min(bounds.right, bounds.left + fillW), bounds.bottom);
+            paint.setColor(0xffffffff);
+            paint.setAlpha(255);
+            paint.setShader(
+                new LinearGradient(
+                    fillRect.left,
+                    0,
+                    fillRect.right,
+                    0,
+                    0xff6e9169,
+                    0xff3e6040,
+                    Shader.TileMode.CLAMP
+                )
+            );
+            canvas.drawRoundRect(fillRect, radius, radius, paint);
+            paint.setShader(null);
+        }
     }
 
     @Override
     public void setAlpha(int alpha) {
         paint.setAlpha(alpha);
+        invalidateSelf();
     }
 
     @Override
     public void setColorFilter(ColorFilter filter) {
         paint.setColorFilter(filter);
+        invalidateSelf();
     }
 
     @Override

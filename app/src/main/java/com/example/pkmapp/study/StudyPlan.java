@@ -26,12 +26,23 @@ final class StudyPlan {
     }
 
     enum Partner {
-        SQUIRREL("松栗"), TREECKO("木守宫"), BULBASAUR("妙蛙种子");
+        SQUIRREL("松栗", "爱翻书的小松鼠"),
+        BEAR("团团", "爱记笔记的小棕熊"),
+        BUNNY("糯糯", "细心刷题的小白兔");
 
         final String title;
+        final String subtitle;
 
-        Partner(String title) {
+        Partner(String title, String subtitle) {
             this.title = title;
+            this.subtitle = subtitle;
+        }
+
+        static Partner parse(String raw) {
+            if (raw == null || raw.isEmpty()) return SQUIRREL;
+            if ("BEAR".equals(raw) || "TREECKO".equals(raw)) return BEAR;
+            if ("BUNNY".equals(raw) || "BULBASAUR".equals(raw)) return BUNNY;
+            return SQUIRREL;
         }
     }
 
@@ -145,7 +156,7 @@ final class StudyPlan {
         for (int i = 0; i < shelf.length(); i++) books.add(StudySubject.fromJson(shelf.getJSONObject(i)));
         StudyPlan plan = new StudyPlan(source.getString("id"), source.getString("title"),
             Kind.valueOf(source.getString("kind")), source.getString("due"),
-            Partner.valueOf(source.getString("partner")), source.getString("previous"),
+            Partner.parse(source.optString("partner", Partner.SQUIRREL.name())), source.getString("previous"),
             source.getLong("created"), books);
         plan.archived = source.getLong("archived");
         plan.selected = source.getString("selected");

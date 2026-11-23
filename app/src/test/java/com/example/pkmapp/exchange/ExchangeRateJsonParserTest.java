@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 public final class ExchangeRateJsonParserTest {
     @Test
@@ -41,5 +42,28 @@ public final class ExchangeRateJsonParserTest {
         assertEquals(false, connection.getUseCaches());
         assertEquals("no-cache", connection.getRequestProperty("Cache-Control"));
         assertEquals("no-cache", connection.getRequestProperty("Pragma"));
+    }
+
+    @Test
+    public void parsesFrankfurterV2BatchArrayResponse() {
+        Map<String, ExchangeRateSnapshot> batch = ExchangeRateJsonParser.parseBatch(
+                "[{\"date\":\"2026-11-23\",\"base\":\"CNY\",\"quote\":\"USD\",\"rate\":0.1412},"
+                        + "{\"date\":\"2026-11-23\",\"base\":\"CNY\",\"quote\":\"JPY\",\"rate\":21.35}]",
+                "CNY");
+
+        assertEquals(2, batch.size());
+        assertEquals(new BigDecimal("0.1412"), batch.get("USD").getRate());
+        assertEquals(new BigDecimal("21.35"), batch.get("JPY").getRate());
+    }
+
+    @Test
+    public void parsesBatchRatesObjectResponse() {
+        Map<String, ExchangeRateSnapshot> batch = ExchangeRateJsonParser.parseBatch(
+                "{\"date\":\"2026-11-23\",\"base\":\"CNY\",\"rates\":{\"EUR\":0.1301,\"GBP\":0.1112}}",
+                "CNY");
+
+        assertEquals(2, batch.size());
+        assertEquals(new BigDecimal("0.1301"), batch.get("EUR").getRate());
+        assertEquals(new BigDecimal("0.1112"), batch.get("GBP").getRate());
     }
 }

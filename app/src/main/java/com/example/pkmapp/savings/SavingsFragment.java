@@ -101,7 +101,7 @@ public final class SavingsFragment extends Fragment {
         TextView depositButton = card.findViewById(R.id.savings_goal_deposit_button);
         TextView deleteButton = card.findViewById(R.id.savings_goal_delete_button);
 
-        kicker.setText("GOAL CARD · SEEDLING");
+        kicker.setText("攒钱心愿卡");
         if (goal == null) {
             stageImage.setImageResource(R.drawable.savings_seedling_stage_1);
             state.setText("空白目标");

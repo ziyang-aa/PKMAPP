@@ -29,12 +29,12 @@ replay_pid*
 local.properties
 /.superpowers/
 /.worktrees/
+/.playwright-cli/
+/output/
+/pkmapp_wx/
 /宝可梦账本素材/
-/artwork/processed/android_ready/
 
 # Local development screenshots and emulator snapshots
 /build-*.png
+/build-*.xml
 /emulator-window.xml
-
-# Design-tool generated cache
-/design/.figma-assets/

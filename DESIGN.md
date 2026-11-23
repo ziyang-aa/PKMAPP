@@ -139,13 +139,17 @@ components:
 | 底部面板 | 学习计划、选科、记录详情使用同一面板内的返回栈，区分「上一步」和「关闭」，保留草稿和筛选。 | `@app/src/main/java/com/example/pkmapp/study/StudySheet.java` · `@app/src/main/java/com/example/pkmapp/study/StudyPlanDialogs.java` · `@app/src/main/res/values/forest_dialog.xml` |
 | 底部导航 | 同一标签的图标、文字、按压和选中区域对齐。 | `@app/src/main/java/com/example/pkmapp/forest/FrostedNavigationBar.java` · `@app/src/main/java/com/example/pkmapp/MainActivity.java` |
 | 学习图表 | 环形图用引线标注科目和实际时长；科目汇总显示时长与占比，按占比降序排列。 | `@app/src/main/java/com/example/pkmapp/study/StudyChartView.java` · `@app/src/main/java/com/example/pkmapp/study/StudyFragment.java` |
+| 自绘日历 | 替代系统原生日期选择器，支持待办/逾期/已完成圆点标记与单日筛选。 | `@app/src/main/java/com/example/pkmapp/forest/ForestCalendarView.java` |
 | 手绘卡片与林地 | 用纸纹、蜡笔边角和少量插画组织重点。林地展示树苗、成长进度和浇水反馈。 | `@app/src/main/java/com/example/pkmapp/forest/CrayonCard.java` · `@app/src/main/java/com/example/pkmapp/study/StudyGardenView.java` |
 
 ## Do's and Don'ts
 
+- **避免盲目的多纯色卡片与卡片套卡片**：不要把筛选条件、提醒开关、输入框随意装进彩色/白底盒子，更禁止卡片内套卡片或弹窗内套卡片。优先采用**报刊发丝线风（无框文字 + 细线图标 + 0.75 dp 发丝线 + 短下划线页签）**，短文案严禁用 `weight=1` 拉成长条色块。
+- **顶栏克制统一**：所有一级页顶栏仅放左侧 `56 dp` 返回门与右侧 `24 sp` 页面标题，不往右上角塞缩小的功能按钮；功能放在顶栏下方视线区，单屏仅保留 1 个松绿实心主按钮。
+- **三图层通栏无割裂**：`fragment_container` 不加 `topMargin`，内层滚动容器使用 `clipToPadding=false` + `bars.top` 内边距，让内容自然滑入状态栏后方。
 - 新版面先标清主操作、辅助操作、当前状态和空状态。触控控件以 48 dp 为目标，文字与所在底色按 WCAG AA 检查，图表和选中状态配文字或符号。
 - 视觉原型可用现有 HTML 对照构图，原生 Android 的可用状态以实际组件为准。复杂调整可以先出原型，确认后落到对应页面。
-- 参考外部样例时，选定想借鉴的一条原则，再用芽叶记的色字、插画和组件表达。全局设计规则达成确认后同步到本文件与共用组件。
+- 参考外部样例时，选定想借鉴的一条原则，再用芽叶记的色字、插画和组件表达。全局设计规则达成确认后同步到本文件、`AGENTS.md` 与共用组件。
 
 ## 后续使用
 

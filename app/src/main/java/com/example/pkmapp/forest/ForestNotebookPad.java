@@ -73,10 +73,10 @@ public final class ForestNotebookPad extends LinearLayout {
         canvas.drawRoundRect(sheet2, radius, radius, fillPaint);
         canvas.drawRoundRect(sheet2, radius, radius, strokePaint);
 
-        // 2. Main warm cream draft-paper sheet
+        // 2. Main warm porcelain draft-paper sheet
         RectF mainSheet = new RectF(0.5f * d, top, w - 0.5f * d, mainBottom);
-        fillPaint.setColor(0xfffbf8ee);
-        strokePaint.setColor(0xffd7d2be);
+        fillPaint.setColor(0xfffffefa);
+        strokePaint.setColor(0x225c4938);
         canvas.drawRoundRect(mainSheet, radius, radius, fillPaint);
         canvas.drawRoundRect(mainSheet, radius, radius, strokePaint);
 

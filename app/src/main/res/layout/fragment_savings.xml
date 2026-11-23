@@ -22,15 +22,15 @@
         <LinearLayout
             android:id="@+id/savings_hero"
             android:layout_width="match_parent"
-            android:layout_height="192dp"
+            android:layout_height="146dp"
             android:layout_marginTop="0dp"
             android:background="@drawable/bg_savings_hero"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="21dp"
-            android:paddingTop="21dp"
+            android:paddingTop="14dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="21dp">
+            android:paddingBottom="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -44,7 +44,7 @@
                     android:fontFamily="serif"
                     android:text="给未来留一片\n更大的森林"
                     android:textColor="@color/forest_green"
-                    android:textSize="24sp"
+                    android:textSize="21sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -57,8 +57,8 @@
             </LinearLayout>
 
             <ImageView
-                android:layout_width="130dp"
-                android:layout_height="130dp"
+                android:layout_width="108dp"
+                android:layout_height="108dp"
                 android:contentDescription="@null"
                 android:src="@drawable/turtwig_carrying_acorn_jar" />
         </LinearLayout>

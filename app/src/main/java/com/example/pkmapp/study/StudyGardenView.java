@@ -6,13 +6,10 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.os.Build;
 import android.os.SystemClock;
 import android.view.View;
@@ -24,14 +21,15 @@ import com.example.pkmapp.forest.ForestUi;
 public final class StudyGardenView extends View {
 
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final Bitmap sprout, sapling, tree, can, companion;
+    private final Bitmap backdrop, sprout, sapling, tree, can;
+    private Bitmap companion;
     private final Rect visible = new Rect();
     private boolean planted, active;
     private int growth, from, to;
     private String motion = "idle";
     private float progress;
     private ValueAnimator animator;
-    private final float[] sizes = { 95, 145, 205, 235, 263, 284 };
+    private final float[] sizes = { 96, 138, 190, 212, 226, 238 };
     private final Runnable frame = new Runnable() {
         @Override
         public void run() {
@@ -43,15 +41,22 @@ public final class StudyGardenView extends View {
 
     public StudyGardenView(Context context) {
         super(context);
+        backdrop = ForestBitmaps.get(context, R.drawable.crayon_garden_backdrop);
         sprout = ForestBitmaps.get(context, R.drawable.savings_seedling_stage_1);
         sapling = ForestBitmaps.get(context, R.drawable.savings_seedling_stage_2);
         tree = ForestBitmaps.get(context, R.drawable.savings_tree_stage_3);
         can = ForestBitmaps.get(context, R.drawable.crayon_watering_can);
         companion = ForestBitmaps.get(context, R.drawable.crayon_study_companion);
-        setBackground(ForestUi.rounded(context, 0xfff0f2df, 0xffd9dfc7, 20));
+        setBackground(ForestUi.rounded(context, 0xfff7f4e8, 0x24456444, 22));
+        setElevation(ForestUi.dp(context, 2));
         setClipToOutline(true);
         setFocusable(true);
         setClickable(true);
+    }
+
+    public void setCompanion(int drawableRes) {
+        this.companion = ForestBitmaps.get(getContext(), drawableRes);
+        invalidate();
     }
 
     public void setState(boolean planted, int growth) {
@@ -186,35 +191,11 @@ public final class StudyGardenView extends View {
         c.save();
         c.scale(getWidth() / 360f, getHeight() / 285f);
         float time = moving() ? SystemClock.uptimeMillis() / 1000f : 0;
+        p.setShader(null);
         p.setColor(0xffffffff);
         p.setAlpha(255);
-        p.setShader(
-            new LinearGradient(
-                0,
-                40,
-                0,
-                250,
-                new int[] { 0x20f8f5e6, 0xeff0f2df },
-                null,
-                Shader.TileMode.CLAMP
-            )
-        );
-        c.drawRect(0, 0, 360, 285, p);
-        p.setShader(null);
-        p.setShader(
-            new RadialGradient(
-                175,
-                224,
-                145,
-                new int[] { 0xa0c7d7a4, 0x00d8dfbb },
-                null,
-                Shader.TileMode.CLAMP
-            )
-        );
-        c.drawOval(new RectF(29, 182, 321, 268), p);
-        p.setShader(null);
-        oval(c, 170, 236, 60, 11, 0x1d8c966b);
-        grass(c, time);
+        c.drawBitmap(backdrop, null, new RectF(0, 0, 360, 285), p);
+        oval(c, 182, 238, 52, 10, 0x205a6c44);
         if (motion.equals("water")) {
             float grow = ease((progress - .5f) / .42f),
                 size = size(from) + (size(to) - size(from)) * grow;
@@ -240,17 +221,18 @@ public final class StudyGardenView extends View {
             drawTree(c, growth, time, 1, size(growth), 0, nod);
             if (motion.equals("greet")) hearts(c, progress);
         } else {
-            oval(c, 170, 235, 25, 7, 0xffc9b697);
-            oval(c, 169, 233, 20, 5, 0xffddceb2);
+            oval(c, 182, 236, 26, 6.5f, 0x88b4986d);
+            oval(c, 181, 234.5f, 19, 4.5f, 0x99d1b98e);
         }
         // The tree is the main subject; the companion and low woodland details frame it.
         p.setShader(null);
         p.setStyle(Paint.Style.FILL);
         p.setColor(0xffffffff);
         p.setAlpha(255);
-        c.drawBitmap(companion, null, new RectF(14, 160, 96, 247), p);
-        mushroom(c, 300, 241, 1f);
-        mushroom(c, 321, 246, .68f);
+        float unstretchX = (getHeight() / 285f) / Math.max(0.001f, getWidth() / 360f);
+        float compH = 88f;
+        float compW = compH * (companion.getWidth() / (float) Math.max(1, companion.getHeight())) * unstretchX;
+        c.drawBitmap(companion, null, new RectF(18, 246 - compH, 18 + compW, 246), p);
         if (motion.equals("water")) {
             watering(c, progress);
             float grow = ease((progress - .5f) / .42f);
@@ -262,19 +244,27 @@ public final class StudyGardenView extends View {
         oval(c, bx - 3 * wing, by - 2, 4 * wing, 5, 0xaad3b878);
         oval(c, bx + 3 * wing, by - 2, 4 * wing, 5, 0xbadec98b);
         oval(c, bx, by, .8f, 4, 0xff9c926b);
-        text(c, "会呼吸的小林地", 14, 23, 9, 0xff74815e);
-        text(
-            c,
-            busy()
-                ? "水壶 → 洒水 → 舒展生长"
-                : planted
-                  ? "点点小树，和它打个招呼"
-                  : "先在这里，种下一颗种子",
-            77,
-            274,
-            9,
-            0xff7d866a
-        );
+        p.setShader(null);
+        p.setStyle(Paint.Style.FILL);
+        p.setTextSize(9);
+        String badge = "会呼吸的小林地";
+        float bw = p.measureText(badge);
+        p.setColor(0xccfffef8);
+        c.drawRoundRect(new RectF(12, 11, 12 + bw + 18, 30), 10, 10, p);
+        text(c, badge, 21, 23.5f, 9, 0xff4c6444);
+        String caption = busy()
+            ? "水壶 → 洒水 → 舒展生长"
+            : planted
+              ? "点点小树，和它打个招呼"
+              : "先在这里，种下一颗种子";
+        p.setTextSize(9);
+        float cw = p.measureText(caption);
+        p.setColor(0xc2fffef8);
+        c.drawRoundRect(new RectF(180 - cw / 2f - 14, 258, 180 + cw / 2f + 14, 277), 10, 10, p);
+        p.setColor(0xff52644a);
+        p.setTextAlign(Paint.Align.CENTER);
+        c.drawText(caption, 180, 270.5f, p);
+        p.setTextAlign(Paint.Align.LEFT);
         c.restore();
     }
 
@@ -304,9 +294,12 @@ public final class StudyGardenView extends View {
         if (alpha <= 0) return;
         Bitmap bitmap = image(stage);
         int visualStage = StudyGrowth.stage(stage);
-        float root = visualStage < 2 ? .81f : visualStage == 2 ? .86f : .89f;
+        float root = visualStage < 2 ? .90f : visualStage == 2 ? .91f : .94f;
+        float unstretchX = (getHeight() / 285f) / Math.max(0.001f, getWidth() / 360f);
+        float aspect = bitmap.getWidth() / (float) Math.max(1, bitmap.getHeight());
+        float halfW = (size * aspect * unstretchX) / 2f;
         c.save();
-        c.translate(170, 237);
+        c.translate(182, 238);
         c.rotate(
             moving() ? (float) (Math.sin(t * 1.35) * .92 + Math.sin(t * .73) * .46) + nod * 5 : 0
         );
@@ -318,63 +311,10 @@ public final class StudyGardenView extends View {
         c.drawBitmap(
             bitmap,
             null,
-            new RectF(-size / 2, -size * root, size / 2, size * (1 - root)),
+            new RectF(-halfW, -size * root, halfW, size * (1 - root)),
             p
         );
         p.setAlpha(255);
-        c.restore();
-    }
-
-    private void grass(Canvas c, float t) {
-        for (int i = 0; i < 18; i++) {
-            float x = 37 + i * 17,
-                y = 226 + (float) Math.sin(i * 1.8) * 12,
-                bend = (float) Math.sin(t * 1.4 + i * .7) * 2;
-            p.setColor(i % 2 == 0 ? 0xffbcc698 : 0xff9dad80);
-            p.setStrokeWidth(1.2f);
-            p.setStyle(Paint.Style.STROKE);
-            Path blade = new Path();
-            blade.moveTo(x, y + 8);
-            blade.quadTo(x - 1, y, x - 4 + bend, y - 5);
-            blade.moveTo(x, y + 8);
-            blade.quadTo(x + 1, y - 1, x + 5 + bend, y - 9);
-            c.drawPath(blade, p);
-            p.setStyle(Paint.Style.FILL);
-            if (i % 5 == 0) {
-                for (int j = 0; j < 5; j++) oval(
-                    c,
-                    x + 5 + (float) Math.cos(j * 1.257) * 3,
-                    y - 9 + (float) Math.sin(j * 1.257) * 3,
-                    2.5f,
-                    1.8f,
-                    0xfffff9e8
-                );
-                oval(c, x + 5, y - 9, 1.8f, 1.8f, 0xffc5aa64);
-            }
-        }
-    }
-
-    private void mushroom(Canvas c, float x, float y, float scale) {
-        c.save();
-        c.translate(x, y);
-        c.scale(scale, scale);
-        oval(c, 1, 1, 10, 2.5f, 0x22677d4c);
-        oval(c, 0, -5, 3.4f, 6.2f, 0xffe7d2a1);
-        Path cap = new Path();
-        cap.moveTo(-10, -9);
-        cap.cubicTo(-10, -14, -4, -22, 1, -20);
-        cap.cubicTo(7, -20, 11, -14, 10, -9);
-        cap.quadTo(0, -6, -10, -9);
-        cap.close();
-        p.setColor(0xffc99a68);
-        c.drawPath(cap, p);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(1.15f);
-        p.setColor(0xff926f4d);
-        c.drawPath(cap, p);
-        oval(c, -4, -13, 1.8f, 1.1f, 0xfff9e9c2);
-        oval(c, 2, -16, 1.7f, 1.2f, 0xfff9e9c2);
-        oval(c, 6, -12, 1.2f, .9f, 0xfff9e9c2);
         c.restore();
     }
 

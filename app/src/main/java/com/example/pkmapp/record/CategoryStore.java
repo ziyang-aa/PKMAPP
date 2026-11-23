@@ -87,10 +87,12 @@ public final class CategoryStore {
 
     public static List<String> defaultCategories(TransactionType type) {
         if (type == TransactionType.EXPENSE) {
-            return Arrays.asList("餐饮", "购物", "饮料", "交通", "日用", "学习", "水果",
-                    "娱乐", "服饰", "礼物", "红包", "人情", "医疗", "订阅", "借出", "还款");
+            return Arrays.asList("餐饮", "美团", "淘宝闪购", "饮料", "实体购物", "网购", "零食",
+                    "水果", "交通", "日用", "房租水电", "美妆理发", "学习", "娱乐", "服饰",
+                    "运动健身", "礼物", "红包", "人情", "医疗", "订阅", "借出", "还款");
         }
-        return Arrays.asList("工资", "零花", "兼职", "转卖", "借入");
+        return Arrays.asList("工资", "奖金", "兼职", "生活费", "收红包", "退款报销", "理财利息",
+                "转卖", "收回欠款", "借入");
     }
 
     private String customKey(TransactionType type) {

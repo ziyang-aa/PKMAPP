@@ -15,13 +15,16 @@ import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Online exchange-rate loader with a small last-success cache for offline viewing. */
 public final class ExchangeRateService {
     private static final String API_ROOT = "https://api.frankfurter.dev/v2/rate/";
+    private static final String API_BATCH_ROOT = "https://api.frankfurter.dev/v2/rates?base=";
     private static final String PREFERENCES = "exchange_rates";
     private static final int TIMEOUT_MILLIS = 10_000;
 
@@ -130,9 +133,67 @@ public final class ExchangeRateService {
         return currency.trim().toUpperCase(Locale.US);
     }
 
+    public void fetchBatch(String baseCurrency, String[] quoteCurrencies, BatchCallback callback) {
+        String base = normalizeCurrency(baseCurrency);
+        Map<String, ExchangeRateSnapshot> cachedMap = new LinkedHashMap<>();
+        for (String q : quoteCurrencies) {
+            String normQ = normalizeCurrency(q);
+            if (normQ.equals(base)) {
+                cachedMap.put(normQ, new ExchangeRateSnapshot(base, normQ, BigDecimal.ONE, "即时"));
+            } else {
+                ExchangeRateSnapshot snap = getCached(base, normQ);
+                if (snap != null) cachedMap.put(normQ, snap);
+            }
+        }
+        executor.execute(() -> {
+            try {
+                Map<String, ExchangeRateSnapshot> loaded = requestBatch(base);
+                loaded.put(base, new ExchangeRateSnapshot(base, base, BigDecimal.ONE,
+                        loaded.values().isEmpty() ? "即时" : loaded.values().iterator().next().getDate()));
+                SharedPreferences.Editor editor = preferences.edit();
+                for (ExchangeRateSnapshot snap : loaded.values()) {
+                    if (!snap.getBaseCurrency().equals(snap.getQuoteCurrency())) {
+                        editor.putString(cacheKey(snap.getBaseCurrency(), snap.getQuoteCurrency()),
+                                snap.getRate().toPlainString() + "|" + snap.getDate());
+                    }
+                }
+                editor.apply();
+                mainHandler.post(() -> callback.onSuccess(loaded, false));
+            } catch (Exception exception) {
+                String message = exception.getMessage() == null
+                        ? "暂时无法获取最新汇率" : exception.getMessage();
+                mainHandler.post(() -> callback.onError(message, cachedMap));
+            }
+        });
+    }
+
+    private Map<String, ExchangeRateSnapshot> requestBatch(String base) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(API_BATCH_ROOT + base)
+                .openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(TIMEOUT_MILLIS);
+        connection.setReadTimeout(TIMEOUT_MILLIS);
+        configureLatestRequest(connection);
+        try {
+            int statusCode = connection.getResponseCode();
+            if (statusCode < 200 || statusCode >= 300) {
+                throw new IOException("汇率服务暂时不可用（" + statusCode + "）");
+            }
+            return ExchangeRateJsonParser.parseBatch(readBody(connection.getInputStream()), base);
+        } finally {
+            connection.disconnect();
+        }
+    }
+
     public interface Callback {
         void onSuccess(ExchangeRateSnapshot snapshot, boolean fromCache);
 
         void onError(String message, @Nullable ExchangeRateSnapshot cachedSnapshot);
+    }
+
+    public interface BatchCallback {
+        void onSuccess(Map<String, ExchangeRateSnapshot> snapshots, boolean fromCache);
+
+        void onError(String message, Map<String, ExchangeRateSnapshot> cachedSnapshots);
     }
 }

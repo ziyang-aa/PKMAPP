@@ -130,6 +130,16 @@ public final class RecordFragment extends Fragment {
         binding.recordDateYear.setOnClickListener(v -> showDateDropdown(binding.recordDateYear, DatePart.YEAR));
         binding.recordDateMonth.setOnClickListener(v -> showDateDropdown(binding.recordDateMonth, DatePart.MONTH));
         binding.recordDateDay.setOnClickListener(v -> showDateDropdown(binding.recordDateDay, DatePart.DAY));
+        binding.recordDateTodayChip.setOnClickListener(v -> {
+            date = RecordDateState.today();
+            dateLabel();
+        });
+        binding.recordDateYesterdayChip.setOnClickListener(v -> {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+            date = new RecordDateState(cal);
+            dateLabel();
+        });
         binding.recordSaveButton.setOnClickListener(v -> save());
         bindCalculatorKeys();
         dateLabel();
@@ -164,8 +174,8 @@ public final class RecordFragment extends Fragment {
             LinearLayout item = new LinearLayout(requireContext());
             item.setGravity(Gravity.CENTER);
             item.setOrientation(LinearLayout.VERTICAL);
-            item.setMinimumHeight(dp(116));
-            item.setPadding(dp(3), dp(7), dp(3), dp(7));
+            item.setMinimumHeight(dp(84));
+            item.setPadding(dp(2), dp(6), dp(2), dp(6));
             item.setBackgroundResource(R.drawable.bg_category_tile);
             item.setForeground(ContextCompat.getDrawable(requireContext(), R.drawable.ripple_category_tile));
             item.setClickable(true);
@@ -178,9 +188,12 @@ public final class RecordFragment extends Fragment {
             name.setText(label);
             name.setTextColor(ContextCompat.getColor(requireContext(), R.color.ink));
             name.setGravity(Gravity.CENTER);
-            name.setTextSize(11);
-            item.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(64)));
-            item.addView(name, new LinearLayout.LayoutParams(-1, dp(22)));
+            name.setTextSize(11.5f);
+            name.setSingleLine(true);
+            item.addView(icon, new LinearLayout.LayoutParams(dp(50), dp(50)));
+            LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(-1, -2);
+            nameLp.topMargin = dp(4);
+            item.addView(name, nameLp);
             item.setOnClickListener(v -> {
                 if ("自定义".equals(label)) {
                     showCustomCategory(item);
@@ -196,7 +209,7 @@ public final class RecordFragment extends Fragment {
             android.widget.GridLayout.LayoutParams params = new android.widget.GridLayout.LayoutParams();
             params.width = 0;
             params.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
-            params.setMargins(dp(2), dp(6), dp(2), dp(6));
+            params.setMargins(dp(2), dp(3), dp(2), dp(3));
             binding.recordCategoryGroup.addView(item, params);
         }
         if (initialCategoryView != null) {

@@ -245,16 +245,13 @@ public final class MainActivity extends AppCompatActivity {
 
     private void applySystemInsets() {
         boolean home = currentDestination == AppDestination.HOME;
-        int systemBarColor = home ? getColor(R.color.cream_background) : Color.TRANSPARENT;
-        getWindow().setStatusBarColor(systemBarColor);
-        getWindow().setNavigationBarColor(systemBarColor);
-        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(home);
-        binding.getRoot().setPadding(systemBars.left, home ? systemBars.top : 0,
-                systemBars.right, home ? systemBars.bottom : 0);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+        binding.getRoot().setPadding(systemBars.left, 0, systemBars.right, 0);
         FrameLayout.LayoutParams containerParams = (FrameLayout.LayoutParams) binding.fragmentContainer.getLayoutParams();
-        int containerTop = home ? 0 : systemBars.top;
-        if (containerParams.topMargin != containerTop) {
-            containerParams.topMargin = containerTop;
+        if (containerParams.topMargin != 0) {
+            containerParams.topMargin = 0;
             binding.fragmentContainer.setLayoutParams(containerParams);
         }
         positionBottomBar(binding.bottomNavigation, home ? 0 : systemBars.bottom);
@@ -292,7 +289,7 @@ public final class MainActivity extends AppCompatActivity {
             androidx.core.graphics.Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             int keyboard = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
-            view.setPadding(left, top, right, Math.max(bottom + bars.bottom, keyboard));
+            view.setPadding(left, top + bars.top, right, Math.max(bottom + bars.bottom, keyboard));
             return insets;
         };
         ViewCompat.setOnApplyWindowInsetsListener(scroll, listener);

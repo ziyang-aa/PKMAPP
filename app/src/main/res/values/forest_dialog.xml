@@ -27,15 +27,15 @@
     </style>
     <style name="ThemeOverlay.PkmAPP.StudySheet" parent="ThemeOverlay.PkmAPP.ForestBottomSheet">
         <item name="bottomSheetStyle">@style/Widget.PkmAPP.StudySheet</item>
-        <item name="colorSurface">#FDFAF0</item>
+        <item name="colorSurface">#FFFEFA</item>
     </style>
     <style name="Widget.PkmAPP.StudySheet" parent="Widget.PkmAPP.ForestBottomSheet">
-        <item name="backgroundTint">#FDFAF0</item>
+        <item name="backgroundTint">#FFFEFA</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.PkmAPP.StudySheet</item>
         <item name="paddingBottomSystemWindowInsets">false</item>
     </style>
     <style name="ShapeAppearance.PkmAPP.StudySheet" parent="ShapeAppearance.PkmAPP.ForestBottomSheet">
-        <item name="cornerSizeTopLeft">32dp</item>
-        <item name="cornerSizeTopRight">32dp</item>
+        <item name="cornerSizeTopLeft">28dp</item>
+        <item name="cornerSizeTopRight">28dp</item>
     </style>
 </resources>

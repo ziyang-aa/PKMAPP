@@ -162,6 +162,55 @@ public final class ForestUi {
         return checkInternal(context, title, subtitle, false);
     }
 
+    public static MaterialCheckBox flatSwitchRow(Context context, String title, String subtitle) {
+        MaterialCheckBox checkbox = new MaterialCheckBox(context);
+        checkbox.setUseMaterialThemeColors(false);
+        checkbox.setButtonTintList(null);
+        checkbox.setButtonIconDrawable(null);
+        checkbox.setButtonDrawable(null);
+        checkbox.setTag(title);
+        checkbox.setText(formatTwoLine(title, subtitle));
+        checkbox.setTextColor(0xff243624);
+        checkbox.setTextSize(14.5f);
+        checkbox.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        checkbox.setCompoundDrawablesRelativeWithIntrinsicBounds(
+            null,
+            null,
+            new ForestCheckDrawable(context, true, null),
+            null
+        );
+        checkbox.setCompoundDrawablePadding(dp(context, 12));
+        checkbox.setGravity(Gravity.CENTER_VERTICAL);
+        checkbox.setLineSpacing(dp(context, 4), 1f);
+        checkbox.setMinHeight(dp(context, 56));
+        checkbox.setMinimumHeight(dp(context, 56));
+        checkbox.setPadding(dp(context, 2), dp(context, 12), dp(context, 2), dp(context, 12));
+        checkbox.setBackground(ripple(context, rounded(context, android.graphics.Color.TRANSPARENT, 0, 12), false));
+        ForestMotion.bind(checkbox);
+        return checkbox;
+    }
+
+    public static void updateFlatSwitchSubtitle(MaterialCheckBox checkbox, String subtitle) {
+        Object tag = checkbox.getTag();
+        if (tag instanceof String) {
+            checkbox.setText(formatTwoLine((String) tag, subtitle));
+            return;
+        }
+        updateSwitchSubtitle(checkbox, subtitle);
+    }
+
+    public static MaterialCheckBox flatCheckWithSubtitle(Context context, String title, String subtitle) {
+        MaterialCheckBox checkbox = checkInternal(context, title, subtitle, false);
+        checkbox.setBackground(ripple(context, rounded(context, android.graphics.Color.TRANSPARENT, 0, 12), false));
+        checkbox.setPadding(
+            dp(context, 10),
+            dp(context, subtitle != null && !subtitle.isEmpty() ? 10 : 11),
+            dp(context, 4),
+            dp(context, subtitle != null && !subtitle.isEmpty() ? 26 : 11)
+        );
+        return checkbox;
+    }
+
     public static MaterialCheckBox switchWithSubtitle(Context context, String title, String subtitle) {
         MaterialCheckBox checkbox = checkInternal(context, formatTwoLine(title, subtitle), null, true);
         Drawable[] drawables = checkbox.getCompoundDrawablesRelative();
@@ -240,15 +289,9 @@ public final class ForestUi {
             );
         }
         StateListDrawable state = new StateListDrawable();
-        GradientDrawable disabledCard = rounded(context, 0xfff4f1e6, 0, 14);
-        disabledCard.setStroke(dp(context, 1.2f), 0xffd2cebe, dp(context, 5), dp(context, 3));
-        state.addState(new int[] { -android.R.attr.state_enabled }, disabledCard);
-
-        GradientDrawable checkedCard = rounded(context, 0xffeaf1e5, 0, 14);
-        checkedCard.setStroke(Math.max(1, dp(context, 1.5f)), 0xff96b392);
-        state.addState(new int[] { android.R.attr.state_checked }, checkedCard);
-
-        state.addState(new int[0], rounded(context, 0xfffbf9f2, 0xffdedbc9, 14));
+        state.addState(new int[] { -android.R.attr.state_enabled }, rounded(context, 0xfff5f2e8, 0, 12));
+        state.addState(new int[] { android.R.attr.state_checked }, rounded(context, 0xffeef4ea, 0, 12));
+        state.addState(new int[0], rounded(context, android.graphics.Color.TRANSPARENT, 0, 12));
         checkbox.setBackground(ripple(context, state, false));
         ForestMotion.bind(checkbox);
         return checkbox;

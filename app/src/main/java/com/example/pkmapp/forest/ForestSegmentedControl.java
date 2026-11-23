@@ -26,6 +26,7 @@ public final class ForestSegmentedControl extends LinearLayout {
     private final float d;
     private final List<TextView> items = new ArrayList<>();
     private int selectedIndex;
+    private boolean selectionCleared;
     private float indicatorLeft = -1f;
     private float indicatorRight = -1f;
     private ValueAnimator animator;
@@ -46,18 +47,18 @@ public final class ForestSegmentedControl extends LinearLayout {
         setPadding(pad, pad, pad, pad);
 
         trackFill.setStyle(Paint.Style.FILL);
-        trackFill.setColor(0xffebe7da);
+        trackFill.setColor(0xffeae5d9);
         trackStroke.setStyle(Paint.Style.STROKE);
-        trackStroke.setStrokeWidth(d);
-        trackStroke.setColor(0xffdcd8c8);
+        trackStroke.setStrokeWidth(0f);
+        trackStroke.setColor(0x00000000);
 
         pillShadow.setStyle(Paint.Style.FILL);
-        pillShadow.setColor(0x16243624);
+        pillShadow.setColor(0x12243624);
         pillFill.setStyle(Paint.Style.FILL);
-        pillFill.setColor(0xfffffcf3);
+        pillFill.setColor(0xfffffefa);
         pillStroke.setStyle(Paint.Style.STROKE);
-        pillStroke.setStrokeWidth(d);
-        pillStroke.setColor(0xffc6d4c0);
+        pillStroke.setStrokeWidth(Math.max(1f, 0.75f * d));
+        pillStroke.setColor(0x145c4938);
 
         for (int i = 0; i < labels.length; i++) {
             int idx = i;
@@ -73,7 +74,8 @@ public final class ForestSegmentedControl extends LinearLayout {
             tab.setMinimumHeight(Math.round(36 * d));
             tab.setFocusable(true);
             tab.setOnClickListener(v -> {
-                if (selectedIndex == idx) return;
+                if (!selectionCleared && selectedIndex == idx) return;
+                selectionCleared = false;
                 select(idx, true);
                 onSelect.accept(idx);
             });
@@ -85,8 +87,24 @@ public final class ForestSegmentedControl extends LinearLayout {
         syncTextStyles();
     }
 
+    public void setTabLabels(CharSequence[] labels) {
+        if (labels == null) return;
+        int n = Math.min(labels.length, items.size());
+        for (int i = 0; i < n; i++) {
+            items.get(i).setText(labels[i]);
+        }
+    }
+
+    public void setSelectionCleared(boolean cleared) {
+        if (this.selectionCleared == cleared) return;
+        this.selectionCleared = cleared;
+        syncTextStyles();
+        invalidate();
+    }
+
     public void select(int index, boolean animate) {
         if (index < 0 || index >= items.size()) return;
+        selectionCleared = false;
         selectedIndex = index;
         syncTextStyles();
         if (getWidth() == 0 || items.get(index).getWidth() == 0) {
@@ -121,7 +139,7 @@ public final class ForestSegmentedControl extends LinearLayout {
 
     private void syncTextStyles() {
         for (int i = 0; i < items.size(); i++) {
-            boolean active = i == selectedIndex;
+            boolean active = !selectionCleared && i == selectedIndex;
             TextView tv = items.get(i);
             tv.setSelected(active);
             tv.setTextColor(active ? 0xff243624 : 0xff6b7568);
@@ -151,7 +169,7 @@ public final class ForestSegmentedControl extends LinearLayout {
         canvas.drawRoundRect(track, trackR, trackR, trackFill);
         canvas.drawRoundRect(track, trackR, trackR, trackStroke);
 
-        if (indicatorLeft >= 0 && indicatorRight > indicatorLeft) {
+        if (!selectionCleared && indicatorLeft >= 0 && indicatorRight > indicatorLeft) {
             float top = getPaddingTop();
             float bottom = h - getPaddingBottom();
             float pillR = 9 * d;

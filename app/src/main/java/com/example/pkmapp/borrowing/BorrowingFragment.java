@@ -1,33 +1,47 @@
 package com.example.pkmapp.borrowing;
 
+import static com.example.pkmapp.forest.ForestUi.*;
+
+import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
 import com.example.pkmapp.data.InMemoryLedgerRepository;
+import com.example.pkmapp.forest.ForestCalendarView;
+import com.example.pkmapp.forest.ForestMotion;
+import com.example.pkmapp.forest.ForestSegmentedControl;
+import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 import com.example.pkmapp.record.RecordDateState;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class BorrowingFragment extends Fragment {
@@ -38,20 +52,15 @@ public final class BorrowingFragment extends Fragment {
 
     private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
     private BorrowingRecordStore store;
-    private RecordDateState date = RecordDateState.today();
-    private BorrowingDirection direction = BorrowingDirection.LEND;
-    private String sourceTransactionId;
-    private EditText amountInput;
-    private EditText personInput;
-    private EditText noteInput;
-    private View dateField;
-    private TextView dateButton;
-    private TextView lendButton;
-    private TextView borrowButton;
-    private TextView modeHint;
-    private TextView status;
+    private int filterTab = 0; // 0: 全部, 1: 我借出去, 2: 我借进来
+    private ForestSegmentedControl filterBar;
     private LinearLayout recordList;
-    private TextView emptyState;
+    private View emptyState;
+    private TextView lendTotal;
+    private TextView lendCount;
+    private TextView borrowTotal;
+    private TextView borrowCount;
+    private TextView netSummary;
 
     public static BorrowingFragment newComposer(BorrowingDirection direction, long amountCents,
             long occurredAtMillis, @Nullable String sourceTransactionId) {
@@ -77,290 +86,421 @@ public final class BorrowingFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         store = new BorrowingRecordStore(requireContext());
-        amountInput = view.findViewById(R.id.borrowing_amount_input);
-        personInput = view.findViewById(R.id.borrowing_person_input);
-        noteInput = view.findViewById(R.id.borrowing_note_input);
-        dateField = view.findViewById(R.id.borrowing_date_field);
-        dateButton = view.findViewById(R.id.borrowing_date_button);
-        lendButton = view.findViewById(R.id.borrowing_direction_lend);
-        borrowButton = view.findViewById(R.id.borrowing_direction_borrow);
-        modeHint = view.findViewById(R.id.borrowing_mode_hint);
-        status = view.findViewById(R.id.borrowing_status);
+        lendTotal = view.findViewById(R.id.borrowing_lend_total);
+        lendCount = view.findViewById(R.id.borrowing_lend_count);
+        borrowTotal = view.findViewById(R.id.borrowing_borrow_total);
+        borrowCount = view.findViewById(R.id.borrowing_borrow_count);
+        netSummary = view.findViewById(R.id.borrowing_net_summary);
         recordList = view.findViewById(R.id.borrowing_record_list);
         emptyState = view.findViewById(R.id.borrowing_empty_state);
-        readArguments();
 
-        view.findViewById(R.id.borrowing_back_button).setOnClickListener(v ->
+        lendTotal.setFontFeatureSettings("tnum");
+        borrowTotal.setFontFeatureSettings("tnum");
+        netSummary.setFontFeatureSettings("tnum");
+
+        View backBtn = view.findViewById(R.id.borrowing_back_button);
+        backBtn.setBackground(ripple(requireContext(), rounded(requireContext(), 0x125c4938, 0, 999), false));
+        backBtn.setOnClickListener(v ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.DETAILS));
-        lendButton.setOnClickListener(v -> {
-            direction = BorrowingDirection.LEND;
-            renderDirection();
-        });
-        borrowButton.setOnClickListener(v -> {
-            direction = BorrowingDirection.BORROW;
-            renderDirection();
-        });
-        dateField.setOnClickListener(v -> showDateCalendar());
-        view.findViewById(R.id.borrowing_save_button).setOnClickListener(v -> save());
+        ForestMotion.bind(backBtn);
 
-        renderDirection();
-        renderDate();
+        TextView addBtn = view.findViewById(R.id.borrowing_add_button);
+        addBtn.setBackground(ripple(requireContext(), rounded(requireContext(), 0xff456444, 0, 999), true));
+        addBtn.setOnClickListener(v -> showComposerSheet(BorrowingDirection.LEND, 0L,
+                System.currentTimeMillis(), null));
+        ForestMotion.bind(addBtn);
+
+        LinearLayout filterHost = view.findViewById(R.id.borrowing_filter_host);
+        filterBar = new ForestSegmentedControl(
+                requireContext(),
+                new String[]{"全部", "借出", "借入"},
+                null,
+                filterTab,
+                idx -> {
+                    filterTab = idx;
+                    renderRecords();
+                }
+        );
+        filterHost.addView(filterBar, new LinearLayout.LayoutParams(-1, -2));
+
         renderRecords();
+        openComposerIfRequested();
     }
 
-    private void readArguments() {
+    private void openComposerIfRequested() {
         Bundle args = getArguments();
-        if (args == null) {
-            return;
-        }
-        String directionName = args.getString(ARG_DIRECTION);
-        if (directionName != null) {
-            try {
-                direction = BorrowingDirection.valueOf(directionName);
-            } catch (IllegalArgumentException ignored) {
-                direction = BorrowingDirection.LEND;
-            }
-        }
-        long occurredAt = args.getLong(ARG_OCCURRED_AT, 0L);
-        if (occurredAt > 0L) {
-            Calendar initial = Calendar.getInstance();
-            initial.setTimeInMillis(occurredAt);
-            date = new RecordDateState(initial);
-        }
+        if (args == null) return;
+        String dirName = args.getString(ARG_DIRECTION);
         long amountCents = args.getLong(ARG_AMOUNT_CENTS, 0L);
-        if (amountCents > 0L && amountInput != null) {
-            amountInput.setText(MoneyParser.formatCents(amountCents).replace("¥", "").trim());
-        }
-        sourceTransactionId = args.getString(ARG_SOURCE_TRANSACTION);
-    }
-
-    private void renderDirection() {
-        if (lendButton == null) return;
-        boolean lend = direction == BorrowingDirection.LEND;
-        lendButton.setBackgroundResource(lend ? R.drawable.bg_details_picker_selected
-                : android.R.color.transparent);
-        borrowButton.setBackgroundResource(lend ? android.R.color.transparent
-                : R.drawable.bg_details_picker_selected);
-        lendButton.setTextColor(ContextCompat.getColor(requireContext(),
-                lend ? R.color.forest_deep : R.color.wood_brown));
-        borrowButton.setTextColor(ContextCompat.getColor(requireContext(),
-                lend ? R.color.wood_brown : R.color.forest_deep));
-        lendButton.setTypeface(null, lend ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
-        borrowButton.setTypeface(null, lend ? android.graphics.Typeface.NORMAL : android.graphics.Typeface.BOLD);
-        modeHint.setText(lend ? "现在：借出" : "现在：借入");
-    }
-
-    private void renderDate() {
-        if (dateButton == null) return;
-        dateButton.setText(String.format(java.util.Locale.CHINA, "%d年%02d月%02d日",
-                date.year(), date.month(), date.day()));
-    }
-
-    private void save() {
-        try {
-            long amountCents = MoneyParser.parseYuanToCents(amountInput.getText().toString());
-            String person = personInput.getText().toString().trim();
-            if (person.isEmpty()) {
-                personInput.setError("请填写对方姓名");
-                return;
+        long occurredAt = args.getLong(ARG_OCCURRED_AT, 0L);
+        String sourceTx = args.getString(ARG_SOURCE_TRANSACTION);
+        if (dirName == null && amountCents <= 0L && sourceTx == null) return;
+        BorrowingDirection dir = BorrowingDirection.LEND;
+        if (dirName != null) {
+            try {
+                dir = BorrowingDirection.valueOf(dirName);
+            } catch (IllegalArgumentException ignored) {
             }
-            BorrowingRecord record = new BorrowingRecord(
-                    UUID.randomUUID().toString(), repository.getCurrentLedger().getId(), direction,
-                    amountCents, date.timeInMillis(), person,
-                    noteInput.getText().toString(), sourceTransactionId);
-            store.add(record);
-            if (BorrowingTransactionSync.shouldCreateMainTransaction(sourceTransactionId)) {
-                repository.addTransaction(
-                        BorrowingTransactionSync.transactionType(direction), amountCents,
-                        BorrowingTransactionSync.category(direction),
-                        BorrowingTransactionSync.note(direction, person,
-                                noteInput.getText().toString()), date.timeInMillis());
-            }
-            sourceTransactionId = null;
-            amountInput.setText("");
-            personInput.setText("");
-            noteInput.setText("");
-            status.setText("已留下这笔来往记录");
-            status.setVisibility(View.VISIBLE);
-            renderRecords();
-        } catch (IllegalArgumentException exception) {
-            amountInput.setError(exception.getMessage());
         }
+        setArguments(null);
+        long finalOccurred = occurredAt > 0L ? occurredAt : System.currentTimeMillis();
+        BorrowingDirection finalDir = dir;
+        requireView().post(() -> {
+            if (isAdded()) showComposerSheet(finalDir, amountCents, finalOccurred, sourceTx);
+        });
     }
 
     private void renderRecords() {
-        if (store == null || recordList == null) return;
-        List<BorrowingRecord> records = store.getRecordsForLedger(repository.getCurrentLedger().getId());
-        BorrowingSummary lend = BorrowingSummary.from(records, BorrowingDirection.LEND);
-        BorrowingSummary borrow = BorrowingSummary.from(records, BorrowingDirection.BORROW);
-        TextView lendTotal = requireView().findViewById(R.id.borrowing_lend_total);
-        TextView lendCount = requireView().findViewById(R.id.borrowing_lend_count);
-        TextView borrowTotal = requireView().findViewById(R.id.borrowing_borrow_total);
-        TextView borrowCount = requireView().findViewById(R.id.borrowing_borrow_count);
+        if (store == null || recordList == null || !isAdded()) return;
+        List<BorrowingRecord> all = store.getRecordsForLedger(repository.getCurrentLedger().getId());
+        BorrowingSummary lend = BorrowingSummary.from(all, BorrowingDirection.LEND);
+        BorrowingSummary borrow = BorrowingSummary.from(all, BorrowingDirection.BORROW);
         lendTotal.setText(MoneyParser.formatCents(lend.getTotalInCents()));
         lendCount.setText(lend.getRecordCount() + " 笔");
         borrowTotal.setText(MoneyParser.formatCents(borrow.getTotalInCents()));
         borrowCount.setText(borrow.getRecordCount() + " 笔");
 
-        recordList.removeAllViews();
-        for (BorrowingDateGroup group : BorrowingDateGroup.from(records)) {
-            TextView dateLabel = label(group.getLabel(), 13, R.color.wood_brown);
-            dateLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-            LinearLayout.LayoutParams dateParams = new LinearLayout.LayoutParams(-1, dp(32));
-            dateParams.topMargin = dp(8);
-            recordList.addView(dateLabel, dateParams);
-            for (BorrowingRecord record : group.getRecords()) {
-                View item = LayoutInflater.from(requireContext()).inflate(
-                        R.layout.item_borrowing_record, recordList, false);
-                TextView itemAvatar = item.findViewById(R.id.borrowing_record_avatar);
-                TextView itemDirection = item.findViewById(R.id.borrowing_record_direction);
-                TextView itemPerson = item.findViewById(R.id.borrowing_record_person);
-                TextView itemAmount = item.findViewById(R.id.borrowing_record_amount);
-                TextView itemNote = item.findViewById(R.id.borrowing_record_note);
-                TextView itemDate = item.findViewById(R.id.borrowing_record_date);
-                boolean isLend = record.getDirection() == BorrowingDirection.LEND;
-                itemAvatar.setText(BorrowingRecordPresentation.initials(record.getPerson()));
-                itemDirection.setText(BorrowingRecordPresentation.directionLabel(record.getDirection()));
-                itemDirection.setBackgroundResource(isLend ? R.drawable.bg_borrowing_tag_lend
-                        : R.drawable.bg_borrowing_tag_borrow);
-                itemDirection.setTextColor(ContextCompat.getColor(requireContext(),
-                        isLend ? R.color.warm_orange : R.color.forest_green));
-                itemPerson.setText(BorrowingRecordPresentation.counterpartyLabel(
-                        record.getDirection(), record.getPerson()));
-                itemAmount.setText(BorrowingRecordPresentation.amountLabel(
-                        record.getDirection(), record.getAmountInCents()));
-                itemAmount.setTextColor(ContextCompat.getColor(requireContext(),
-                        isLend ? R.color.expense_red : R.color.forest_green));
-                itemNote.setText(record.getNote().isEmpty()
-                        ? (isLend ? "借给对方" : "向对方借入") : record.getNote());
-                itemDate.setText(group.getLabel());
-                item.setContentDescription(String.valueOf(itemDirection.getText())
-                        + itemPerson.getText() + "，" + itemAmount.getText());
-                LinearLayout.LayoutParams itemParams = new LinearLayout.LayoutParams(-1, -2);
-                itemParams.bottomMargin = dp(8);
-                recordList.addView(item, itemParams);
-            }
+        long netCents = lend.getTotalInCents() - borrow.getTotalInCents();
+        if (netCents > 0) {
+            netSummary.setText("应收净额 · " + MoneyParser.formatCents(netCents));
+            netSummary.setTextColor(0xff9e4c37);
+        } else if (netCents < 0) {
+            netSummary.setText("待还净额 · " + MoneyParser.formatCents(-netCents));
+            netSummary.setTextColor(DEEP);
+        } else {
+            netSummary.setText("往来已两清 · ¥0.00");
+            netSummary.setTextColor(DEEP);
         }
-        emptyState.setVisibility(records.isEmpty() ? View.VISIBLE : View.GONE);
-    }
 
-    private void showDateCalendar() {
-        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        View root = LayoutInflater.from(requireContext()).inflate(
-                R.layout.dialog_borrowing_calendar, null);
-        Calendar draft = Calendar.getInstance();
-        draft.setTimeInMillis(date.timeInMillis());
-        Calendar visibleMonth = Calendar.getInstance();
-        visibleMonth.setTimeInMillis(draft.getTimeInMillis());
-        visibleMonth.set(Calendar.DAY_OF_MONTH, 1);
-
-        TextView selectedDate = root.findViewById(R.id.borrowing_calendar_selected_date);
-        TextView selectedWeekday = root.findViewById(R.id.borrowing_calendar_selected_weekday);
-        TextView month = root.findViewById(R.id.borrowing_calendar_month);
-        GridLayout grid = root.findViewById(R.id.borrowing_calendar_grid);
-        renderCalendar(selectedDate, selectedWeekday, month, grid, draft, visibleMonth);
-
-        root.findViewById(R.id.borrowing_calendar_previous).setOnClickListener(view -> {
-            visibleMonth.add(Calendar.MONTH, -1);
-            renderCalendar(selectedDate, selectedWeekday, month, grid, draft, visibleMonth);
-        });
-        root.findViewById(R.id.borrowing_calendar_next).setOnClickListener(view -> {
-            visibleMonth.add(Calendar.MONTH, 1);
-            renderCalendar(selectedDate, selectedWeekday, month, grid, draft, visibleMonth);
-        });
-        root.findViewById(R.id.borrowing_calendar_close).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.borrowing_calendar_cancel).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.borrowing_calendar_confirm).setOnClickListener(view -> {
-            date = new RecordDateState(draft);
-            renderDate();
-            dialog.dismiss();
-        });
-
-        dialog.setContentView(root);
-        dialog.setOnShowListener(ignored -> {
-            FrameLayout bottomSheet = dialog.findViewById(
-                    com.google.android.material.R.id.design_bottom_sheet);
-            if (bottomSheet != null) {
-                bottomSheet.setBackgroundColor(Color.TRANSPARENT);
-                BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottomSheet);
-                behavior.setSkipCollapsed(true);
-                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-            }
-        });
-        dialog.show();
-    }
-
-    private void renderCalendar(TextView selectedDate, TextView selectedWeekday,
-            TextView month, GridLayout grid, Calendar draft, Calendar visibleMonth) {
-        selectedDate.setText(BorrowingCalendarModel.selectedDateLabel(draft));
-        selectedWeekday.setText(BorrowingCalendarModel.weekdayLabel(draft));
-        month.setText(BorrowingCalendarModel.monthTitle(visibleMonth));
-        grid.removeAllViews();
-        List<Calendar> cells = BorrowingCalendarModel.cellsForMonth(visibleMonth);
-        for (int index = 0; index < cells.size(); index++) {
-            final Calendar chosenCell = cells.get(index);
-            TextView day = label(String.valueOf(chosenCell.get(Calendar.DAY_OF_MONTH)), 14,
-                    R.color.ink);
-            boolean selected = BorrowingCalendarModel.isSameDate(chosenCell, draft);
-            boolean inCurrentMonth = BorrowingCalendarModel.isSameMonth(chosenCell, visibleMonth);
-            day.setTypeface(null, selected ? android.graphics.Typeface.BOLD
-                    : android.graphics.Typeface.NORMAL);
-            day.setTextColor(ContextCompat.getColor(requireContext(), selected
-                    ? R.color.paper_light : inCurrentMonth ? R.color.ink : R.color.brown_soft));
-            day.setBackgroundResource(selected ? R.drawable.bg_borrowing_calendar_selected_day
-                    : R.drawable.bg_borrowing_calendar_day);
-            day.setGravity(Gravity.CENTER);
-            FrameLayout cell = new FrameLayout(requireContext());
-            cell.setContentDescription(BorrowingCalendarModel.selectedDateLabel(chosenCell)
-                    + (selected ? "，已选择" : ""));
-            cell.setClickable(true);
-            cell.setFocusable(true);
-            FrameLayout.LayoutParams dayParams = new FrameLayout.LayoutParams(
-                    dp(42), dp(42), Gravity.CENTER);
-            cell.addView(day, dayParams);
-            GridLayout.LayoutParams params = new GridLayout.LayoutParams(
-                    GridLayout.spec(index / 7), GridLayout.spec(index % 7, 1, 1f));
-            params.width = 0;
-            params.height = dp(42);
-            params.setMargins(dp(2), dp(1), dp(2), dp(1));
-            grid.addView(cell, params);
-            cell.setOnClickListener(view -> {
-                draft.set(Calendar.YEAR, chosenCell.get(Calendar.YEAR));
-                draft.set(Calendar.MONTH, chosenCell.get(Calendar.MONTH));
-                draft.set(Calendar.DAY_OF_MONTH, chosenCell.get(Calendar.DAY_OF_MONTH));
-                visibleMonth.setTimeInMillis(chosenCell.getTimeInMillis());
-                visibleMonth.set(Calendar.DAY_OF_MONTH, 1);
-                renderCalendar(selectedDate, selectedWeekday, month, grid, draft, visibleMonth);
+        if (filterBar != null) {
+            filterBar.setTabLabels(new CharSequence[]{
+                    all.isEmpty() ? "全部" : "全部 " + all.size(),
+                    lend.getRecordCount() == 0 ? "借出" : "借出 " + lend.getRecordCount(),
+                    borrow.getRecordCount() == 0 ? "借入" : "借入 " + borrow.getRecordCount()
             });
         }
+
+        List<BorrowingRecord> filtered = new ArrayList<>();
+        for (BorrowingRecord rec : all) {
+            if (filterTab == 1 && rec.getDirection() != BorrowingDirection.LEND) continue;
+            if (filterTab == 2 && rec.getDirection() != BorrowingDirection.BORROW) continue;
+            filtered.add(rec);
+        }
+
+        recordList.removeAllViews();
+        Context ctx = requireContext();
+        int groupIdx = 0;
+        for (BorrowingDateGroup group : BorrowingDateGroup.from(filtered)) {
+            TextView dateLabel = text(ctx, group.getLabel(), 12, WOOD);
+            dateLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            dateLabel.setPadding(dp(ctx, 2), dp(ctx, groupIdx == 0 ? 12 : 18), dp(ctx, 2), dp(ctx, 6));
+            recordList.addView(dateLabel, new LinearLayout.LayoutParams(-1, -2));
+            groupIdx++;
+
+            int rowIdx = 0;
+            for (BorrowingRecord record : group.getRecords()) {
+                if (rowIdx++ > 0) {
+                    View hairline = new View(ctx);
+                    hairline.setBackgroundColor(0x165c4938);
+                    recordList.addView(hairline, new LinearLayout.LayoutParams(-1,
+                            Math.max(1, Math.round(0.75f * getResources().getDisplayMetrics().density))));
+                }
+                boolean isLend = record.getDirection() == BorrowingDirection.LEND;
+                LinearLayout rowView = row(ctx);
+                rowView.setMinimumHeight(dp(ctx, 60));
+                rowView.setPadding(dp(ctx, 2), dp(ctx, 10), dp(ctx, 2), dp(ctx, 10));
+
+                TextView avatar = text(ctx, BorrowingRecordPresentation.initials(record.getPerson()),
+                        13, isLend ? 0xff9e4c37 : DEEP);
+                avatar.setGravity(Gravity.CENTER);
+                avatar.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                avatar.setBackground(rounded(ctx, isLend ? 0xfff8ede6 : 0xffeef4ea, 0, 999));
+                rowView.addView(avatar, new LinearLayout.LayoutParams(dp(ctx, 38), dp(ctx, 38)));
+
+                LinearLayout copy = column(ctx);
+                TextView person = text(ctx,
+                        BorrowingRecordPresentation.counterpartyLabel(record.getDirection(), record.getPerson()),
+                        15, 0xff243624);
+                person.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+                copy.addView(person);
+                String noteCopy = BorrowingRecordPresentation.directionLabel(record.getDirection())
+                        + (record.getNote().isEmpty() ? "" : " · " + record.getNote());
+                ForestUi.add(copy, text(ctx, noteCopy, 12, MUTED), 3);
+                LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(0, -2, 1);
+                copyLp.setMarginStart(dp(ctx, 12));
+                rowView.addView(copy, copyLp);
+
+                TextView amt = text(ctx,
+                        BorrowingRecordPresentation.amountLabel(
+                                record.getDirection(), record.getAmountInCents()),
+                        16, isLend ? 0xff9e4c37 : DEEP);
+                amt.setTypeface(Typeface.create("serif", Typeface.BOLD));
+                amt.setFontFeatureSettings("tnum");
+                rowView.addView(amt);
+
+                recordList.addView(rowView, new LinearLayout.LayoutParams(-1, -2));
+            }
+        }
+        emptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private TextView label(String value, int size, int color) {
-        TextView view = new TextView(requireContext());
-        view.setText(value);
-        view.setTextSize(size);
-        view.setTextColor(ContextCompat.getColor(requireContext(), color));
-        return view;
+    private void showComposerSheet(BorrowingDirection initialDirection, long initialAmountCents,
+            long initialOccurredAt, @Nullable String initialSourceTxId) {
+        Context ctx = requireContext();
+        BottomSheetDialog sheet = new BottomSheetDialog(ctx, R.style.ThemeOverlay_PkmAPP_StudySheet);
+        sheet.getBehavior().setSkipCollapsed(true);
+        sheet.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
+
+        LinearLayout root = column(ctx);
+        root.setPadding(dp(ctx, 22), dp(ctx, 10), dp(ctx, 22), dp(ctx, 20));
+
+        View grip = new View(ctx);
+        grip.setBackground(rounded(ctx, 0x387b5c3b, 0, 3));
+        LinearLayout.LayoutParams gripLp = new LinearLayout.LayoutParams(dp(ctx, 36), dp(ctx, 4));
+        gripLp.gravity = Gravity.CENTER_HORIZONTAL;
+        root.addView(grip, gripLp);
+
+        LinearLayout header = row(ctx);
+        TextView title = heading(ctx, "记录一笔往来", 21);
+        title.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        title.setTextColor(0xff243624);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView close = text(ctx, "✕", 15, 0xff525e50);
+        close.setGravity(Gravity.CENTER);
+        close.setBackground(ripple(ctx, rounded(ctx, 0x125c4938, 0, 999), false));
+        close.setOnClickListener(v -> sheet.dismiss());
+        header.addView(close, new LinearLayout.LayoutParams(dp(ctx, 34), dp(ctx, 34)));
+        ForestUi.add(root, header, 12);
+
+        addSheetHairline(root, 12, 14);
+
+        // 1. Direct Borderless Direction Chips
+        BorrowingDirection[] chosenDir = {initialDirection};
+        LinearLayout dirRow = row(ctx);
+        TextView lendChip = text(ctx, "借出给别人", 13, 0xff243624);
+        TextView borrowChip = text(ctx, "向别人借入", 13, 0xff243624);
+        for (int i = 0; i < 2; i++) {
+            TextView c = i == 0 ? lendChip : borrowChip;
+            c.setGravity(Gravity.CENTER);
+            c.setMinimumHeight(dp(ctx, 40));
+            c.setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8));
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, -2, 1);
+            if (i == 1) clp.setMarginStart(dp(ctx, 10));
+            dirRow.addView(c, clp);
+            ForestMotion.bind(c);
+        }
+        Runnable syncDir = () -> {
+            boolean isLend = chosenDir[0] == BorrowingDirection.LEND;
+            stylePill(lendChip, isLend);
+            stylePill(borrowChip, !isLend);
+        };
+        lendChip.setOnClickListener(v -> { chosenDir[0] = BorrowingDirection.LEND; syncDir.run(); });
+        borrowChip.setOnClickListener(v -> { chosenDir[0] = BorrowingDirection.BORROW; syncDir.run(); });
+        syncDir.run();
+        root.addView(dirRow, new LinearLayout.LayoutParams(-1, -2));
+
+        // 2. Direct Borderless Underline Inputs (ZERO nested cards!)
+        ForestUi.add(root, label(ctx, "金额（元）"), 16);
+        EditText amountInput = underlineInput(ctx, "0.00", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        amountInput.setTextSize(24f);
+        amountInput.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        amountInput.setFontFeatureSettings("tnum");
+        if (initialAmountCents > 0L) {
+            amountInput.setText(MoneyParser.formatCents(initialAmountCents).replace("¥", "").trim());
+        }
+        root.addView(amountInput, new LinearLayout.LayoutParams(-1, -2));
+
+        ForestUi.add(root, label(ctx, "对方姓名"), 14);
+        EditText personInput = underlineInput(ctx, "例如：小林", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        root.addView(personInput, new LinearLayout.LayoutParams(-1, -2));
+
+        // 3. Date Row -> opens handcrafted ForestCalendarView sheet
+        Calendar initCal = Calendar.getInstance();
+        initCal.setTimeInMillis(initialOccurredAt);
+        RecordDateState[] chosenDate = {new RecordDateState(initCal)};
+        LinearLayout dateRow = row(ctx);
+        dateRow.setMinimumHeight(dp(ctx, 48));
+        dateRow.setPadding(dp(ctx, 2), dp(ctx, 8), dp(ctx, 2), dp(ctx, 8));
+        dateRow.setBackground(ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 10), false));
+        dateRow.addView(label(ctx, "发生日期"), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView dateVal = text(ctx, formatDateLabel(chosenDate[0]), 14, DEEP);
+        dateVal.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        dateVal.setFontFeatureSettings("tnum");
+        dateRow.addView(dateVal);
+        dateRow.setOnClickListener(v -> showForestDatePicker(chosenDate[0], picked -> {
+            chosenDate[0] = picked;
+            dateVal.setText(formatDateLabel(picked));
+        }));
+        ForestUi.add(root, dateRow, 10);
+        addSheetHairline(root, 0, 12);
+
+        root.addView(label(ctx, "备注（选填）"));
+        EditText noteInput = underlineInput(ctx, "例如：晚饭先垫付", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        root.addView(noteInput, new LinearLayout.LayoutParams(-1, -2));
+
+        MaterialButton saveBtn = button(ctx, "保存这笔往来", true);
+        saveBtn.setMinHeight(dp(ctx, 48));
+        saveBtn.setMinimumHeight(dp(ctx, 48));
+        saveBtn.setCornerRadius(dp(ctx, 14));
+        saveBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        saveBtn.setOnClickListener(v -> {
+            try {
+                long amountCents = MoneyParser.parseYuanToCents(amountInput.getText().toString());
+                String person = personInput.getText().toString().trim();
+                if (person.isEmpty()) {
+                    personInput.setError("请填写对方姓名");
+                    personInput.requestFocus();
+                    return;
+                }
+                BorrowingRecord record = new BorrowingRecord(
+                        UUID.randomUUID().toString(),
+                        repository.getCurrentLedger().getId(),
+                        chosenDir[0],
+                        amountCents,
+                        chosenDate[0].timeInMillis(),
+                        person,
+                        noteInput.getText().toString(),
+                        initialSourceTxId
+                );
+                store.add(record);
+                if (BorrowingTransactionSync.shouldCreateMainTransaction(initialSourceTxId)) {
+                    repository.addTransaction(
+                            BorrowingTransactionSync.transactionType(chosenDir[0]),
+                            amountCents,
+                            BorrowingTransactionSync.category(chosenDir[0]),
+                            BorrowingTransactionSync.note(chosenDir[0], person, noteInput.getText().toString()),
+                            chosenDate[0].timeInMillis()
+                    );
+                }
+                sheet.dismiss();
+                renderRecords();
+                Toast.makeText(ctx, "已记录这笔往来", Toast.LENGTH_SHORT).show();
+            } catch (IllegalArgumentException e) {
+                amountInput.setError(e.getMessage());
+                amountInput.requestFocus();
+            }
+        });
+        ForestUi.add(root, saveBtn, 18);
+
+        sheet.setContentView(root);
+        sheet.show();
     }
 
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    private void showForestDatePicker(RecordDateState current, java.util.function.Consumer<RecordDateState> onConfirm) {
+        Context ctx = requireContext();
+        BottomSheetDialog calSheet = new BottomSheetDialog(ctx, R.style.ThemeOverlay_PkmAPP_StudySheet);
+        calSheet.getBehavior().setSkipCollapsed(true);
+        calSheet.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
+
+        LinearLayout root = column(ctx);
+        root.setPadding(dp(ctx, 22), dp(ctx, 10), dp(ctx, 22), dp(ctx, 20));
+
+        View grip = new View(ctx);
+        grip.setBackground(rounded(ctx, 0x387b5c3b, 0, 3));
+        LinearLayout.LayoutParams gripLp = new LinearLayout.LayoutParams(dp(ctx, 36), dp(ctx, 4));
+        gripLp.gravity = Gravity.CENTER_HORIZONTAL;
+        root.addView(grip, gripLp);
+
+        LinearLayout header = row(ctx);
+        TextView title = heading(ctx, "选择发生日期", 20);
+        title.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        title.setTextColor(0xff243624);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView close = text(ctx, "✕", 15, 0xff525e50);
+        close.setGravity(Gravity.CENTER);
+        close.setBackground(ripple(ctx, rounded(ctx, 0x125c4938, 0, 999), false));
+        close.setOnClickListener(v -> calSheet.dismiss());
+        header.addView(close, new LinearLayout.LayoutParams(dp(ctx, 34), dp(ctx, 34)));
+        ForestUi.add(root, header, 12);
+
+        addSheetHairline(root, 10, 8);
+        String initKey = String.format(Locale.ROOT, "%04d-%02d-%02d", current.year(), current.month(), current.day());
+        ForestCalendarView calView = new ForestCalendarView(ctx, initKey, null, null);
+        root.addView(calView, new LinearLayout.LayoutParams(-1, -2));
+
+        MaterialButton okBtn = button(ctx, "确认日期", true);
+        okBtn.setMinHeight(dp(ctx, 48));
+        okBtn.setCornerRadius(dp(ctx, 14));
+        okBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        okBtn.setOnClickListener(v -> {
+            String[] p = calView.selectedDayKey().split("-");
+            Calendar cal = Calendar.getInstance();
+            cal.set(Integer.parseInt(p[0]), Integer.parseInt(p[1]) - 1, Integer.parseInt(p[2]), 12, 0, 0);
+            onConfirm.accept(new RecordDateState(cal));
+            calSheet.dismiss();
+        });
+        ForestUi.add(root, okBtn, 12);
+
+        calSheet.setContentView(root);
+        calSheet.show();
+    }
+
+    private static String formatDateLabel(RecordDateState d) {
+        return String.format(Locale.CHINA, "%d年%02d月%02d日 ›", d.year(), d.month(), d.day());
+    }
+
+    private void stylePill(TextView tv, boolean active) {
+        tv.setTextColor(active ? 0xfffffcf3 : 0xff5a6458);
+        tv.setTypeface(Typeface.create(active ? "sans-serif-medium" : "sans-serif",
+                active ? Typeface.BOLD : Typeface.NORMAL));
+        tv.setBackground(ripple(requireContext(),
+                rounded(requireContext(), active ? 0xff456444 : 0xfff2eee3, 0, 999), active));
+    }
+
+    private TextView label(Context ctx, String textVal) {
+        TextView tv = text(ctx, textVal, 12, MUTED);
+        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        return tv;
+    }
+
+    private EditText underlineInput(Context ctx, String hint, int inputType) {
+        EditText et = new EditText(ctx);
+        et.setSingleLine(true);
+        et.setHint(hint);
+        et.setInputType(inputType);
+        et.setTextSize(15f);
+        et.setTextColor(0xff243624);
+        et.setHintTextColor(0xff9ca195);
+        et.setPadding(dp(ctx, 2), dp(ctx, 8), dp(ctx, 2), dp(ctx, 10));
+        et.setMinimumHeight(dp(ctx, 44));
+        StateListDrawable bg = new StateListDrawable();
+        bg.addState(new int[]{android.R.attr.state_focused}, lineDrawable(ctx, 0xff456444, 1.5f));
+        bg.addState(new int[0], lineDrawable(ctx, 0x185c4938, 1f));
+        et.setBackground(bg);
+        et.setBackgroundTintList(null);
+        return et;
+    }
+
+    private Drawable lineDrawable(Context ctx, int color, float heightDp) {
+        GradientDrawable bar = new GradientDrawable();
+        bar.setColor(color);
+        LayerDrawable layer = new LayerDrawable(new Drawable[]{bar});
+        layer.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        layer.setLayerHeight(0, Math.max(1, Math.round(heightDp * ctx.getResources().getDisplayMetrics().density)));
+        return layer;
+    }
+
+    private void addSheetHairline(LinearLayout parent, int topDp, int bottomDp) {
+        Context ctx = parent.getContext();
+        View line = new View(ctx);
+        line.setBackgroundColor(0x185c4938);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,
+                Math.max(1, Math.round(0.75f * ctx.getResources().getDisplayMetrics().density)));
+        lp.topMargin = dp(ctx, topDp);
+        lp.bottomMargin = dp(ctx, bottomDp);
+        parent.addView(line, lp);
     }
 
     @Override
     public void onDestroyView() {
-        store = null;
-        amountInput = null;
-        personInput = null;
-        noteInput = null;
-        dateField = null;
-        dateButton = null;
-        lendButton = null;
-        borrowButton = null;
-        modeHint = null;
-        status = null;
+        filterBar = null;
         recordList = null;
         emptyState = null;
+        lendTotal = null;
+        lendCount = null;
+        borrowTotal = null;
+        borrowCount = null;
+        netSummary = null;
         super.onDestroyView();
     }
 }

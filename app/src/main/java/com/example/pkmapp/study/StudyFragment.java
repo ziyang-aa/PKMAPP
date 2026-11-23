@@ -40,6 +40,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.forest.ForestCalendarView;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestNotebookPad;
 import com.example.pkmapp.forest.ForestSegmentedControl;
@@ -72,8 +73,16 @@ public final class StudyFragment extends Fragment {
     private StudyStore store;
     private AppDestination page;
     private ScrollView scroll;
+    private TextView topBarTitle;
     private LinearLayout body;
-    private TextView clock, today, wallet;
+    private TextView clock, today, wallet, dialGoalCaption, dialRightCaption, activeStatusText, dailyProgressText;
+    private TextView focusStatusLabel, focusGentleNote;
+    private LinearLayout focusStatusPill;
+    private View focusStatusDot;
+    private MaterialButton startPauseButton;
+    private android.animation.ObjectAnimator statusPulseAnimator;
+    private android.widget.ProgressBar dailyProgressBar;
+    private boolean countdownMode, keepScreenOn;
     private String renderedToday;
     private StudyClockFace dial;
     private StudyGardenView garden;
@@ -86,6 +95,7 @@ public final class StudyFragment extends Fragment {
     private long lastControlClick;
     private int days = 7;
     private int todoFilter = 0;
+    private String todoFilterDay;
     private String statsPlan;
     private static final String HISTORY_REQUEST = "study-history";
     private final ActivityResultLauncher<String> exportPicker = registerForActivityResult(
@@ -106,9 +116,17 @@ public final class StudyFragment extends Fragment {
         @Override
         public void run() {
             StudyNotebook notebook = store.notebook();
-            if (page == AppDestination.STUDY_FOCUS && (notebook.running() != renderedRunning
-                || !notebook.sessionId().equals(renderedSession))) render();
-            else updateTimer();
+            if (page == AppDestination.STUDY_FOCUS && !notebook.sessionId().equals(renderedSession)) {
+                render();
+            } else if (page == AppDestination.STUDY_FOCUS && notebook.running() != renderedRunning) {
+                if (focusStatusPill != null && startPauseButton != null && notebook.currentHasSession()) {
+                    syncRunningStateInPlace(notebook.running());
+                } else {
+                    render();
+                }
+            } else {
+                updateTimer();
+            }
             handler.postDelayed(this, 1000);
         }
     };
@@ -177,44 +195,38 @@ public final class StudyFragment extends Fragment {
         host.setClipChildren(false);
         scroll.addView(host);
         LinearLayout bar = row(requireContext());
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setMinimumHeight(dp(requireContext(), 68));
         bar.setPadding(
-            dp(requireContext(), 15),
-            dp(requireContext(), 5),
             dp(requireContext(), 18),
+            dp(requireContext(), 10),
+            dp(requireContext(), 20),
             0
         );
         ImageButton back = new ImageButton(requireContext());
         back.setId(R.id.page_back_button);
         back.setImageResource(R.drawable.return_home_door);
-        back.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-        back.setBackgroundColor(0);
-        back.setPadding(
-            dp(requireContext(), 4),
-            dp(requireContext(), 4),
-            dp(requireContext(), 4),
-            dp(requireContext(), 4)
-        );
+        back.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        back.setPadding(0, 0, 0, 0);
         back.setContentDescription("返回森林入口");
         back.setOnClickListener(v -> open(AppDestination.HOME));
         ForestMotion.bind(back);
         back.setBackground(
-            ForestUi.ripple(requireContext(), rounded(requireContext(), 0, 0, 12), false)
+            ForestUi.ripple(requireContext(), rounded(requireContext(), 0, 0, 14), false)
         );
         bar.addView(
             back,
-            new LinearLayout.LayoutParams(dp(requireContext(), 44), dp(requireContext(), 44))
+            new LinearLayout.LayoutParams(dp(requireContext(), 56), dp(requireContext(), 56))
         );
-        TextView home = text(requireContext(), "森林小窝", 11, WOOD);
-        bar.addView(home, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView tag = text(requireContext(), "学习小屋", 11, DEEP);
-        tag.setBackground(rounded(requireContext(), 0xffe8eddb, 0xffccd5b9, 18));
-        tag.setPadding(
-            dp(requireContext(), 10),
-            dp(requireContext(), 5),
-            dp(requireContext(), 10),
-            dp(requireContext(), 5)
-        );
-        bar.addView(tag);
+        topBarTitle = heading(requireContext(), "", 24);
+        topBarTitle.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        topBarTitle.setTextColor(DEEP);
+        topBarTitle.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        topBarTitle.setSingleLine(true);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, -2, 1);
+        titleLp.setMarginStart(dp(requireContext(), 12));
+        bar.addView(topBarTitle, titleLp);
+
         host.addView(bar);
         body = column(requireContext());
         body.setClipChildren(false);
@@ -234,7 +246,7 @@ public final class StudyFragment extends Fragment {
         );
         // Padding positions initial/final content safely; clipToPadding=false still lets content
         // pass beneath status icons and the floating navigation while the page scrolls.
-        scroll.setPadding(0, 0, 0, bars.bottom + dp(requireContext(), 112));
+        scroll.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 112));
     }
 
     private void open(AppDestination destination) {
@@ -326,14 +338,14 @@ public final class StudyFragment extends Fragment {
             return;
         }
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane("恢复学习备份", "恢复将合并学习记录。请选择保留哪份计划设置和林地。",
+        StudySheet.Pane pane = sheetPane("恢复学习备份", "恢复将合并学习记录，请选择保留哪份计划设置和林地。",
             R.drawable.ic_study_trail);
+        StudySheet.addHairline(pane.body, 0, 14);
         LinearLayout stats = row(ctx());
-        stats.setPadding(dp(ctx(), 16), dp(ctx(), 15), dp(ctx(), 16), dp(ctx(), 15));
-        stats.setBackground(rounded(ctx(), StudySheet.MOSS, 0, 18));
         stat(stats, "备份中的计划", backup.plans().size() + " 个", 1);
         stat(stats, "备份中的记录", backup.records().size() + " 条", 1);
         pane.body.addView(stats);
+        StudySheet.addHairline(pane.body, 14, 0);
         pane.primary("保留本机设置和林地", () -> restoreLearning(sheet, backup, false));
         pane.secondary("使用备份设置和林地", () -> restoreLearning(sheet, backup, true));
         sheet.push(pane);
@@ -365,9 +377,26 @@ public final class StudyFragment extends Fragment {
         int y = scroll.getScrollY();
         if (garden != null) garden.setActive(false);
         body.removeAllViews();
+        if (statusPulseAnimator != null) {
+            statusPulseAnimator.cancel();
+            statusPulseAnimator = null;
+        }
         clock = null;
         today = null;
+        dialGoalCaption = null;
+        dialRightCaption = null;
+        activeStatusText = null;
+        focusStatusPill = null;
+        focusStatusDot = null;
+        focusStatusLabel = null;
+        focusGentleNote = null;
+        startPauseButton = null;
+        dailyProgressText = null;
+        dailyProgressBar = null;
         renderedToday = null;
+        android.content.SharedPreferences uiPrefs = ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE);
+        countdownMode = uiPrefs.getBoolean("countdown_mode", false);
+        keepScreenOn = uiPrefs.getBoolean("keep_screen_on", false);
         dial = null;
         garden = null;
         growthProgress = null;
@@ -428,59 +457,88 @@ public final class StudyFragment extends Fragment {
         row.addView(child, lp);
     }
 
+    static int partnerDrawable(StudyPlan.Partner partner) {
+        if (partner == StudyPlan.Partner.BEAR) return R.drawable.crayon_partner_bear;
+        if (partner == StudyPlan.Partner.BUNNY) return R.drawable.crayon_partner_bunny;
+        return R.drawable.crayon_study_companion;
+    }
+
+    private void setBarTitle(String title) {
+        if (topBarTitle != null) {
+            topBarTitle.setText(title);
+        }
+    }
+
     private void focus() {
         StudyNotebook n = store.notebook();
         StudyPlan plan = n.currentPlan();
         StudyPlan.Partner partner = plan == null ? StudyPlan.Partner.SQUIRREL : plan.partner;
         boolean active = n.currentHasSession();
-        FrameLayout hero = new FrameLayout(ctx());
-        LinearLayout copy = column(ctx());
-        copy.setGravity(Gravity.START);
+
+        // Top bar right side: title only, aligned parallel to the 56dp return door
+        setBarTitle("森林自习室");
+
+        LinearLayout content = content();
+        body.addView(content);
+
+        // Editorial Hairline hero strip below top bar: date/partner + borderless serif plan dropdown on left, companion on right
+        LinearLayout heroRow = row(ctx());
+        heroRow.setGravity(Gravity.BOTTOM);
+        heroRow.setPadding(0, dp(ctx(), 2), 0, dp(ctx(), 10));
+        heroRow.setBackground(bottomHairlineBg(0x1f5c4938));
+        LinearLayout heroCopy = column(ctx());
         TextView datePartner = text(
             ctx(),
             new SimpleDateFormat("M月d日 · EEEE", Locale.CHINA).format(new java.util.Date())
                 + " · 伙伴·" + partner.title,
-            11,
-            WOOD
+            13,
+            0xff6b563f
         );
+        datePartner.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         datePartner.setSingleLine(true);
         datePartner.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        copy.addView(datePartner, new LinearLayout.LayoutParams(-1, -2));
-        ForestUi.add(copy, heading(ctx(), "森林自习室", 24), 4);
+        heroCopy.addView(datePartner, new LinearLayout.LayoutParams(-1, -2));
         if (plan != null) {
-            int pillFill = plan.partner == StudyPlan.Partner.TREECKO ? 0xffe3ecd9
-                : plan.partner == StudyPlan.Partner.BULBASAUR ? 0xffe5efea : 0xffe9efe3;
+            LinearLayout planWrap = row(ctx());
+            planWrap.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            planWrap.setMinimumHeight(dp(ctx(), 40));
+            planWrap.setPadding(0, dp(ctx(), 4), dp(ctx(), 6), dp(ctx(), 4));
+            planWrap.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+            planWrap.setOnClickListener(v -> planDialogs().manager());
+            ForestMotion.bind(planWrap);
+
+            View planDot = new View(ctx());
+            planDot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            planDot.setBackground(rounded(ctx(), GREEN, 0, 99));
+            LinearLayout.LayoutParams planDotLp = new LinearLayout.LayoutParams(dp(ctx(), 7.5f), dp(ctx(), 7.5f));
+            planDotLp.setMarginEnd(dp(ctx(), 8));
+            planWrap.addView(planDot, planDotLp);
+
             TextView plans = StudySheet.link(
                 ctx(),
                 "当前计划 · " + plan.title + " ▾",
                 0xff243624,
                 () -> planDialogs().manager()
             );
-            plans.setTextSize(12);
-            plans.setMinimumHeight(dp(ctx(), 32));
-            plans.setPadding(dp(ctx(), 12), dp(ctx(), 5), dp(ctx(), 12), dp(ctx(), 5));
-            plans.setBackground(ripple(ctx(), rounded(ctx(), pillFill, 0xffbfd0b9, 999), false));
-            LinearLayout.LayoutParams planLp = new LinearLayout.LayoutParams(-2, -2);
-            planLp.topMargin = dp(ctx(), 8);
-            copy.addView(plans, planLp);
+            plans.setTextSize(18);
+            plans.setTypeface(Typeface.create("serif", Typeface.BOLD));
+            plans.setSingleLine(true);
+            plans.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            plans.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            plans.setPadding(0, 0, 0, 0);
+            plans.setBackground(null);
+            planWrap.addView(plans, new LinearLayout.LayoutParams(-2, -2));
+
+            LinearLayout.LayoutParams planWrapLp = new LinearLayout.LayoutParams(-1, -2);
+            planWrapLp.topMargin = dp(ctx(), 4);
+            heroCopy.addView(planWrap, planWrapLp);
         }
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-            -1,
-            -2,
-            Gravity.TOP | Gravity.START
-        );
-        lp.setMargins(dp(ctx(), 22), dp(ctx(), 8), dp(ctx(), 112), 0);
-        hero.addView(copy, lp);
-        int companion = partner == StudyPlan.Partner.TREECKO ? R.drawable.treecko_chart
-            : partner == StudyPlan.Partner.BULBASAUR ? R.drawable.bulbasaur_sleeping
-            : R.drawable.crayon_study_companion;
-        FrameLayout.LayoutParams mascot = new FrameLayout.LayoutParams(dp(ctx(), 90), dp(ctx(), 84),
-            Gravity.END | Gravity.CENTER_VERTICAL);
-        mascot.setMarginEnd(dp(ctx(), 21));
-        hero.addView(image(ctx(), companion, null), mascot);
-        body.addView(hero, new LinearLayout.LayoutParams(-1, -2));
-        LinearLayout content = content();
-        body.addView(content);
+        heroRow.addView(heroCopy, new LinearLayout.LayoutParams(0, -2, 1));
+        int companion = partnerDrawable(partner);
+        LinearLayout.LayoutParams mascotLp = new LinearLayout.LayoutParams(dp(ctx(), 70), dp(ctx(), 66));
+        mascotLp.setMarginStart(dp(ctx(), 10));
+        heroRow.addView(image(ctx(), companion, null), mascotLp);
+        ForestUi.add(content, heroRow, 4);
         if (plan == null) {
             LinearLayout empty = card();
             empty.addView(heading(ctx(), "还没有学习计划", 19));
@@ -529,12 +587,13 @@ public final class StudyFragment extends Fragment {
         StudyWork.Task next = !n.hasSession() ? n.nextTask(plan.id) : null;
         List<StudySubject> upcoming = StudyWorkDialogs.deadlines(plan);
         LinearLayout timer = card();
+        timer.setElevation(dp(ctx(), 2));
         LinearLayout.LayoutParams timerParams = new LinearLayout.LayoutParams(-1, -2);
         timerParams.topMargin = dp(ctx(), 8);
         content.addView(timer, timerParams);
         StudySubject currentSubject = active ? n.activeSubject() : n.selected();
         String subjectLabel =
-            currentSubject.title + (active ? "  · 本次科目" : "    切换科目 ›");
+            currentSubject.title + (active ? " · 本次科目" : "  切换 ›");
         android.text.SpannableString selectorText = new android.text.SpannableString(subjectLabel);
         selectorText.setSpan(
             new android.text.style.RelativeSizeSpan(.8f),
@@ -548,101 +607,226 @@ public final class StudyFragment extends Fragment {
             subjectLabel.length(),
             0
         );
+        LinearLayout timerTopRow = row(ctx());
         subjectSelector = button(ctx(), subjectLabel, false);
         subjectSelector.setText(selectorText);
         subjectSelector.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        subjectSelector.setIconPadding(dp(ctx(), 12));
+        subjectSelector.setIconPadding(dp(ctx(), 10));
         subjectSelector.setId(R.id.study_subject_selector);
         subjectSelector.setContentDescription("切换学习科目");
         subjectSelector.setIconResource(R.drawable.ic_study_book);
         subjectSelector.setIconTint(ColorStateList.valueOf(DEEP));
-        subjectSelector.setIconSize(dp(ctx(), 20));
+        subjectSelector.setIconSize(dp(ctx(), 19));
         subjectSelector.setBackgroundTintList(ColorStateList.valueOf(0));
         subjectSelector.setStrokeWidth(0);
         subjectSelector.setEnabled(!active);
-        subjectSelector.setAlpha(active ? .85f : 1f);
+        subjectSelector.setAlpha(active ? .88f : 1f);
         subjectSelector.setOnClickListener(v -> showSubjectSheet());
-        timer.addView(subjectSelector, new LinearLayout.LayoutParams(-1, dp(ctx(), 44)));
+        timerTopRow.addView(subjectSelector, new LinearLayout.LayoutParams(0, dp(ctx(), 42), 1));
+        TextView[] modeToggleRef = new TextView[1];
+        TextView modeToggle = StudySheet.link(
+            ctx(),
+            countdownMode ? "倒计时 ⇄" : "正计时 ⇄",
+            countdownMode ? 0xff2c5132 : WOOD,
+            () -> {
+                countdownMode = !countdownMode;
+                ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE)
+                    .edit().putBoolean("countdown_mode", countdownMode).apply();
+                TextView btn = modeToggleRef[0];
+                if (btn != null) {
+                    btn.setText(countdownMode ? "倒计时 ⇄" : "正计时 ⇄");
+                    btn.setTextColor(countdownMode ? 0xff2c5132 : WOOD);
+                    btn.setBackground(ripple(ctx(), rounded(ctx(),
+                        countdownMode ? 0xffe6efe1 : 0xfff2eee3,
+                        countdownMode ? 0xffa7c2a0 : 0x225c4938, 999), false));
+                }
+                if (focusGentleNote != null && !store.notebook().currentHasSession()) {
+                    focusGentleNote.setText(countdownMode
+                        ? "倒计时模式 · 归零后自动转为加时计数"
+                        : "正向计时 · 随时暂停 · 到达目标仍可继续");
+                }
+                updateTimer();
+            }
+        );
+        modeToggleRef[0] = modeToggle;
+        modeToggle.setTextSize(11);
+        modeToggle.setMinimumHeight(dp(ctx(), 30));
+        modeToggle.setPadding(dp(ctx(), 10), dp(ctx(), 4), dp(ctx(), 10), dp(ctx(), 4));
+        modeToggle.setBackground(ripple(ctx(), rounded(ctx(),
+            countdownMode ? 0xffe6efe1 : 0xfff2eee3,
+            countdownMode ? 0xffa7c2a0 : 0x225c4938, 999), false));
+        timerTopRow.addView(modeToggle);
+        timer.addView(timerTopRow, new LinearLayout.LayoutParams(-1, -2));
         StudyWork.Task activeTask = active ? n.task(n.activeTaskId()) : null;
         if (activeTask != null) ForestUi.add(timer, note("本次目标 · " + activeTask.title), 0);
-        FrameLayout dialHost = new FrameLayout(ctx());
-        dial = new StudyClockFace();
-        dialHost.setBackground(dial);
-        LinearLayout dialCopy = column(ctx());
-        dialCopy.setGravity(Gravity.CENTER);
-        TextView dialLabel = text(
+        LinearLayout clockBlock = column(ctx());
+        clockBlock.setGravity(Gravity.CENTER_HORIZONTAL);
+        clockBlock.setPadding(dp(ctx(), 4), dp(ctx(), 20), dp(ctx(), 4), dp(ctx(), 14));
+
+        // 1. Live Status Pill with breathing dot
+        boolean isRunning = active && n.running();
+        boolean isPaused = active && !n.running();
+        focusStatusPill = row(ctx());
+        focusStatusPill.setGravity(Gravity.CENTER_VERTICAL);
+        focusStatusPill.setPadding(dp(ctx(), 12), dp(ctx(), 5), dp(ctx(), 12), dp(ctx(), 5));
+        focusStatusPill.setBackground(rounded(ctx(),
+            isRunning ? 0xffeef3e8 : isPaused ? 0xfff5efe3 : 0xfff2efe6, 0, 999));
+
+        focusStatusDot = new View(ctx());
+        focusStatusDot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        focusStatusDot.setBackground(rounded(ctx(),
+            isRunning ? 0xff456444 : isPaused ? 0xffb8894f : 0xffb5afa0, 0, 99));
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(ctx(), 7), dp(ctx(), 7));
+        dotLp.setMarginEnd(dp(ctx(), 6));
+        focusStatusPill.addView(focusStatusDot, dotLp);
+
+        if (isRunning && (Build.VERSION.SDK_INT < 26 || android.animation.ValueAnimator.areAnimatorsEnabled())) {
+            statusPulseAnimator = android.animation.ObjectAnimator.ofFloat(focusStatusDot, View.ALPHA, 1f, 0.35f);
+            statusPulseAnimator.setDuration(1100);
+            statusPulseAnimator.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            statusPulseAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            statusPulseAnimator.start();
+        }
+
+        focusStatusLabel = text(
             ctx(),
-            active ? (n.running() ? "正在专注" : "休息一下") : "准备好就开始",
-            11,
-            MUTED
+            isRunning ? "正在专注" : isPaused ? "休息一下" : "准备好就开始",
+            12,
+            isRunning ? 0xff315e3a : isPaused ? 0xff7b5c3b : MUTED
         );
-        dialLabel.setGravity(Gravity.CENTER);
-        dialCopy.addView(dialLabel);
-        clock = text(ctx(), StudyFormat.clock(active ? store.elapsedMillis() : 0), 27, DEEP);
-        clock.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        focusStatusLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        focusStatusPill.addView(focusStatusLabel);
+        clockBlock.addView(focusStatusPill, new LinearLayout.LayoutParams(-2, -2));
+
+        // 2. Oversized Editorial Serif Clock
+        clock = text(ctx(), StudyFormat.clock(active ? store.elapsedMillis() : 0), 48, 0xff243a28);
+        clock.setTypeface(Typeface.create("serif", Typeface.NORMAL));
         clock.setFontFeatureSettings("tnum");
+        clock.setLetterSpacing(0.02f);
+        clock.setMaxLines(1);
         clock.setId(R.id.study_timer);
         clock.setGravity(Gravity.CENTER);
         clock.setContentDescription("本次学习计时");
-        ForestUi.add(dialCopy, clock, 10);
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+            clock, 30, 50, 2, android.util.TypedValue.COMPLEX_UNIT_SP
+        );
+        LinearLayout.LayoutParams clockLp = new LinearLayout.LayoutParams(-1, dp(ctx(), 62));
+        clockLp.topMargin = dp(ctx(), 12);
+        clockBlock.addView(clock, clockLp);
+
+        // 3. Precision Horizontal Gradient Progress Rail
+        dial = new StudyClockFace();
+        View progressRail = new View(ctx());
+        progressRail.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        progressRail.setBackground(dial);
+        LinearLayout.LayoutParams railLp = new LinearLayout.LayoutParams(-1, dp(ctx(), 7));
+        railLp.setMargins(dp(ctx(), 6), dp(ctx(), 20), dp(ctx(), 6), 0);
+        clockBlock.addView(progressRail, railLp);
+
+        // 4. Two-Sided Progress Metadata Row
         int focusGoal = active ? n.activeGoal() : n.sessionGoal();
-        TextView subject = text(ctx(), "目标 " + focusGoal + " 分钟", 12, MUTED);
-        subject.setGravity(Gravity.CENTER);
-        ForestUi.add(dialCopy, subject, 9);
-        dialHost.addView(dialCopy, new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout.LayoutParams dialParams = new LinearLayout.LayoutParams(-1, dp(ctx(), 164));
-        dialParams.topMargin = dp(ctx(), 4);
-        timer.addView(dialHost, dialParams);
-        LinearLayout goals = row(ctx());
-        goals.setBackground(rounded(ctx(), 0xffebe7da, 0xffdcd8c8, 12));
-        goals.setPadding(dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4));
-        int[] presetGoals = new int[] { 25, 45, 60 };
-        boolean isCustomGoal = focusGoal != 25 && focusGoal != 45 && focusGoal != 60;
-        for (int minutes : presetGoals) {
-            boolean selectedGoal = focusGoal == minutes;
-            TextView chip = text(ctx(), minutes + "分钟", 12, selectedGoal ? 0xff243624 : 0xff6b7568);
-            chip.setGravity(Gravity.CENTER);
-            chip.setTypeface(Typeface.create(selectedGoal ? "sans-serif-medium" : "sans-serif",
-                selectedGoal ? Typeface.BOLD : Typeface.NORMAL));
-            chip.setEnabled(!active);
-            chip.setAlpha(active ? 0.65f : 1f);
-            chip.setBackground(ripple(ctx(), rounded(ctx(),
-                selectedGoal ? 0xfffffcf3 : Color.TRANSPARENT,
-                selectedGoal ? 0xffc6d4c0 : 0, 9), false));
-            chip.setOnClickListener(v ->
-                perform(() -> {
-                    store.update(book -> {
-                        book.setSessionGoal(minutes);
-                        return null;
-                    });
-                    render();
-                })
+        LinearLayout progressMeta = row(ctx());
+        dialGoalCaption = text(ctx(), (countdownMode ? "倒计时目标 " : "目标 ") + focusGoal + " 分钟", 12, MUTED);
+        dialGoalCaption.setFontFeatureSettings("tnum");
+        progressMeta.addView(dialGoalCaption, new LinearLayout.LayoutParams(0, -2, 1));
+
+        dialRightCaption = text(ctx(), "0%", 12, 0xff315e3a);
+        dialRightCaption.setFontFeatureSettings("tnum");
+        dialRightCaption.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        progressMeta.addView(dialRightCaption);
+
+        LinearLayout.LayoutParams metaLp = new LinearLayout.LayoutParams(-1, -2);
+        metaLp.setMargins(dp(ctx(), 6), dp(ctx(), 8), dp(ctx(), 6), 0);
+        clockBlock.addView(progressMeta, metaLp);
+
+        timer.addView(clockBlock, new LinearLayout.LayoutParams(-1, -2));
+        if (!active) {
+            LinearLayout goals = row(ctx());
+            goals.setBackground(rounded(ctx(), 0xffeae5d9, 0, 13));
+            goals.setPadding(dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4));
+            int[] presetGoals = new int[] { 25, 45, 60 };
+            boolean isCustomGoal = focusGoal != 25 && focusGoal != 45 && focusGoal != 60;
+            for (int minutes : presetGoals) {
+                boolean selectedGoal = focusGoal == minutes;
+                TextView chip = text(ctx(), minutes + "分钟", 12, selectedGoal ? 0xff243624 : 0xff6b7568);
+                chip.setGravity(Gravity.CENTER);
+                chip.setTypeface(Typeface.create(selectedGoal ? "sans-serif-medium" : "sans-serif",
+                    selectedGoal ? Typeface.BOLD : Typeface.NORMAL));
+                chip.setBackground(ripple(ctx(), rounded(ctx(),
+                    selectedGoal ? 0xfffffefa : Color.TRANSPARENT,
+                    selectedGoal ? 0x185c4938 : 0, 10), false));
+                chip.setOnClickListener(v ->
+                    perform(() -> {
+                        store.update(book -> {
+                            book.setSessionGoal(minutes);
+                            return null;
+                        });
+                        render();
+                    })
+                );
+                addEqual(goals, chip, 36);
+            }
+            String customLabel = isCustomGoal ? focusGoal + "分钟 ✎" : "自定义";
+            TextView customChip = text(ctx(), customLabel, 12, isCustomGoal ? 0xff243624 : 0xff6b7568);
+            customChip.setGravity(Gravity.CENTER);
+            customChip.setTypeface(Typeface.create(isCustomGoal ? "sans-serif-medium" : "sans-serif",
+                isCustomGoal ? Typeface.BOLD : Typeface.NORMAL));
+            customChip.setBackground(ripple(ctx(), rounded(ctx(),
+                isCustomGoal ? 0xfffffefa : Color.TRANSPARENT,
+                isCustomGoal ? 0x185c4938 : 0, 10), false));
+            customChip.setOnClickListener(v -> customSessionGoalDialog());
+            addEqual(goals, customChip, 36);
+            ForestUi.add(timer, goals, 10);
+        } else {
+            StudySheet.addHairline(timer, 6, 8);
+            LinearLayout activeBar = row(ctx());
+            activeBar.setPadding(dp(ctx(), 4), dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2));
+            activeStatusText = text(
+                ctx(),
+                n.running() ? "静心计时中 · 随时可暂停" : "已暂停 · 暂停时长不计入",
+                12,
+                MUTED
             );
-            addEqual(goals, chip, 36);
+            activeBar.addView(activeStatusText, new LinearLayout.LayoutParams(0, -2, 1));
+            TextView[] wakeBtnRef = new TextView[1];
+            TextView wakeBtn = StudySheet.link(
+                ctx(),
+                keepScreenOn ? "常亮已开" : "屏幕常亮",
+                keepScreenOn ? 0xff2a4e2f : MUTED,
+                () -> {
+                    keepScreenOn = !keepScreenOn;
+                    ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE)
+                        .edit().putBoolean("keep_screen_on", keepScreenOn).apply();
+                    syncKeepScreenOn();
+                    TextView wb = wakeBtnRef[0];
+                    if (wb != null) {
+                        wb.setText(keepScreenOn ? "常亮已开" : "屏幕常亮");
+                        wb.setTextColor(keepScreenOn ? 0xff2a4e2f : MUTED);
+                        wb.setBackground(ripple(ctx(), rounded(ctx(),
+                            keepScreenOn ? 0xffeef4ea : 0xfff2eee3, 0, 999), false));
+                    }
+                }
+            );
+            wakeBtnRef[0] = wakeBtn;
+            wakeBtn.setTextSize(11);
+            wakeBtn.setMinimumHeight(dp(ctx(), 28));
+            wakeBtn.setPadding(dp(ctx(), 11), dp(ctx(), 4), dp(ctx(), 11), dp(ctx(), 4));
+            wakeBtn.setBackground(ripple(ctx(), rounded(ctx(),
+                keepScreenOn ? 0xffeef4ea : 0xfff2eee3, 0, 999), false));
+            activeBar.addView(wakeBtn);
+            timer.addView(activeBar, new LinearLayout.LayoutParams(-1, -2));
+            syncKeepScreenOn();
         }
-        String customLabel = isCustomGoal ? focusGoal + "分钟 ✎" : "自定义";
-        TextView customChip = text(ctx(), customLabel, 12, isCustomGoal ? 0xff243624 : 0xff6b7568);
-        customChip.setGravity(Gravity.CENTER);
-        customChip.setTypeface(Typeface.create(isCustomGoal ? "sans-serif-medium" : "sans-serif",
-            isCustomGoal ? Typeface.BOLD : Typeface.NORMAL));
-        customChip.setEnabled(!active);
-        customChip.setAlpha(active ? 0.65f : 1f);
-        customChip.setBackground(ripple(ctx(), rounded(ctx(),
-            isCustomGoal ? 0xfffffcf3 : Color.TRANSPARENT,
-            isCustomGoal ? 0xffc6d4c0 : 0, 9), false));
-        customChip.setOnClickListener(v -> customSessionGoalDialog());
-        addEqual(goals, customChip, 36);
-        ForestUi.add(timer, goals, 10);
         LinearLayout controls = row(ctx());
-        MaterialButton start = button(
+        startPauseButton = button(
             ctx(),
             active ? (n.running() ? "暂停一下" : "继续学习")
                 : n.hasSession() ? "返回原计划保存计时" : "开始专注，种下今天",
             true
         );
-        start.setId(R.id.study_start_pause_button);
-        start.setCornerRadius(dp(ctx(), 12));
-        start.setOnClickListener(v ->
+        startPauseButton.setId(R.id.study_start_pause_button);
+        startPauseButton.setCornerRadius(dp(ctx(), 12));
+        startPauseButton.setOnClickListener(v ->
             perform(() -> {
                 long now = android.os.SystemClock.elapsedRealtime();
                 if (now - lastControlClick < 280) return;
@@ -651,15 +835,17 @@ public final class StudyFragment extends Fragment {
                     returnToTimer(store.notebook().activePlanId());
                     return;
                 }
-                if (!store.notebook().hasSession()) store.start();
-                else if (store.notebook().running()) store.pause();
-                else store.resume();
-                render();
-                View action = body.findViewById(R.id.study_start_pause_button);
-                if (action != null) ForestMotion.reveal(action);
+                if (!store.notebook().hasSession()) {
+                    store.start();
+                    render();
+                } else {
+                    if (store.notebook().running()) store.pause();
+                    else store.resume();
+                    syncRunningStateInPlace(store.notebook().running());
+                }
             })
         );
-        controls.addView(start, new LinearLayout.LayoutParams(0, dp(ctx(), 48), 1));
+        controls.addView(startPauseButton, new LinearLayout.LayoutParams(0, dp(ctx(), 48), 1));
         if (active) {
             MaterialButton finish = button(ctx(), "完成学习", false);
             finish.setId(R.id.study_finish_button);
@@ -692,16 +878,16 @@ public final class StudyFragment extends Fragment {
                 ForestUi.add(timer, withdraw, 4);
             }
         }
-        TextView gentle = text(
+        focusGentleNote = text(
             ctx(),
             active
-                ? "暂停时间不计入时长 · 完成后可以切换科目"
-                : "正向计时 · 随时暂停 · 到达目标仍可继续",
+                ? "完成后可自由切换科目 · 满 25 分钟累计 1 水滴"
+                : (countdownMode ? "倒计时模式 · 归零后自动转为加时计数" : "正向计时 · 随时暂停 · 到达目标仍可继续"),
             11,
             MUTED
         );
-        gentle.setGravity(Gravity.CENTER);
-        ForestUi.add(timer, gentle, 8);
+        focusGentleNote.setGravity(Gravity.CENTER);
+        ForestUi.add(timer, focusGentleNote, 8);
         if (!n.hasSession()) {
             TextView addGoalLink = StudySheet.link(ctx(), "添加本次目标", DEEP, this::sessionGoalDialog);
             addGoalLink.setMinimumHeight(dp(ctx(), 36));
@@ -717,37 +903,60 @@ public final class StudyFragment extends Fragment {
     private void customSessionGoalDialog() {
         if (store.notebook().currentHasSession()) return;
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane("自定义专注时长", "设置单次专注目标（5 至 360 分钟），满 25 分钟累计水滴。",
-            R.drawable.ic_study_book);
+        StudySheet.Pane pane = sheetPane("自定义专注时长", "单次目标 5 至 360 分钟，满 25 分钟累计水滴。", 0);
+        StudySheet.addHairline(pane.body, 0, 12);
+
         EditText input = new EditText(ctx());
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setText(String.valueOf(store.notebook().sessionGoal()));
         input.setSelectAllOnFocus(true);
         input.setContentDescription("自定义专注目标分钟");
-        StudySheet.styleField(input);
+        StudySheet.styleUnderlineField(input);
+        input.setTextSize(22f);
+        input.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        input.setFontFeatureSettings("tnum");
         pane.body.addView(StudySheet.section(ctx(), "单次目标时长（分钟）"));
-        ForestUi.add(pane.body, input, 7);
+        ForestUi.add(pane.body, input, 4);
 
         LinearLayout presets = row(ctx());
         int[] presetValues = { 15, 30, 90, 120 };
+        List<TextView> presetChips = new ArrayList<>();
+        Runnable syncPresets = () -> {
+            String cur = input.getText().toString().trim();
+            for (int i = 0; i < presetValues.length; i++) {
+                StudySheet.styleChoiceChip(presetChips.get(i), cur.equals(String.valueOf(presetValues[i])));
+            }
+        };
         for (int i = 0; i < presetValues.length; i++) {
             int minutes = presetValues[i];
-            TextView option = StudySheet.link(ctx(), minutes + " 分钟", DEEP,
-                () -> input.setText(String.valueOf(minutes)));
+            TextView option = StudySheet.link(ctx(), minutes + " 分钟", DEEP, () -> {
+                input.setText(String.valueOf(minutes));
+                input.setSelection(input.getText().length());
+            });
             option.setTextSize(12);
+            option.setFontFeatureSettings("tnum");
             option.setMinimumHeight(dp(ctx(), 36));
-            option.setBackground(ripple(ctx(), rounded(ctx(), 0xfff5f2e6, 0xffd8d5c2, 10), false));
             LinearLayout.LayoutParams presetParams = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) presetParams.setMarginStart(dp(ctx(), 6));
+            if (i > 0) presetParams.setMarginStart(dp(ctx(), 8));
             presets.addView(option, presetParams);
+            presetChips.add(option);
         }
-        ForestUi.add(pane.body, presets, 8);
+        ForestUi.add(pane.body, presets, 14);
 
         TextView errorMessage = text(ctx(), "", 12, 0xff8d4836);
         errorMessage.setVisibility(View.GONE);
         ForestUi.add(pane.body, errorMessage, 8);
 
-        pane.secondary("取消", sheet::dismiss);
+        input.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                errorMessage.setVisibility(View.GONE);
+                syncPresets.run();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+        syncPresets.run();
+
         pane.primary("保存时长", () -> {
             try {
                 int value = Integer.parseInt(input.getText().toString().trim());
@@ -833,32 +1042,14 @@ public final class StudyFragment extends Fragment {
         goal.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
         summary.addView(goal);
         preview.addView(summary);
-
-        View divider = new View(ctx());
-        divider.setBackgroundColor(0xffe6e2d3);
-        LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(-1, dp(ctx(), 1));
-        divLp.topMargin = dp(ctx(), 12);
-        divLp.bottomMargin = dp(ctx(), 6);
-        preview.addView(divider, divLp);
-
-        int pendingCount = TodoStore.get(ctx()).pending().size();
-        LinearLayout agendaHeader = row(ctx());
-        agendaHeader.setMinimumHeight(dp(ctx(), 36));
-        TextView agendaTitle = text(ctx(), "待办清单与提醒  ›", 13, DEEP);
-        agendaTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        agendaHeader.addView(agendaTitle, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView agendaBadge = text(
-            ctx(),
-            pendingCount == 0 ? "去新建待办" : pendingCount + " 项待办",
-            11,
-            MUTED
-        );
-        agendaHeader.addView(agendaBadge);
-        agendaHeader.setOnClickListener(v -> open(AppDestination.STUDY_TODO));
-        agendaHeader.setFocusable(true);
-        agendaHeader.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
-        ForestMotion.bind(agendaHeader);
-        preview.addView(agendaHeader, new LinearLayout.LayoutParams(-1, -2));
+        dailyProgressBar = new android.widget.ProgressBar(ctx(), null, android.R.attr.progressBarStyleHorizontal);
+        dailyProgressBar.setMax(100);
+        dailyProgressBar.setProgressDrawable(roundedProgressDrawable());
+        LinearLayout.LayoutParams pbLp = new LinearLayout.LayoutParams(-1, dp(ctx(), 7));
+        pbLp.topMargin = dp(ctx(), 10);
+        preview.addView(dailyProgressBar, pbLp);
+        dailyProgressText = text(ctx(), "", 11, MUTED);
+        ForestUi.add(preview, dailyProgressText, 6);
 
         if (next != null) {
             LinearLayout nextRow = StudySheet.item(
@@ -893,182 +1084,727 @@ public final class StudyFragment extends Fragment {
         ForestUi.add(parent, preview, 12);
     }
 
+    private android.graphics.drawable.Drawable tintedIcon(int resId, int sizeDp, int tintColor) {
+        android.graphics.drawable.Drawable raw = androidx.core.content.ContextCompat.getDrawable(ctx(), resId);
+        if (raw == null) return null;
+        android.graphics.drawable.Drawable icon = androidx.core.graphics.drawable.DrawableCompat.wrap(raw.mutate());
+        androidx.core.graphics.drawable.DrawableCompat.setTint(icon, tintColor);
+        int px = dp(ctx(), sizeDp);
+        icon.setBounds(0, 0, px, px);
+        return icon;
+    }
+
+    private android.graphics.drawable.Drawable bottomHairlineBg(int color) {
+        android.graphics.drawable.GradientDrawable line = new android.graphics.drawable.GradientDrawable();
+        line.setColor(color);
+        android.graphics.drawable.LayerDrawable bg = new android.graphics.drawable.LayerDrawable(
+            new android.graphics.drawable.Drawable[] { line }
+        );
+        bg.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        bg.setLayerHeight(0, Math.max(1, dp(ctx(), 0.75f)));
+        return bg;
+    }
+
     private void todoPage() {
         LinearLayout content = content();
         body.addView(content);
         TodoStore todos = TodoStore.get(ctx());
 
-        // 1. Minimalist editorial header (standalone, no plan or subject binding)
-        LinearLayout headerRow = row(ctx());
-        headerRow.addView(heading(ctx(), "待办", 27), new LinearLayout.LayoutParams(0, -2, 1));
+        // 1. Top bar right side: title only, aligned parallel to the 56dp return door
+        setBarTitle("待办");
 
-        TextView remindPill = StudySheet.link(
+        // Editorial Hairline Toolbar (Proposal 1): crisp date + larger borderless icon links + airy porcelain outline CTA
+        LinearLayout toolbar = row(ctx());
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.setPadding(0, dp(ctx(), 2), 0, dp(ctx(), 10));
+        toolbar.setBackground(bottomHairlineBg(0x1f5c4938));
+
+        LinearLayout leftMeta = column(ctx());
+        TextView todayLabel = text(
             ctx(),
-            todos.remindEnabled() ? "提醒 " + todos.defaultRemindTime() : "提醒已关",
-            todos.remindEnabled() ? 0xff2e4f2f : MUTED,
-            this::todoReminderSettingsDialog
+            new SimpleDateFormat("M月d日 · EEEE", Locale.CHINA).format(new java.util.Date()),
+            14,
+            0xff5c4938
         );
-        remindPill.setTextSize(12);
-        remindPill.setMinimumHeight(dp(ctx(), 34));
-        remindPill.setPadding(dp(ctx(), 12), dp(ctx(), 5), dp(ctx(), 12), dp(ctx(), 5));
-        remindPill.setBackground(ripple(ctx(), rounded(ctx(),
-            todos.remindEnabled() ? 0xffe6efe2 : 0xfff0ece0,
-            todos.remindEnabled() ? 0xffb8cbb2 : 0xffdcd8c8, 999), false));
-        headerRow.addView(remindPill);
+        todayLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        leftMeta.addView(todayLabel);
 
-        TextView addTodoBtn = StudySheet.link(ctx(), "+ 新建", 0xfffffcf3, () -> todoEditorSheet(null));
-        addTodoBtn.setTextSize(12);
+        LinearLayout subLinks = row(ctx());
+        subLinks.setGravity(Gravity.CENTER_VERTICAL);
+
+        boolean remindOn = todos.remindEnabled();
+        int remindColor = remindOn ? DEEP : MUTED;
+        LinearLayout remindRow = row(ctx());
+        remindRow.setGravity(Gravity.CENTER_VERTICAL);
+        remindRow.setMinimumHeight(dp(ctx(), 40));
+        remindRow.setPadding(0, dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4));
+        remindRow.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 8), false));
+        remindRow.setOnClickListener(v -> todoReminderSettingsDialog());
+        ForestMotion.bind(remindRow);
+
+        TextView remindText = text(
+            ctx(),
+            remindOn ? ("提醒 " + todos.defaultRemindTime()) : "提醒已关",
+            13,
+            remindColor
+        );
+        remindText.setTextSize(13.5f);
+        remindText.setSingleLine(true);
+        remindText.setTypeface(Typeface.create(remindOn ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
+        remindText.setFontFeatureSettings("tnum");
+        remindText.setCompoundDrawablesRelative(tintedIcon(R.drawable.ic_editorial_bell, 15, remindColor), null, null, null);
+        remindText.setCompoundDrawablePadding(dp(ctx(), 4));
+        remindRow.addView(remindText);
+        if (remindOn) {
+            View dot = new View(ctx());
+            dot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            dot.setBackground(rounded(ctx(), GREEN, 0, 99));
+            LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(ctx(), 6), dp(ctx(), 6));
+            dotLp.setMarginStart(dp(ctx(), 5));
+            remindRow.addView(dot, dotLp);
+        }
+        subLinks.addView(remindRow);
+
+        View sep = new View(ctx());
+        sep.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        sep.setBackgroundColor(0x285c4938);
+        LinearLayout.LayoutParams sepLp = new LinearLayout.LayoutParams(Math.max(1, dp(ctx(), 1)), dp(ctx(), 13));
+        sepLp.setMarginStart(dp(ctx(), 8));
+        sepLp.setMarginEnd(dp(ctx(), 8));
+        subLinks.addView(sep, sepLp);
+
+        TextView dateFilterPill = StudySheet.link(ctx(), "按日期筛选 ▾", 0xff6b5c49, () -> {});
+        dateFilterPill.setTextSize(13.5f);
+        dateFilterPill.setSingleLine(true);
+        dateFilterPill.setFontFeatureSettings("tnum");
+        dateFilterPill.setGravity(Gravity.CENTER_VERTICAL);
+        dateFilterPill.setMinimumHeight(dp(ctx(), 40));
+        dateFilterPill.setCompoundDrawablePadding(dp(ctx(), 4));
+        subLinks.addView(dateFilterPill);
+        ForestUi.add(leftMeta, subLinks, 4);
+        toolbar.addView(leftMeta, new LinearLayout.LayoutParams(0, -2, 1));
+
+        TextView addTodoBtn = StudySheet.link(ctx(), "新建", DEEP, () -> todoEditorSheet(null));
+        addTodoBtn.setContentDescription("新建待办");
+        addTodoBtn.setTextSize(14);
         addTodoBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        addTodoBtn.setMinimumHeight(dp(ctx(), 34));
-        addTodoBtn.setPadding(dp(ctx(), 14), dp(ctx(), 5), dp(ctx(), 14), dp(ctx(), 5));
-        addTodoBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xff456444, 0xff345439, 999), true));
+        addTodoBtn.setGravity(Gravity.CENTER);
+        addTodoBtn.setMinimumHeight(dp(ctx(), 40));
+        addTodoBtn.setPadding(dp(ctx(), 14), dp(ctx(), 7), dp(ctx(), 15), dp(ctx(), 7));
+        addTodoBtn.setCompoundDrawablesRelative(tintedIcon(R.drawable.ic_editorial_plus, 14, DEEP), null, null, null);
+        addTodoBtn.setCompoundDrawablePadding(dp(ctx(), 5));
+        addTodoBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfffffefa, 0x4c315e3a, 999), false));
+        addTodoBtn.setElevation(dp(ctx(), 1));
         LinearLayout.LayoutParams addLp = new LinearLayout.LayoutParams(-2, -2);
         addLp.setMarginStart(dp(ctx(), 8));
-        headerRow.addView(addTodoBtn, addLp);
-        ForestUi.add(content, headerRow, 14);
+        toolbar.addView(addTodoBtn, addLp);
+        ForestUi.add(content, toolbar, 4);
 
-        ForestUi.add(
-            content,
-            text(
-                ctx(),
-                new SimpleDateFormat("M月d日 · EEEE", Locale.CHINA).format(new java.util.Date()),
-                12,
-                WOOD
-            ),
-            4
-        );
-
-        // 2. Motion-Primitives Sliding Pill Filter Bar + Handcrafted Draft-Paper Notebook Pad
+        // 2. Motion-Primitives 3-Tab Mutually Exclusive Filter Bar + Optional Single-Day Bar + Notebook Pad
+        if (todoFilter < 0 || todoFilter > 2) todoFilter = 0;
         ForestNotebookPad notebookPad = new ForestNotebookPad(ctx());
+        notebookPad.setMinimumHeight(dp(ctx(), 350));
+
+        // Sleek borderless single-day strip (visible ONLY while filtering by a specific date)
+        LinearLayout dateFilterStrip = row(ctx());
+        dateFilterStrip.setPadding(dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2));
+        TextView prevDayBtn = StudySheet.link(ctx(), "‹", 0xff4c594a, () -> {});
+        prevDayBtn.setTextSize(18);
+        prevDayBtn.setContentDescription("前一天");
+        prevDayBtn.setMinimumHeight(dp(ctx(), 32));
+        prevDayBtn.setPadding(dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2));
+        prevDayBtn.setBackground(ripple(ctx(), rounded(ctx(), 0x125c4938, 0, 999), false));
+        dateFilterStrip.addView(prevDayBtn, new LinearLayout.LayoutParams(dp(ctx(), 32), dp(ctx(), 32)));
+
+        TextView filterDayLabel = StudySheet.link(ctx(), "", 0xff243624, () -> {});
+        filterDayLabel.setTextSize(13);
+        filterDayLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        filterDayLabel.setFontFeatureSettings("tnum");
+        filterDayLabel.setMinimumHeight(dp(ctx(), 32));
+        filterDayLabel.setPadding(dp(ctx(), 10), dp(ctx(), 4), dp(ctx(), 10), dp(ctx(), 4));
+        dateFilterStrip.addView(filterDayLabel, new LinearLayout.LayoutParams(-2, -2));
+
+        TextView nextDayBtn = StudySheet.link(ctx(), "›", 0xff4c594a, () -> {});
+        nextDayBtn.setTextSize(18);
+        nextDayBtn.setContentDescription("后一天");
+        nextDayBtn.setMinimumHeight(dp(ctx(), 32));
+        nextDayBtn.setPadding(dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2));
+        nextDayBtn.setBackground(ripple(ctx(), rounded(ctx(), 0x125c4938, 0, 999), false));
+        dateFilterStrip.addView(nextDayBtn, new LinearLayout.LayoutParams(dp(ctx(), 32), dp(ctx(), 32)));
+
+        dateFilterStrip.addView(new View(ctx()), new LinearLayout.LayoutParams(0, 1, 1));
+
+        TextView clearFilterBtn = StudySheet.link(ctx(), "退出筛选", 0xff7b5c3b, () -> {});
+        clearFilterBtn.setTextSize(12);
+        clearFilterBtn.setMinimumHeight(dp(ctx(), 30));
+        clearFilterBtn.setPadding(dp(ctx(), 10), dp(ctx(), 4), dp(ctx(), 10), dp(ctx(), 4));
+        clearFilterBtn.setBackground(ripple(ctx(), rounded(ctx(), 0x125c4938, 0, 999), false));
+        dateFilterStrip.addView(clearFilterBtn);
+
+        ForestSegmentedControl[] filterBarRef = new ForestSegmentedControl[1];
+        Runnable[] refreshTodoView = new Runnable[1];
+        refreshTodoView[0] = () -> {
+            boolean filtering = todoFilterDay != null && !todoFilterDay.isEmpty();
+            if (filtering) {
+                dateFilterPill.setText("已选 " + shortMonthDay(todoFilterDay) + " ▾");
+                dateFilterPill.setTextColor(DEEP);
+                dateFilterPill.setCompoundDrawablesRelative(
+                    tintedIcon(R.drawable.ic_editorial_calendar, 15, DEEP), null, null, null);
+                dateFilterPill.setPadding(dp(ctx(), 10), dp(ctx(), 4), dp(ctx(), 10), dp(ctx(), 4));
+                dateFilterPill.setBackground(ripple(ctx(), rounded(ctx(), 0xffe5eee0, 0x55315e3a, 999), false));
+                dateFilterStrip.setVisibility(View.VISIBLE);
+                String todayKey = TodoStore.dayKey(System.currentTimeMillis());
+                Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.DATE, 1);
+                String tomorrowKey = TodoStore.dayKey(cal.getTimeInMillis());
+                Calendar yCal = Calendar.getInstance();
+                yCal.add(Calendar.DATE, -1);
+                String yesterdayKey = TodoStore.dayKey(yCal.getTimeInMillis());
+                filterDayLabel.setText(formatTodoDayHeader(todoFilterDay, todayKey, tomorrowKey, yesterdayKey, true));
+            } else {
+                dateFilterPill.setText("按日期筛选 ▾");
+                dateFilterPill.setTextColor(0xff6b5c49);
+                dateFilterPill.setCompoundDrawablesRelative(
+                    tintedIcon(R.drawable.ic_editorial_calendar, 15, 0xff6b5c49), null, null, null);
+                dateFilterPill.setPadding(dp(ctx(), 2), dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4));
+                dateFilterPill.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 8), false));
+                dateFilterStrip.setVisibility(View.GONE);
+            }
+            populateStandaloneTodos(notebookPad, filterBarRef[0], todos);
+        };
+
+        dateFilterPill.setOnClickListener(v -> todoDateFilterSheet(todos, refreshTodoView[0]));
+        filterDayLabel.setOnClickListener(v -> todoDateFilterSheet(todos, refreshTodoView[0]));
+        prevDayBtn.setOnClickListener(v -> {
+            shiftTodoFilterDay(-1);
+            refreshTodoView[0].run();
+        });
+        nextDayBtn.setOnClickListener(v -> {
+            shiftTodoFilterDay(1);
+            refreshTodoView[0].run();
+        });
+        clearFilterBtn.setOnClickListener(v -> {
+            todoFilterDay = null;
+            refreshTodoView[0].run();
+        });
+
         ForestSegmentedControl filterBar = new ForestSegmentedControl(
             ctx(),
-            new String[] {"全部", "今天", "未来", "已完成"},
+            new String[] {"今天", "计划", "已完成"},
             null,
             todoFilter,
             idx -> {
+                todoFilterDay = null;
                 todoFilter = idx;
-                populateStandaloneTodos(notebookPad, todos);
+                refreshTodoView[0].run();
             }
         );
-        ForestUi.add(content, filterBar, 14);
-        ForestUi.add(content, notebookPad, 12);
-        populateStandaloneTodos(notebookPad, todos);
+        filterBarRef[0] = filterBar;
+        ForestUi.add(content, filterBar, 12);
+        ForestUi.add(content, dateFilterStrip, 8);
+        ForestUi.add(content, notebookPad, 10);
+        refreshTodoView[0].run();
     }
 
-    private void populateStandaloneTodos(LinearLayout host, TodoStore todos) {
-        host.removeAllViews();
+    private void shiftTodoFilterDay(int deltaDays) {
+        String base = (todoFilterDay == null || todoFilterDay.isEmpty())
+            ? TodoStore.dayKey(System.currentTimeMillis()) : todoFilterDay;
+        Calendar c = TodoStore.parseDay(base);
+        c.add(Calendar.DATE, deltaDays);
+        todoFilterDay = TodoStore.dayKey(c.getTimeInMillis());
+    }
+
+    private void todoDateFilterSheet(TodoStore todos, Runnable onFilterChanged) {
+        StudySheet sheet = newSheet();
+        StudySheet.Pane pane = sheetPane("按日期筛选", null, 0);
         String todayKey = TodoStore.dayKey(System.currentTimeMillis());
+
+        List<TodoStore.TodoItem> pendingAll = todos.pending();
+        List<TodoStore.TodoItem> doneAll = todos.completed();
+        Map<String, Integer> markers = new LinkedHashMap<>();
+        Map<String, Integer> pendingCounts = new LinkedHashMap<>();
+        Map<String, Integer> doneCounts = new LinkedHashMap<>();
+        for (TodoStore.TodoItem item : pendingAll) {
+            if (item.day.isEmpty()) continue;
+            int flag = item.day.compareTo(todayKey) < 0
+                ? ForestCalendarView.MARKER_OVERDUE : ForestCalendarView.MARKER_PENDING;
+            markers.merge(item.day, flag, (a, b) -> a | b);
+            pendingCounts.merge(item.day, 1, Integer::sum);
+        }
+        for (TodoStore.TodoItem item : doneAll) {
+            String doneDay = item.completed > 0 ? TodoStore.dayKey(item.completed) : item.day;
+            if (doneDay.isEmpty()) continue;
+            markers.merge(doneDay, ForestCalendarView.MARKER_DONE, (a, b) -> a | b);
+            doneCounts.merge(doneDay, 1, Integer::sum);
+        }
+
+        StudySheet.addHairline(pane.body, 0, 8);
+
+        TextView previewDate = text(ctx(), "", 13, 0xff243624);
+        previewDate.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        previewDate.setFontFeatureSettings("tnum");
+        TextView previewStats = text(ctx(), "", 12, MUTED);
+        previewStats.setFontFeatureSettings("tnum");
+
+        Runnable[] syncPreview = new Runnable[1];
+        String[] activeKey = { (todoFilterDay != null && !todoFilterDay.isEmpty()) ? todoFilterDay : todayKey };
+        syncPreview[0] = () -> {
+            String key = activeKey[0];
+            previewDate.setText(ForestCalendarView.formatChineseFull(key));
+            int pCount = pendingCounts.getOrDefault(key, 0);
+            int dCount = doneCounts.getOrDefault(key, 0);
+            if (pCount == 0 && dCount == 0) {
+                previewStats.setText("暂无待办或完成记录");
+                previewStats.setTextColor(MUTED);
+            } else {
+                StringBuilder sb = new StringBuilder();
+                if (pCount > 0) sb.append(pCount).append(" 项待办");
+                if (dCount > 0) {
+                    if (sb.length() > 0) sb.append(" · ");
+                    sb.append(dCount).append(" 项已完成");
+                }
+                previewStats.setText(sb.toString());
+                previewStats.setTextColor(pCount > 0 && key.compareTo(todayKey) < 0 ? 0xff9e4c37 : DEEP);
+            }
+        };
+
+        ForestCalendarView calendar = new ForestCalendarView(ctx(), activeKey[0], markers, dayKey -> {
+            activeKey[0] = dayKey;
+            syncPreview[0].run();
+        });
+        pane.body.addView(calendar, new LinearLayout.LayoutParams(-1, -2));
+
+        // Compact botanical legend row directly on sheet
+        LinearLayout legend = row(ctx());
+        legend.setGravity(Gravity.CENTER_VERTICAL);
+        addLegendDot(legend, 0xff456444, "待办", false);
+        addLegendDot(legend, 0xffb2553f, "逾期", true);
+        addLegendDot(legend, 0xff9bb595, "已完成", true);
+        ForestUi.add(pane.body, legend, 6);
+
+        StudySheet.addHairline(pane.body, 10, 12);
+        LinearLayout previewRow = row(ctx());
+        previewRow.addView(previewDate, new LinearLayout.LayoutParams(0, -2, 1));
+        previewRow.addView(previewStats);
+        pane.body.addView(previewRow, new LinearLayout.LayoutParams(-1, -2));
+        syncPreview[0].run();
+
+        if (todoFilterDay != null && !todoFilterDay.isEmpty()) {
+            pane.secondary("查看全部", () -> {
+                todoFilterDay = null;
+                sheet.dismiss();
+                onFilterChanged.run();
+            });
+        }
+        pane.primary("查看这一天", () -> {
+            todoFilterDay = calendar.selectedDayKey();
+            sheet.dismiss();
+            onFilterChanged.run();
+        });
+        sheet.push(pane);
+    }
+
+    private void addLegendDot(LinearLayout row, int color, String label, boolean spaced) {
+        View dot = new View(ctx());
+        dot.setBackground(rounded(ctx(), color, 0, 99));
+        dot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(ctx(), 6), dp(ctx(), 6));
+        if (spaced) dlp.setMarginStart(dp(ctx(), 14));
+        dlp.setMarginEnd(dp(ctx(), 5));
+        row.addView(dot, dlp);
+        row.addView(text(ctx(), label, 11, MUTED));
+    }
+
+    private CharSequence formatTodoTabLabel(String title, int count) {
+        if (count <= 0) return title;
+        String raw = title + " " + count;
+        SpannableString span = new SpannableString(raw);
+        span.setSpan(new RelativeSizeSpan(0.86f), title.length() + 1, raw.length(), 0);
+        return span;
+    }
+
+    private static String shortMonthDay(String dayKey) {
+        if (dayKey == null || dayKey.length() != 10) return dayKey == null ? "" : dayKey;
+        Calendar c = TodoStore.parseDay(dayKey);
+        return (c.get(Calendar.MONTH) + 1) + "月" + c.get(Calendar.DAY_OF_MONTH) + "日";
+    }
+
+    private static String formatTodoDayHeader(
+        String dayKey,
+        String todayKey,
+        String tomorrowKey,
+        String yesterdayKey,
+        boolean doneGroup
+    ) {
+        if (dayKey == null || dayKey.isEmpty()) return "随时可做 · 未限日期";
+        Calendar c = TodoStore.parseDay(dayKey);
+        String md = (c.get(Calendar.MONTH) + 1) + "月" + c.get(Calendar.DAY_OF_MONTH) + "日";
+        if (dayKey.equals(todayKey)) return "今天 · " + md;
+        if (dayKey.equals(tomorrowKey)) return "明天 · " + md;
+        if (doneGroup && dayKey.equals(yesterdayKey)) return "昨天 · " + md;
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        if (c.get(Calendar.YEAR) != currentYear) {
+            return c.get(Calendar.YEAR) + "年" + md;
+        }
+        String[] weeks = {"", "周日", "周一", "周二", "周三", "周四", "周五", "周六"};
+        return md + " · " + weeks[c.get(Calendar.DAY_OF_WEEK)];
+    }
+
+    private void addTodoGroupHeader(LinearLayout host, String title, int count, boolean overdue, boolean first) {
+        LinearLayout dateHeader = row(ctx());
+        dateHeader.setPadding(dp(ctx(), 50), dp(ctx(), first ? 6 : 14), dp(ctx(), 4), dp(ctx(), 6));
+        TextView dateTitle = text(ctx(), title, 12, overdue ? 0xff9e4c37 : 0xff3b543c);
+        dateTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        dateHeader.addView(dateTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView countTv = text(ctx(), count + " 项", 11, MUTED);
+        countTv.setFontFeatureSettings("tnum");
+        dateHeader.addView(countTv);
+        host.addView(dateHeader, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private void populateStandaloneTodos(
+        LinearLayout host,
+        @Nullable ForestSegmentedControl filterBar,
+        TodoStore todos
+    ) {
+        host.removeAllViews();
+        long now = System.currentTimeMillis();
+        String todayKey = TodoStore.dayKey(now);
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, 1);
         String tomorrowKey = TodoStore.dayKey(cal.getTimeInMillis());
-
-        if (todoFilter == 3) {
-            List<TodoStore.TodoItem> doneList = todos.completed();
-            if (doneList.isEmpty()) {
-                TextView empty = note("还没有已完成的待办。\n在草稿本左侧打勾划掉后，会静静留在这里。");
-                empty.setPadding(dp(ctx(), 50), dp(ctx(), 16), dp(ctx(), 8), dp(ctx(), 16));
-                host.addView(empty);
-                return;
-            }
-            for (TodoStore.TodoItem item : doneList) {
-                ForestTodoRow row = new ForestTodoRow(
-                    ctx(),
-                    item.title,
-                    0,
-                    null,
-                    item.day.isEmpty() ? "已完成" : item.day + " · 已完成",
-                    false,
-                    true,
-                    () -> {
-                        todos.toggleDone(item.id, false);
-                        populateStandaloneTodos(host, todos);
-                    },
-                    () -> todoEditorSheet(item)
-                );
-                host.addView(row);
-            }
-            return;
-        }
+        Calendar yCal = Calendar.getInstance();
+        yCal.add(Calendar.DATE, -1);
+        String yesterdayKey = TodoStore.dayKey(yCal.getTimeInMillis());
 
         List<TodoStore.TodoItem> pendingList = todos.pending();
-        List<TodoStore.TodoItem> filtered = new ArrayList<>();
+        List<TodoStore.TodoItem> overdueItems = new ArrayList<>();
+        List<TodoStore.TodoItem> todayItems = new ArrayList<>();
+        List<TodoStore.TodoItem> plannedDated = new ArrayList<>();
+        List<TodoStore.TodoItem> plannedAnytime = new ArrayList<>();
         for (TodoStore.TodoItem t : pendingList) {
-            if (todoFilter == 1 && !t.day.equals(todayKey)) continue;
-            if (todoFilter == 2 && (t.day.isEmpty() || t.day.compareTo(todayKey) <= 0)) continue;
-            filtered.add(t);
+            if (!t.day.isEmpty() && t.day.compareTo(todayKey) < 0) {
+                overdueItems.add(t);
+            } else if (t.day.equals(todayKey)) {
+                todayItems.add(t);
+            } else if (!t.day.isEmpty()) {
+                plannedDated.add(t);
+            } else {
+                plannedAnytime.add(t);
+            }
         }
-        if (filtered.isEmpty()) {
-            LinearLayout emptyBox = column(ctx());
-            emptyBox.setPadding(dp(ctx(), 50), dp(ctx(), 16), dp(ctx(), 8), dp(ctx(), 12));
-            TextView title = heading(ctx(), todoFilter == 1 ? "今天暂时没有待办" : "草稿纸还留着空白", 17);
-            emptyBox.addView(title);
-            ForestUi.add(emptyBox, note("点右上角「+ 新建」，把待办一条条写在这页草稿本上，并设好截止提醒。"), 6);
-            host.addView(emptyBox);
+        List<TodoStore.TodoItem> doneList = todos.completed();
+        int todayCount = overdueItems.size() + todayItems.size();
+        int plannedCount = plannedDated.size() + plannedAnytime.size();
+        if (filterBar != null) {
+            filterBar.setTabLabels(new CharSequence[] {
+                formatTodoTabLabel("今天", todayCount),
+                formatTodoTabLabel("计划", plannedCount),
+                formatTodoTabLabel("已完成", doneList.size())
+            });
+            filterBar.setSelectionCleared(todoFilterDay != null && !todoFilterDay.isEmpty());
+        }
+
+        // Single-Day Date Filter Mode: shows ALL pending + completed items for todoFilterDay
+        if (todoFilterDay != null && !todoFilterDay.isEmpty()) {
+            String targetDay = todoFilterDay;
+            boolean targetOverdue = targetDay.compareTo(todayKey) < 0;
+            List<TodoStore.TodoItem> dayPending = new ArrayList<>();
+            for (TodoStore.TodoItem t : pendingList) {
+                if (targetDay.equals(t.day)) dayPending.add(t);
+            }
+            List<TodoStore.TodoItem> dayDone = new ArrayList<>();
+            for (TodoStore.TodoItem t : doneList) {
+                String doneDay = t.completed > 0 ? TodoStore.dayKey(t.completed) : t.day;
+                if (targetDay.equals(doneDay)) dayDone.add(t);
+            }
+            String quickHint = "＋ 快速记一条 " + shortMonthDay(targetDay) + " 待办...";
+            if (dayPending.isEmpty() && dayDone.isEmpty()) {
+                LinearLayout emptyBox = column(ctx());
+                emptyBox.setPadding(dp(ctx(), 50), dp(ctx(), 18), dp(ctx(), 8), dp(ctx(), 12));
+                emptyBox.addView(heading(ctx(), shortMonthDay(targetDay) + " 暂无待办", 17));
+                ForestUi.add(emptyBox, note("可直接在下方记一条这一天的待办，或点上方 ‹ › 切换相邻日期。"), 6);
+                host.addView(emptyBox);
+                appendQuickAddRow(host, filterBar, todos, targetDay, quickHint);
+                return;
+            }
+            int gIdx = 0;
+            if (!dayPending.isEmpty()) {
+                String header = (targetOverdue ? "已逾期 · " : "待办 · ")
+                    + formatTodoDayHeader(targetDay, todayKey, tomorrowKey, yesterdayKey, false);
+                addTodoGroupHeader(host, header, dayPending.size(), targetOverdue, gIdx++ == 0);
+                for (TodoStore.TodoItem item : dayPending) {
+                    addPendingTodoRow(host, filterBar, todos, item, todayKey, targetOverdue);
+                }
+            }
+            if (!dayDone.isEmpty()) {
+                addTodoGroupHeader(host, "当天已完成", dayDone.size(), false, gIdx++ == 0);
+                SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.CHINA);
+                for (TodoStore.TodoItem item : dayDone) {
+                    StringBuilder meta = new StringBuilder();
+                    if (item.completed > 0) {
+                        meta.append(hm.format(new java.util.Date(item.completed))).append(" 完成");
+                    } else {
+                        meta.append("已完成");
+                    }
+                    if (!item.day.isEmpty() && !item.day.equals(targetDay)) {
+                        meta.append(" · 原计划 ").append(shortMonthDay(item.day));
+                    }
+                    if (!item.note.isEmpty()) {
+                        meta.append(" · ").append(item.note);
+                    }
+                    ForestTodoRow doneRow = new ForestTodoRow(
+                        ctx(),
+                        item.title,
+                        0,
+                        null,
+                        meta.toString(),
+                        false,
+                        true,
+                        () -> {
+                            todos.toggleDone(item.id, false);
+                            populateStandaloneTodos(host, filterBar, todos);
+                        },
+                        () -> todoEditorSheet(item)
+                    );
+                    host.addView(doneRow);
+                }
+            }
+            appendQuickAddRow(host, filterBar, todos, targetDay, quickHint);
             return;
         }
 
-        Map<String, List<TodoStore.TodoItem>> grouped = new LinkedHashMap<>();
-        for (TodoStore.TodoItem item : filtered) {
-            String header;
-            if (item.day.isEmpty()) header = "未限日期";
-            else if (item.day.compareTo(todayKey) < 0) header = "已逾期 · " + item.day;
-            else if (item.day.equals(todayKey)) header = "今天 · " + todayKey;
-            else if (item.day.equals(tomorrowKey)) header = "明天 · " + tomorrowKey;
-            else header = "日期 · " + item.day;
-            grouped.computeIfAbsent(header, k -> new ArrayList<>()).add(item);
+        // Tab 2: 已完成 · 按实际完成日期倒序分组日志
+        if (todoFilter == 2) {
+            if (doneList.isEmpty()) {
+                LinearLayout emptyBox = column(ctx());
+                emptyBox.setPadding(dp(ctx(), 50), dp(ctx(), 20), dp(ctx(), 8), dp(ctx(), 20));
+                emptyBox.addView(heading(ctx(), "还没有已完成的待办", 17));
+                ForestUi.add(emptyBox, note("打勾划掉后，会按实际完成日期与时刻自动记入这里。"), 6);
+                host.addView(emptyBox);
+                return;
+            }
+            Map<String, List<TodoStore.TodoItem>> doneByDay = new LinkedHashMap<>();
+            for (TodoStore.TodoItem item : doneList) {
+                String doneDay = item.completed > 0
+                    ? TodoStore.dayKey(item.completed)
+                    : (item.day.isEmpty() ? todayKey : item.day);
+                doneByDay.computeIfAbsent(doneDay, k -> new ArrayList<>()).add(item);
+            }
+            SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.CHINA);
+            int groupIdx = 0;
+            for (Map.Entry<String, List<TodoStore.TodoItem>> entry : doneByDay.entrySet()) {
+                String doneDay = entry.getKey();
+                addTodoGroupHeader(
+                    host,
+                    formatTodoDayHeader(doneDay, todayKey, tomorrowKey, yesterdayKey, true),
+                    entry.getValue().size(),
+                    false,
+                    groupIdx++ == 0
+                );
+                for (TodoStore.TodoItem item : entry.getValue()) {
+                    StringBuilder meta = new StringBuilder();
+                    if (item.completed > 0) {
+                        meta.append(hm.format(new java.util.Date(item.completed))).append(" 完成");
+                    } else {
+                        meta.append("已完成");
+                    }
+                    if (!item.day.isEmpty() && !item.day.equals(doneDay)) {
+                        meta.append(" · 原计划 ").append(shortMonthDay(item.day));
+                    }
+                    if (!item.note.isEmpty()) {
+                        meta.append(" · ").append(item.note);
+                    }
+                    ForestTodoRow row = new ForestTodoRow(
+                        ctx(),
+                        item.title,
+                        0,
+                        null,
+                        meta.toString(),
+                        false,
+                        true,
+                        () -> {
+                            todos.toggleDone(item.id, false);
+                            populateStandaloneTodos(host, filterBar, todos);
+                        },
+                        () -> todoEditorSheet(item)
+                    );
+                    host.addView(row);
+                }
+            }
+            return;
         }
 
-        int groupIdx = 0;
-        for (Map.Entry<String, List<TodoStore.TodoItem>> entry : grouped.entrySet()) {
-            String headerText = entry.getKey();
-            boolean isOverdue = headerText.startsWith("已逾期");
-            LinearLayout dateHeader = row(ctx());
-            dateHeader.setPadding(dp(ctx(), 50), dp(ctx(), groupIdx == 0 ? 6 : 14), dp(ctx(), 4), dp(ctx(), 6));
-            TextView dateTitle = text(ctx(), headerText, 12, isOverdue ? 0xff9e4c37 : 0xff3b543c);
-            dateTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            dateHeader.addView(dateTitle, new LinearLayout.LayoutParams(0, -2, 1));
-            dateHeader.addView(text(ctx(), entry.getValue().size() + " 项", 11, MUTED));
-            host.addView(dateHeader, new LinearLayout.LayoutParams(-1, -2));
-            groupIdx++;
-
-            for (TodoStore.TodoItem item : entry.getValue()) {
-                StringBuilder meta = new StringBuilder();
-                if (!item.dueTime.isEmpty()) meta.append(item.dueTime).append(" 截止");
-                if (item.remind && !item.day.isEmpty()) {
-                    if (meta.length() > 0) meta.append(" · ");
-                    meta.append(item.leadLabel()).append("提醒");
+        // Tab 0: 今天 = 已逾期（暖陶红置顶） + 今日待办
+        if (todoFilter == 0) {
+            if (todayCount == 0) {
+                LinearLayout emptyBox = column(ctx());
+                emptyBox.setPadding(dp(ctx(), 50), dp(ctx(), 18), dp(ctx(), 8), dp(ctx(), 12));
+                emptyBox.addView(heading(ctx(), "今天的事项都清完了", 17));
+                String sub = plannedCount > 0
+                    ? "计划里还有 " + plannedCount + " 项后续安排，随时可切过去查看。"
+                    : "在下方直接记下今日待办，或点右上角「+ 新建」设置截止提醒。";
+                ForestUi.add(emptyBox, note(sub), 6);
+                host.addView(emptyBox);
+                appendQuickAddRow(host, filterBar, todos, todayKey, "＋ 快速记一条今日待办...");
+                return;
+            }
+            int groupIdx = 0;
+            if (!overdueItems.isEmpty()) {
+                addTodoGroupHeader(host, "已逾期 · 优先清掉", overdueItems.size(), true, groupIdx++ == 0);
+                for (TodoStore.TodoItem item : overdueItems) {
+                    addPendingTodoRow(host, filterBar, todos, item, todayKey, true);
                 }
-                if (!item.note.isEmpty()) {
-                    if (meta.length() > 0) meta.append(" · ");
-                    meta.append(item.note);
-                }
-                boolean urgent = isOverdue || (item.day.equals(todayKey) && !item.dueTime.isEmpty());
-                ForestTodoRow todoRow = new ForestTodoRow(
-                    ctx(),
-                    item.title,
-                    0,
-                    null,
-                    meta.toString(),
-                    urgent,
+            }
+            if (!todayItems.isEmpty()) {
+                addTodoGroupHeader(
+                    host,
+                    formatTodoDayHeader(todayKey, todayKey, tomorrowKey, yesterdayKey, false),
+                    todayItems.size(),
                     false,
-                    () -> {
-                        todos.toggleDone(item.id, true);
-                        toast("已完成「" + item.title + "」");
-                        populateStandaloneTodos(host, todos);
-                    },
-                    () -> todoEditorSheet(item)
+                    groupIdx++ == 0
                 );
-                host.addView(todoRow);
+                for (TodoStore.TodoItem item : todayItems) {
+                    addPendingTodoRow(host, filterBar, todos, item, todayKey, false);
+                }
+            }
+            appendQuickAddRow(host, filterBar, todos, todayKey, "＋ 快速记一条今日待办...");
+            return;
+        }
+
+        // Tab 1: 计划 = 未来日程（按日分组） + 随时可做（未限日期收集箱）
+        if (plannedCount == 0) {
+            LinearLayout emptyBox = column(ctx());
+            emptyBox.setPadding(dp(ctx(), 50), dp(ctx(), 18), dp(ctx(), 8), dp(ctx(), 12));
+            emptyBox.addView(heading(ctx(), "暂无后续安排", 17));
+            ForestUi.add(emptyBox, note("未来日期的日程与未限日期的收集箱都会收在这里，和「今天」互不重复。"), 6);
+            host.addView(emptyBox);
+            appendQuickAddRow(host, filterBar, todos, "", "＋ 随手记一条待安排事项（不限日期）...");
+            return;
+        }
+        Map<String, List<TodoStore.TodoItem>> futureByDay = new LinkedHashMap<>();
+        for (TodoStore.TodoItem item : plannedDated) {
+            futureByDay.computeIfAbsent(item.day, k -> new ArrayList<>()).add(item);
+        }
+        int groupIdx = 0;
+        for (Map.Entry<String, List<TodoStore.TodoItem>> entry : futureByDay.entrySet()) {
+            addTodoGroupHeader(
+                host,
+                formatTodoDayHeader(entry.getKey(), todayKey, tomorrowKey, yesterdayKey, false),
+                entry.getValue().size(),
+                false,
+                groupIdx++ == 0
+            );
+            for (TodoStore.TodoItem item : entry.getValue()) {
+                addPendingTodoRow(host, filterBar, todos, item, todayKey, false);
             }
         }
+        if (!plannedAnytime.isEmpty()) {
+            addTodoGroupHeader(host, "随时可做 · 未限日期", plannedAnytime.size(), false, groupIdx++ == 0);
+            for (TodoStore.TodoItem item : plannedAnytime) {
+                addPendingTodoRow(host, filterBar, todos, item, todayKey, false);
+            }
+        }
+        appendQuickAddRow(host, filterBar, todos, "", "＋ 随手记一条待安排事项（不限日期）...");
+    }
+
+    private void addPendingTodoRow(
+        LinearLayout host,
+        @Nullable ForestSegmentedControl filterBar,
+        TodoStore todos,
+        TodoStore.TodoItem item,
+        String todayKey,
+        boolean isOverdue
+    ) {
+        StringBuilder meta = new StringBuilder();
+        if (isOverdue) {
+            meta.append("原定 ").append(shortMonthDay(item.day));
+        }
+        if (!item.dueTime.isEmpty()) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append(item.dueTime).append(" 截止");
+            if (item.remind && !item.day.isEmpty()) {
+                meta.append(" · ").append(item.leadLabel()).append("提醒");
+            }
+        } else if (item.remind && !item.day.isEmpty()) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append("当日 ").append(todos.defaultRemindTime()).append(" 提醒");
+        }
+        if (!item.note.isEmpty()) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append(item.note);
+        }
+        boolean urgent = isOverdue || (item.day.equals(todayKey) && !item.dueTime.isEmpty());
+        ForestTodoRow todoRow = new ForestTodoRow(
+            ctx(),
+            item.title,
+            0,
+            null,
+            meta.toString(),
+            urgent,
+            false,
+            () -> {
+                todos.toggleDone(item.id, true);
+                toast("已归档到「已完成」");
+                populateStandaloneTodos(host, filterBar, todos);
+            },
+            () -> todoEditorSheet(item)
+        );
+        host.addView(todoRow);
+    }
+
+    private void appendQuickAddRow(
+        LinearLayout host,
+        @Nullable ForestSegmentedControl filterBar,
+        TodoStore todos,
+        String defaultDay,
+        String hint
+    ) {
+        LinearLayout quick = row(ctx());
+        quick.setPadding(dp(ctx(), 50), dp(ctx(), 10), dp(ctx(), 6), dp(ctx(), 6));
+        EditText input = new EditText(ctx());
+        input.setHint(hint);
+        input.setHintTextColor(0xff9aa094);
+        input.setTextColor(0xff243624);
+        input.setTextSize(14f);
+        input.setSingleLine(true);
+        input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
+        input.setBackground(null);
+        input.setPadding(0, dp(ctx(), 6), dp(ctx(), 6), dp(ctx(), 6));
+        Runnable commit = () -> {
+            String textVal = input.getText().toString().trim();
+            if (textVal.isEmpty()) return;
+            todos.add(textVal, "", defaultDay, "", false, 30);
+            input.setText("");
+            populateStandaloneTodos(host, filterBar, todos);
+            String msg = defaultDay.isEmpty() ? "已记入计划收集箱"
+                : defaultDay.equals(TodoStore.dayKey(System.currentTimeMillis())) ? "已记入今日待办"
+                : "已记入 " + shortMonthDay(defaultDay) + " 待办";
+            toast(msg);
+        };
+        input.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                commit.run();
+                return true;
+            }
+            return false;
+        });
+        quick.addView(input, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView addBtn = StudySheet.link(ctx(), "记下", DEEP, commit);
+        addBtn.setTextSize(12);
+        addBtn.setMinimumHeight(dp(ctx(), 32));
+        addBtn.setPadding(dp(ctx(), 12), dp(ctx(), 4), dp(ctx(), 12), dp(ctx(), 4));
+        addBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xffeef4ea, 0, 999), false));
+        quick.addView(addBtn);
+        host.addView(quick, new LinearLayout.LayoutParams(-1, -2));
     }
 
     private void todoEditorSheet(@Nullable TodoStore.TodoItem existing) {
         TodoStore todos = TodoStore.get(ctx());
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane(existing == null ? "新建待办" : "编辑待办", null, R.drawable.ic_list);
+        StudySheet.Pane pane = sheetPane(existing == null ? "新建待办" : "编辑待办", null, 0);
 
-        // 1. Borderless editorial title input
+        // 1. Borderless editorial writing area directly on porcelain sheet
         EditText title = new EditText(ctx());
         title.setSingleLine(false);
         title.setMaxLines(3);
@@ -1076,7 +1812,7 @@ public final class StudyFragment extends Fragment {
         title.setHint("准备做哪件事？");
         title.setFilters(new InputFilter[] { new InputFilter.LengthFilter(120) });
         title.setText(existing == null ? "" : existing.title);
-        title.setTextSize(18f);
+        title.setTextSize(17.5f);
         title.setTextColor(0xff243624);
         title.setHintTextColor(0xff9aa094);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
@@ -1088,55 +1824,91 @@ public final class StudyFragment extends Fragment {
         noteInput.setSingleLine(false);
         noteInput.setMaxLines(3);
         noteInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        noteInput.setHint("备注（选填）");
+        noteInput.setHint("添加备注（选填）");
         noteInput.setFilters(new InputFilter[] { new InputFilter.LengthFilter(200) });
         noteInput.setText(existing == null ? "" : existing.note);
         noteInput.setTextSize(13.5f);
         noteInput.setTextColor(MUTED);
         noteInput.setHintTextColor(0xffa7ad9f);
         noteInput.setBackground(null);
-        noteInput.setPadding(dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 10));
+        noteInput.setPadding(dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 8));
         pane.body.addView(noteInput, new LinearLayout.LayoutParams(-1, -2));
 
-        View titleRule = new View(ctx());
-        titleRule.setBackgroundColor(0xffe5e1d2);
-        pane.body.addView(titleRule, new LinearLayout.LayoutParams(-1, dp(ctx(), 1)));
+        StudySheet.addHairline(pane.body, 4, 10);
 
         String todayKey = TodoStore.dayKey(System.currentTimeMillis());
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, 1);
         String tomorrowKey = TodoStore.dayKey(cal.getTimeInMillis());
-        cal.add(Calendar.DATE, 1);
-        String afterTomorrowKey = TodoStore.dayKey(cal.getTimeInMillis());
 
-        String[] chosenDay = { existing == null ? todayKey : existing.day };
+        String defaultNewDay = (todoFilterDay != null && !todoFilterDay.isEmpty())
+            ? todoFilterDay
+            : (todoFilter == 1 ? "" : todayKey);
+        String[] chosenDay = { existing == null ? defaultNewDay : existing.day };
         int[] leadMinutes = { existing == null ? 30 : existing.remindLeadMinutes };
         boolean initialRemind = existing != null && existing.remind;
 
-        // 2. Standalone property pill strip: Date + Deadline Time ONLY (no subject!)
-        LinearLayout pillRow = row(ctx());
-        TextView datePill = StudySheet.link(ctx(), "", 0xff2e4f2f, () -> {});
-        datePill.setTextSize(12);
-        datePill.setMinimumHeight(dp(ctx(), 34));
-        datePill.setPadding(dp(ctx(), 13), dp(ctx(), 6), dp(ctx(), 13), dp(ctx(), 6));
-        pillRow.addView(datePill);
+        // 2. Direct Date Row (borderless flat chips directly on sheet — zero nested card)
+        LinearLayout dateRow = row(ctx());
+        dateRow.setMinimumHeight(dp(ctx(), 44));
+        TextView dateLabel = text(ctx(), "日期", 13, 0xff5b5447);
+        dateLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        dateRow.addView(dateLabel, new LinearLayout.LayoutParams(0, -2, 1));
 
-        TextView timePill = StudySheet.link(ctx(), "", 0xff4c594a, () -> {});
-        timePill.setTextSize(12);
-        timePill.setMinimumHeight(dp(ctx(), 34));
-        timePill.setPadding(dp(ctx(), 13), dp(ctx(), 6), dp(ctx(), 13), dp(ctx(), 6));
-        LinearLayout.LayoutParams timePillLp = new LinearLayout.LayoutParams(-2, -2);
-        timePillLp.setMarginStart(dp(ctx(), 8));
-        pillRow.addView(timePill, timePillLp);
-        ForestUi.add(pane.body, pillRow, 12);
+        TextView todayChip = StudySheet.link(ctx(), "今天", DEEP, () -> {});
+        TextView tomorrowChip = StudySheet.link(ctx(), "明天", DEEP, () -> {});
+        TextView pickDayChip = StudySheet.link(ctx(), "选日期", DEEP, () -> {});
+        TextView anytimeChip = StudySheet.link(ctx(), "不限", DEEP, () -> {});
+        TextView[] dateChips = { todayChip, tomorrowChip, pickDayChip, anytimeChip };
+        for (int i = 0; i < dateChips.length; i++) {
+            TextView chip = dateChips[i];
+            chip.setTextSize(12);
+            chip.setMinimumHeight(dp(ctx(), 32));
+            chip.setPadding(dp(ctx(), 11), dp(ctx(), 5), dp(ctx(), 11), dp(ctx(), 5));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) lp.setMarginStart(dp(ctx(), 6));
+            dateRow.addView(chip, lp);
+        }
+        pane.body.addView(dateRow, new LinearLayout.LayoutParams(-1, -2));
 
-        // 3. Collapsible inline Date & Time panels
-        LinearLayout datePanel = column(ctx());
-        datePanel.setVisibility(View.GONE);
-        LinearLayout dayPresetsRow = row(ctx());
-        String[][] dayPresets = {
-            {"今天", todayKey}, {"明天", tomorrowKey}, {"后天", afterTomorrowKey}, {"选日期", "CAL"}, {"不限", ""}
+        Runnable syncDateChips = () -> {
+            String cur = chosenDay[0];
+            boolean isToday = cur.equals(todayKey);
+            boolean isTomorrow = cur.equals(tomorrowKey);
+            boolean isAnytime = cur.isEmpty();
+            boolean isCustom = !isToday && !isTomorrow && !isAnytime;
+            pickDayChip.setText(isCustom ? shortMonthDay(cur) : "选日期");
+            StudySheet.styleChoiceChip(todayChip, isToday);
+            StudySheet.styleChoiceChip(tomorrowChip, isTomorrow);
+            StudySheet.styleChoiceChip(pickDayChip, isCustom);
+            StudySheet.styleChoiceChip(anytimeChip, isAnytime);
         };
+        todayChip.setOnClickListener(v -> { chosenDay[0] = todayKey; syncDateChips.run(); });
+        tomorrowChip.setOnClickListener(v -> { chosenDay[0] = tomorrowKey; syncDateChips.run(); });
+        anytimeChip.setOnClickListener(v -> { chosenDay[0] = ""; syncDateChips.run(); });
+        pickDayChip.setOnClickListener(v -> {
+            sheet.hideKeyboard();
+            sheet.pushDatePicker("选择待办日期", chosenDay[0], picked -> {
+                chosenDay[0] = picked;
+                syncDateChips.run();
+            });
+        });
+        syncDateChips.run();
+
+        StudySheet.addHairline(pane.body, 10, 4);
+
+        // 3. Direct Deadline Time Row + collapsible flat preset strip
+        LinearLayout timeHeader = row(ctx());
+        timeHeader.setMinimumHeight(dp(ctx(), 48));
+        timeHeader.setPadding(dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8));
+        timeHeader.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+        TextView timeRowLabel = text(ctx(), "截止时刻", 13, 0xff5b5447);
+        timeRowLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        timeHeader.addView(timeRowLabel, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView timeValue = text(ctx(), "未设置 ›", 13, MUTED);
+        timeValue.setFontFeatureSettings("tnum");
+        timeHeader.addView(timeValue);
+        pane.body.addView(timeHeader, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout timePanel = column(ctx());
         timePanel.setVisibility(View.GONE);
@@ -1144,134 +1916,79 @@ public final class StudyFragment extends Fragment {
         EditText dueTimeInput = new EditText(ctx());
         dueTimeInput.setSingleLine(true);
         dueTimeInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        dueTimeInput.setHint("自定义截止时刻，例如 19:30");
+        dueTimeInput.setHint("或输入具体时刻，如 19:30");
         dueTimeInput.setText(existing == null ? "" : existing.dueTime);
-        StudySheet.styleField(dueTimeInput);
-
-        Runnable syncPills = () -> {
-            String dLabel;
-            if (chosenDay[0].isEmpty()) dLabel = "不限日期 ▾";
-            else if (chosenDay[0].equals(todayKey)) dLabel = "今天 ▾";
-            else if (chosenDay[0].equals(tomorrowKey)) dLabel = "明天 ▾";
-            else if (chosenDay[0].equals(afterTomorrowKey)) dLabel = "后天 ▾";
-            else dLabel = chosenDay[0] + " ▾";
-            datePill.setText(dLabel);
-            boolean hasDay = !chosenDay[0].isEmpty();
-            datePill.setBackground(ripple(ctx(), rounded(ctx(),
-                hasDay ? 0xffe6efe2 : 0xfff3efe3,
-                hasDay ? 0xffb8cbb2 : 0xffdcd8c8, 999), false));
-
-            String tVal = dueTimeInput.getText().toString().trim();
-            boolean hasTime = !tVal.isEmpty();
-            timePill.setText(hasTime ? "截止 " + tVal + " ▾" : "设截止时间 ▾");
-            timePill.setTextColor(hasTime ? 0xff8d4836 : 0xff4c594a);
-            timePill.setBackground(ripple(ctx(), rounded(ctx(),
-                hasTime ? 0xfff9efea : 0xfff3efe3,
-                hasTime ? 0xffe6cfc5 : 0xffdcd8c8, 999), false));
-        };
-
-        for (int i = 0; i < dayPresets.length; i++) {
-            String lbl = dayPresets[i][0];
-            String val = dayPresets[i][1];
-            TextView chip = StudySheet.link(ctx(), lbl, DEEP, () -> {
-                if ("CAL".equals(val)) {
-                    Calendar local = TodoStore.parseDay(chosenDay[0]);
-                    Calendar utc = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
-                    utc.clear();
-                    utc.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH));
-                    com.google.android.material.datepicker.MaterialDatePicker<Long> picker =
-                        com.google.android.material.datepicker.MaterialDatePicker.Builder.datePicker()
-                            .setTitleText("选择待办日期")
-                            .setSelection(utc.getTimeInMillis())
-                            .build();
-                    picker.addOnPositiveButtonClickListener(ms -> {
-                        utc.setTimeInMillis(ms);
-                        chosenDay[0] = String.format(Locale.ROOT, "%04d-%02d-%02d",
-                            utc.get(Calendar.YEAR), utc.get(Calendar.MONTH) + 1, utc.get(Calendar.DAY_OF_MONTH));
-                        syncPills.run();
-                        datePanel.setVisibility(View.GONE);
-                    });
-                    sheet.hideKeyboard();
-                    picker.show(getParentFragmentManager(), "todo-calendar");
-                } else {
-                    chosenDay[0] = val;
-                    syncPills.run();
-                    datePanel.setVisibility(View.GONE);
-                }
-            });
-            chip.setTextSize(12);
-            chip.setMinimumHeight(dp(ctx(), 34));
-            chip.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) lp.setMarginStart(dp(ctx(), 5));
-            dayPresetsRow.addView(chip, lp);
-        }
-        datePanel.addView(dayPresetsRow);
-        ForestUi.add(pane.body, datePanel, 8);
+        dueTimeInput.setFontFeatureSettings("tnum");
+        StudySheet.styleQuietInlineField(dueTimeInput);
 
         String[] timePresets = {"12:00", "18:00", "21:00", "22:30", "不限"};
+        List<TextView> timePresetChips = new ArrayList<>();
+        Runnable syncTimeUi = () -> {
+            String tVal = dueTimeInput.getText().toString().trim();
+            boolean hasTime = !tVal.isEmpty();
+            timeValue.setText(hasTime ? tVal + " 截止 ›" : "未设置 ›");
+            timeValue.setTextColor(hasTime ? 0xff9e4c37 : MUTED);
+            for (int i = 0; i < timePresets.length; i++) {
+                String preset = timePresets[i];
+                boolean active = "不限".equals(preset) ? !hasTime : preset.equals(tVal);
+                StudySheet.styleChoiceChip(timePresetChips.get(i), active);
+            }
+        };
         for (int i = 0; i < timePresets.length; i++) {
             String preset = timePresets[i];
             TextView chip = StudySheet.link(ctx(), preset, DEEP, () -> {
                 dueTimeInput.setText("不限".equals(preset) ? "" : preset);
-                syncPills.run();
+                syncTimeUi.run();
                 timePanel.setVisibility(View.GONE);
             });
             chip.setTextSize(12);
+            chip.setFontFeatureSettings("tnum");
             chip.setMinimumHeight(dp(ctx(), 34));
-            chip.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
+            chip.setPadding(dp(ctx(), 6), dp(ctx(), 5), dp(ctx(), 6), dp(ctx(), 5));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) lp.setMarginStart(dp(ctx(), 5));
+            if (i > 0) lp.setMarginStart(dp(ctx(), 6));
             timePresetsRow.addView(chip, lp);
+            timePresetChips.add(chip);
         }
         timePanel.addView(timePresetsRow);
-        ForestUi.add(timePanel, dueTimeInput, 8);
-        ForestUi.add(pane.body, timePanel, 8);
+        ForestUi.add(timePanel, dueTimeInput, 6);
+        ForestUi.add(pane.body, timePanel, 4);
 
-        datePill.setOnClickListener(v -> {
-            boolean show = datePanel.getVisibility() != View.VISIBLE;
-            datePanel.setVisibility(show ? View.VISIBLE : View.GONE);
-            if (show) timePanel.setVisibility(View.GONE);
-        });
-        timePill.setOnClickListener(v -> {
+        timeHeader.setOnClickListener(v -> {
             boolean show = timePanel.getVisibility() != View.VISIBLE;
             timePanel.setVisibility(show ? View.VISIBLE : View.GONE);
-            if (show) datePanel.setVisibility(View.GONE);
         });
         dueTimeInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { syncPills.run(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { syncTimeUi.run(); }
             @Override public void afterTextChanged(Editable s) {}
         });
-        syncPills.run();
+        syncTimeUi.run();
 
-        // 4. Morphing Leaf Switch card (matches HTML design C · 森林叶片旋转胶囊开关)
-        MaterialCheckBox remindSwitch = ForestUi.switchWithSubtitle(
+        StudySheet.addHairline(pane.body, 4, 2);
+
+        // 4. Borderless Morphing Leaf Switch Row directly on sheet
+        MaterialCheckBox remindSwitch = ForestUi.flatSwitchRow(
             ctx(),
-            "截止时间森林提醒",
+            "截止提醒",
             todoLeadSubtitle(initialRemind, leadMinutes[0], todos.defaultRemindTime())
         );
         remindSwitch.setChecked(initialRemind);
-        ForestUi.add(pane.body, remindSwitch, 14);
+        pane.body.addView(remindSwitch, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout leadRow = row(ctx());
         int[] leadValues = {15, 30, 60, 1440};
-        String[] leadLabels = {"提前15分", "提前30分", "提前1小时", "前一天傍晚"};
+        String[] leadLabels = {"提前15分", "提前30分", "提前1小时", "前一天"};
         List<TextView> leadButtons = new ArrayList<>();
         Runnable updateLeadUi = () -> {
             boolean on = remindSwitch.isChecked();
             leadRow.setVisibility(on ? View.VISIBLE : View.GONE);
-            ForestUi.updateSwitchSubtitle(
+            ForestUi.updateFlatSwitchSubtitle(
                 remindSwitch,
                 todoLeadSubtitle(on, leadMinutes[0], todos.defaultRemindTime())
             );
             for (int i = 0; i < leadButtons.size(); i++) {
-                boolean active = leadMinutes[0] == leadValues[i];
-                TextView btn = leadButtons.get(i);
-                btn.setTextColor(active ? 0xff243624 : 0xff6b7568);
-                btn.setBackground(ripple(ctx(), rounded(ctx(),
-                    active ? 0xffe6efe2 : 0xfff3efe3,
-                    active ? 0xff96b392 : 0xffdcd8c8, 999), false));
+                StudySheet.styleChoiceChip(leadButtons.get(i), leadMinutes[0] == leadValues[i]);
             }
         };
         for (int i = 0; i < leadValues.length; i++) {
@@ -1282,14 +1999,36 @@ public final class StudyFragment extends Fragment {
             });
             btn.setTextSize(11);
             btn.setMinimumHeight(dp(ctx(), 32));
+            btn.setPadding(dp(ctx(), 6), dp(ctx(), 5), dp(ctx(), 6), dp(ctx(), 5));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) lp.setMarginStart(dp(ctx(), 5));
+            if (i > 0) lp.setMarginStart(dp(ctx(), 6));
             leadRow.addView(btn, lp);
             leadButtons.add(btn);
         }
         remindSwitch.setOnCheckedChangeListener((b, checked) -> updateLeadUi.run());
         updateLeadUi.run();
-        ForestUi.add(pane.body, leadRow, 2);
+        ForestUi.add(pane.body, leadRow, 4);
+
+        if (existing != null && existing.completed == 0L && store.notebook().currentPlan() != null && !store.notebook().hasSession()) {
+            StudySheet.addHairline(pane.body, 12, 4);
+            LinearLayout focusRow = row(ctx());
+            focusRow.setMinimumHeight(dp(ctx(), 48));
+            focusRow.setPadding(dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8));
+            focusRow.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+            TextView focusTitle = text(ctx(), "以此为目标去专注", 13, 0xff315e3a);
+            focusTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            focusRow.addView(focusTitle, new LinearLayout.LayoutParams(0, -2, 1));
+            focusRow.addView(text(ctx(), "前往自习室 ›", 12, MUTED));
+            focusRow.setOnClickListener(v -> {
+                String taskName = title.getText().toString().trim();
+                if (taskName.isEmpty()) taskName = existing.title;
+                store.start("", taskName);
+                sheet.dismiss();
+                open(AppDestination.STUDY_FOCUS);
+            });
+            ForestMotion.bind(focusRow);
+            pane.body.addView(focusRow, new LinearLayout.LayoutParams(-1, -2));
+        }
 
         if (existing != null) {
             pane.secondary("删除待办", () -> {
@@ -1297,8 +2036,6 @@ public final class StudyFragment extends Fragment {
                 sheet.dismiss();
                 render();
             });
-        } else {
-            pane.secondary("取消", sheet::dismiss);
         }
         pane.primary("保存待办", () -> perform(() -> {
             String cleanTime = TodoStore.TodoItem.validateTime(dueTimeInput.getText().toString());
@@ -1331,93 +2068,161 @@ public final class StudyFragment extends Fragment {
     }
 
     private static String todoLeadSubtitle(boolean enabled, int leadMinutes, String defaultTime) {
-        if (!enabled) return "已关闭 · 轻触唤醒森林提醒";
-        if (leadMinutes >= 1440) return "已开启 · 截止前一天 " + defaultTime + " 发送森林提醒";
+        if (!enabled) return "已关闭，开启后在截止前自动提醒";
+        if (leadMinutes >= 1440) return "截止前一天 " + defaultTime + " 轻提醒";
         if (leadMinutes >= 60 && leadMinutes % 60 == 0)
-            return "已开启 · 截止前 " + (leadMinutes / 60) + " 小时森林提醒";
-        return "已开启 · 截止前 " + leadMinutes + " 分钟森林提醒";
+            return "截止前 " + (leadMinutes / 60) + " 小时轻提醒";
+        return "截止前 " + leadMinutes + " 分钟轻提醒";
     }
 
     private void todoReminderSettingsDialog() {
         TodoStore todos = TodoStore.get(ctx());
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane("待办提醒设置", "独立管理待办任务的截止消息提醒。", R.drawable.ic_list);
-        MaterialCheckBox masterSwitch = ForestUi.switchWithSubtitle(
+        StudySheet.Pane pane = sheetPane("待办提醒", null, 0);
+
+        String initialTime = todos.defaultRemindTime();
+        String[] presets = {"09:00", "12:00", "18:00", "20:30"};
+        boolean initialIsPreset = false;
+        for (String p : presets) if (p.equals(initialTime)) initialIsPreset = true;
+        boolean[] customMode = { !initialIsPreset };
+        String[] selectedTime = { initialTime };
+
+        StudySheet.addHairline(pane.body, 0, 2);
+
+        // 1. Direct Borderless Master Leaf Switch
+        MaterialCheckBox masterSwitch = ForestUi.flatSwitchRow(
             ctx(),
-            "开启待办截止提醒",
+            "截止前提醒",
             todos.remindEnabled()
-                ? "已开启 · 未设具体时刻时于 " + todos.defaultRemindTime() + " 提醒"
-                : "已关闭 · 开启后在待办截止前自动发送消息"
+                ? "未设具体时刻时，每日 " + initialTime + " 提醒"
+                : "已关闭，开启后在截止前自动提醒"
         );
         masterSwitch.setChecked(todos.remindEnabled());
-        pane.body.addView(masterSwitch);
+        pane.body.addView(masterSwitch, new LinearLayout.LayoutParams(-1, -2));
 
-        EditText timeInput = new EditText(ctx());
-        timeInput.setSingleLine(true);
-        timeInput.setText(todos.defaultRemindTime());
-        timeInput.setHint("例如 18:00");
-        StudySheet.styleField(timeInput);
-        ForestUi.add(pane.body, StudySheet.section(ctx(), "默认每日提醒时间（HH:mm）"), 14);
-        ForestUi.add(pane.body, timeInput, 6);
+        // 2. Progressive Disclosure Container (collapses cleanly when master switch is OFF)
+        LinearLayout detailsSection = column(ctx());
+        StudySheet.addHairline(detailsSection, 2, 14);
 
-        LinearLayout presets = row(ctx());
-        String[] times = {"09:00", "12:00", "18:00", "20:30"};
-        for (int i = 0; i < times.length; i++) {
-            String t = times[i];
-            TextView chip = StudySheet.link(ctx(), t, DEEP, () -> {
-                timeInput.setText(t);
-                masterSwitch.setChecked(true);
-                ForestUi.updateSwitchSubtitle(masterSwitch, "已开启 · 未设具体时刻时于 " + t + " 提醒");
+        LinearLayout timeHeader = row(ctx());
+        TextView timeTitle = text(ctx(), "默认提醒时间", 14, 0xff243624);
+        timeTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        timeHeader.addView(timeTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView timeDisplay = text(ctx(), initialTime, 14, 0xff315e3a);
+        timeDisplay.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        timeDisplay.setFontFeatureSettings("tnum");
+        timeHeader.addView(timeDisplay);
+        detailsSection.addView(timeHeader, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout presetRow = row(ctx());
+        List<TextView> timeChips = new ArrayList<>();
+        String[] chipLabels = {"09:00", "12:00", "18:00", "20:30", "自定"};
+
+        EditText customInput = new EditText(ctx());
+        customInput.setSingleLine(true);
+        customInput.setText(initialTime);
+        customInput.setHint("输入时刻，如 19:30");
+        customInput.setFontFeatureSettings("tnum");
+        StudySheet.styleQuietInlineField(customInput);
+
+        Runnable syncUi = () -> {
+            boolean on = masterSwitch.isChecked();
+            detailsSection.setVisibility(on ? View.VISIBLE : View.GONE);
+            String cur = selectedTime[0].isEmpty() ? initialTime : selectedTime[0];
+            timeDisplay.setText(cur);
+            ForestUi.updateFlatSwitchSubtitle(
+                masterSwitch,
+                on ? "未设具体时刻时，每日 " + cur + " 提醒" : "已关闭，开启后在截止前自动提醒"
+            );
+            customInput.setVisibility(customMode[0] ? View.VISIBLE : View.GONE);
+            for (int i = 0; i < chipLabels.length; i++) {
+                boolean active = customMode[0] ? (i == chipLabels.length - 1) : chipLabels[i].equals(cur);
+                StudySheet.styleChoiceChip(timeChips.get(i), active);
+            }
+        };
+
+        for (int i = 0; i < chipLabels.length; i++) {
+            String lbl = chipLabels[i];
+            boolean isCustom = "自定".equals(lbl);
+            TextView chip = StudySheet.link(ctx(), lbl, DEEP, () -> {
+                if (isCustom) {
+                    customMode[0] = true;
+                    String typed = customInput.getText().toString().trim();
+                    if (!typed.isEmpty()) selectedTime[0] = typed;
+                    syncUi.run();
+                    customInput.requestFocus();
+                } else {
+                    customMode[0] = false;
+                    selectedTime[0] = lbl;
+                    customInput.setText(lbl);
+                    syncUi.run();
+                }
             });
             chip.setTextSize(12);
+            chip.setFontFeatureSettings("tnum");
             chip.setMinimumHeight(dp(ctx(), 36));
-            chip.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
+            chip.setPadding(dp(ctx(), 4), dp(ctx(), 5), dp(ctx(), 4), dp(ctx(), 5));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
             if (i > 0) lp.setMarginStart(dp(ctx(), 6));
-            presets.addView(chip, lp);
+            presetRow.addView(chip, lp);
+            timeChips.add(chip);
         }
-        ForestUi.add(pane.body, presets, 8);
+        ForestUi.add(detailsSection, presetRow, 12);
+        ForestUi.add(detailsSection, customInput, 6);
 
-        masterSwitch.setOnCheckedChangeListener((b, checked) -> {
-            String t = timeInput.getText().toString().trim();
-            if (t.isEmpty()) t = todos.defaultRemindTime();
-            ForestUi.updateSwitchSubtitle(
-                masterSwitch,
-                checked
-                    ? "已开启 · 未设具体时刻时于 " + t + " 提醒"
-                    : "已关闭 · 开启后在待办截止前自动发送消息"
-            );
+        customInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (customMode[0]) {
+                    selectedTime[0] = s.toString().trim();
+                    String cur = selectedTime[0].isEmpty() ? initialTime : selectedTime[0];
+                    timeDisplay.setText(cur);
+                    if (masterSwitch.isChecked()) {
+                        ForestUi.updateFlatSwitchSubtitle(masterSwitch, "未设具体时刻时，每日 " + cur + " 提醒");
+                    }
+                }
+            }
+            @Override public void afterTextChanged(Editable s) {}
         });
 
-        TextView testBtn = StudySheet.link(ctx(), "立即发送一条测试提醒消息", 0xff355336, () -> {
+        StudySheet.addHairline(detailsSection, 14, 2);
+
+        // 3. Quiet Inline Test Notification Row directly on sheet
+        LinearLayout testRow = row(ctx());
+        testRow.setMinimumHeight(dp(ctx(), 48));
+        testRow.setPadding(dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8));
+        testRow.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+        TextView testTitle = text(ctx(), "发送一条测试通知", 13, 0xff456444);
+        testTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        testRow.addView(testTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView testStatus = text(ctx(), "验证提醒通道 ›", 12, 0xff8f8675);
+        testRow.addView(testStatus);
+        testRow.setOnClickListener(v -> {
             allowStudyNotifications();
             boolean sent = TodoNotifications.sendImmediate(
                 ctx(),
                 "待办即将截止提醒",
                 "提醒功能已就绪！将在待办截止时间前自动通知你。"
             );
+            testStatus.setText(sent ? "已发送测试通知 ✓" : "请先开启系统通知");
+            testStatus.setTextColor(sent ? 0xff315e3a : 0xff9e4c37);
             toast(sent ? "已发送测试提醒通知，请查看顶部通知栏" : "请先允许应用发送系统通知");
         });
-        testBtn.setMinimumHeight(dp(ctx(), 40));
-        testBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xffeaf1e5, 0xffb8cbb2, 11), false));
-        ForestUi.add(pane.body, testBtn, 12);
+        ForestMotion.bind(testRow);
+        detailsSection.addView(testRow, new LinearLayout.LayoutParams(-1, -2));
 
-        pane.secondary("取消", sheet::dismiss);
-        pane.primary("保存提醒设置", () -> perform(() -> {
-            todos.setReminderConfig(masterSwitch.isChecked(), timeInput.getText().toString());
+        pane.body.addView(detailsSection, new LinearLayout.LayoutParams(-1, -2));
+        masterSwitch.setOnCheckedChangeListener((b, checked) -> syncUi.run());
+        syncUi.run();
+
+        pane.primary("保存设置", () -> perform(() -> {
+            String timeToSave = customMode[0] ? customInput.getText().toString() : selectedTime[0];
+            todos.setReminderConfig(masterSwitch.isChecked(), timeToSave);
             if (masterSwitch.isChecked()) allowStudyNotifications();
             sheet.dismiss();
             render();
         }));
         sheet.push(pane);
-    }
-
-    private void addTodoHairline(LinearLayout parent) {
-        View hairline = new View(ctx());
-        hairline.setBackgroundColor(0xffeae6d9);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(ctx(), 1));
-        lp.setMarginStart(dp(ctx(), 46));
-        parent.addView(hairline, lp);
     }
 
     private Map<String, List<StudyWork.Task>> groupTasksByDate(
@@ -1480,53 +2285,122 @@ public final class StudyFragment extends Fragment {
 
     private void reminderSettingsDialog(StudyPlan plan, @Nullable Runnable afterSave) {
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane("提醒设置", "在考试、科目截止日与待办任务到期前发送通知。",
-            R.drawable.ic_leaf);
-        MaterialCheckBox masterSwitch = ForestUi.switchWithSubtitle(
+        StudySheet.Pane pane = sheetPane("提醒设置", null, 0);
+
+        String initialTime = plan.remindTime;
+        String[] presets = {"09:00", "12:00", "18:00", "20:30"};
+        boolean initialIsPreset = false;
+        for (String p : presets) if (p.equals(initialTime)) initialIsPreset = true;
+        boolean[] customMode = { !initialIsPreset };
+        String[] selectedTime = { initialTime };
+
+        StudySheet.addHairline(pane.body, 0, 2);
+
+        MaterialCheckBox masterSwitch = ForestUi.flatSwitchRow(
             ctx(),
-            "在考试或截止前一天傍晚提醒",
+            "考试与截止前提醒",
             planRemindSubtitle(plan)
         );
         masterSwitch.setChecked(plan.remindDeadlines);
-        pane.body.addView(masterSwitch);
+        pane.body.addView(masterSwitch, new LinearLayout.LayoutParams(-1, -2));
 
-        EditText timeInput = new EditText(ctx());
-        timeInput.setSingleLine(true);
-        timeInput.setText(plan.remindTime);
-        timeInput.setHint("例如 18:00");
-        timeInput.setContentDescription("每日提醒时间");
-        StudySheet.styleField(timeInput);
-        ForestUi.add(pane.body, StudySheet.section(ctx(), "默认提醒时间（HH:mm）"), 14);
-        ForestUi.add(pane.body, timeInput, 6);
+        LinearLayout detailsSection = column(ctx());
+        StudySheet.addHairline(detailsSection, 2, 14);
 
-        LinearLayout presets = row(ctx());
-        String[] times = {"09:00", "12:00", "18:00", "20:30"};
-        for (int i = 0; i < times.length; i++) {
-            String t = times[i];
-            TextView chip = StudySheet.link(ctx(), t, DEEP, () -> {
-                timeInput.setText(t);
-                masterSwitch.setChecked(true);
-                ForestUi.updateSwitchSubtitle(masterSwitch, "已开启 · " + t + " 发送森林自习提醒");
+        LinearLayout timeHeader = row(ctx());
+        TextView timeTitle = text(ctx(), "默认提醒时间", 14, 0xff243624);
+        timeTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        timeHeader.addView(timeTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView timeDisplay = text(ctx(), initialTime, 14, 0xff315e3a);
+        timeDisplay.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        timeDisplay.setFontFeatureSettings("tnum");
+        timeHeader.addView(timeDisplay);
+        detailsSection.addView(timeHeader, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout presetRow = row(ctx());
+        List<TextView> timeChips = new ArrayList<>();
+        String[] chipLabels = {"09:00", "12:00", "18:00", "20:30", "自定"};
+
+        EditText customInput = new EditText(ctx());
+        customInput.setSingleLine(true);
+        customInput.setText(initialTime);
+        customInput.setHint("输入时刻，如 18:00");
+        customInput.setContentDescription("每日提醒时间");
+        customInput.setFontFeatureSettings("tnum");
+        StudySheet.styleQuietInlineField(customInput);
+
+        Runnable syncUi = () -> {
+            boolean on = masterSwitch.isChecked();
+            detailsSection.setVisibility(on ? View.VISIBLE : View.GONE);
+            String cur = selectedTime[0].isEmpty() ? initialTime : selectedTime[0];
+            timeDisplay.setText(cur);
+            ForestUi.updateFlatSwitchSubtitle(
+                masterSwitch,
+                on ? "截止前一天 " + cur + " 发送森林自习提醒" : "已关闭，开启后在截止前自动提醒"
+            );
+            customInput.setVisibility(customMode[0] ? View.VISIBLE : View.GONE);
+            for (int i = 0; i < chipLabels.length; i++) {
+                boolean active = customMode[0] ? (i == chipLabels.length - 1) : chipLabels[i].equals(cur);
+                StudySheet.styleChoiceChip(timeChips.get(i), active);
+            }
+        };
+
+        for (int i = 0; i < chipLabels.length; i++) {
+            String lbl = chipLabels[i];
+            boolean isCustom = "自定".equals(lbl);
+            TextView chip = StudySheet.link(ctx(), lbl, DEEP, () -> {
+                if (isCustom) {
+                    customMode[0] = true;
+                    String typed = customInput.getText().toString().trim();
+                    if (!typed.isEmpty()) selectedTime[0] = typed;
+                    syncUi.run();
+                    customInput.requestFocus();
+                } else {
+                    customMode[0] = false;
+                    selectedTime[0] = lbl;
+                    customInput.setText(lbl);
+                    syncUi.run();
+                }
             });
             chip.setTextSize(12);
+            chip.setFontFeatureSettings("tnum");
             chip.setMinimumHeight(dp(ctx(), 36));
-            chip.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
+            chip.setPadding(dp(ctx(), 4), dp(ctx(), 5), dp(ctx(), 4), dp(ctx(), 5));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
             if (i > 0) lp.setMarginStart(dp(ctx(), 6));
-            presets.addView(chip, lp);
+            presetRow.addView(chip, lp);
+            timeChips.add(chip);
         }
-        ForestUi.add(pane.body, presets, 8);
+        ForestUi.add(detailsSection, presetRow, 12);
+        ForestUi.add(detailsSection, customInput, 6);
 
-        masterSwitch.setOnCheckedChangeListener((b, checked) -> {
-            String currentT = timeInput.getText().toString().trim();
-            if (currentT.isEmpty()) currentT = plan.remindTime;
-            ForestUi.updateSwitchSubtitle(
-                masterSwitch,
-                checked ? "已开启 · " + currentT + " 发送森林自习提醒" : "已关闭 · 开启后在截止前发送森林自习提醒"
-            );
+        customInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (customMode[0]) {
+                    selectedTime[0] = s.toString().trim();
+                    String cur = selectedTime[0].isEmpty() ? initialTime : selectedTime[0];
+                    timeDisplay.setText(cur);
+                    if (masterSwitch.isChecked()) {
+                        ForestUi.updateFlatSwitchSubtitle(masterSwitch, "截止前一天 " + cur + " 发送森林自习提醒");
+                    }
+                }
+            }
+            @Override public void afterTextChanged(Editable s) {}
         });
 
-        TextView testBtn = StudySheet.link(ctx(), "立即发送一条测试提醒消息", 0xff355336, () -> {
+        StudySheet.addHairline(detailsSection, 14, 2);
+
+        LinearLayout testRow = row(ctx());
+        testRow.setMinimumHeight(dp(ctx(), 48));
+        testRow.setPadding(dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 8));
+        testRow.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+        TextView testTitle = text(ctx(), "发送一条测试通知", 13, 0xff456444);
+        testTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        testRow.addView(testTitle, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView testStatus = text(ctx(), "验证提醒通道 ›", 12, 0xff8f8675);
+        testRow.addView(testStatus);
+        testRow.setOnClickListener(v -> {
             allowStudyNotifications();
             boolean sent = StudyNotifications.sendImmediateReminder(
                 ctx(),
@@ -1534,15 +2408,20 @@ public final class StudyFragment extends Fragment {
                 "森林自习室 · 待办与截止提醒",
                 "提醒功能已就绪！将在待办截止时间前自动通知你。"
             );
+            testStatus.setText(sent ? "已发送测试通知 ✓" : "请先开启系统通知");
+            testStatus.setTextColor(sent ? 0xff315e3a : 0xff9e4c37);
             toast(sent ? "已发送测试提醒通知，请查看顶部通知栏" : "请先允许应用发送系统通知");
         });
-        testBtn.setMinimumHeight(dp(ctx(), 40));
-        testBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xffeaf1e5, 0xffb8cbb2, 11), false));
-        ForestUi.add(pane.body, testBtn, 12);
+        ForestMotion.bind(testRow);
+        detailsSection.addView(testRow, new LinearLayout.LayoutParams(-1, -2));
 
-        pane.secondary("取消", sheet::dismiss);
-        pane.primary("保存提醒设置", () -> perform(() -> {
-            String clean = StudyWork.Task.validateTime(timeInput.getText().toString());
+        pane.body.addView(detailsSection, new LinearLayout.LayoutParams(-1, -2));
+        masterSwitch.setOnCheckedChangeListener((b, checked) -> syncUi.run());
+        syncUi.run();
+
+        pane.primary("保存设置", () -> perform(() -> {
+            String rawTime = customMode[0] ? customInput.getText().toString() : selectedTime[0];
+            String clean = StudyWork.Task.validateTime(rawTime);
             if (clean.isEmpty()) throw new IllegalArgumentException("请输入时间，例如 18:00");
             store.update(n -> {
                 n.remindDeadlines(plan.id, masterSwitch.isChecked());
@@ -1570,48 +2449,31 @@ public final class StudyFragment extends Fragment {
         pane.primary("添加事项", () -> work.taskForm(plan, plan.book(plan.selected), null, refresh, null));
         pane.secondary("设置科目日期", () -> chooseDeadline(work, sheet, plan, refresh));
 
-        MaterialCheckBox remind = ForestUi.switchWithSubtitle(
+        StudySheet.addHairline(pane.body, 0, 2);
+        MaterialCheckBox remind = ForestUi.flatSwitchRow(
             ctx(),
-            "在截止前一天傍晚提醒",
+            "考试与截止前提醒",
             planRemindSubtitle(plan)
         );
         remind.setChecked(plan.remindDeadlines);
         remind.setOnClickListener(v -> perform(() -> {
             store.update(n -> { n.remindDeadlines(plan.id, remind.isChecked()); return null; });
-            ForestUi.updateSwitchSubtitle(remind, planRemindSubtitle(plan));
+            ForestUi.updateFlatSwitchSubtitle(remind, planRemindSubtitle(plan));
             if (remind.isChecked()) allowStudyNotifications();
         }));
-        ForestUi.add(pane.body, remind, 0);
+        pane.body.addView(remind, new LinearLayout.LayoutParams(-1, -2));
 
-        LinearLayout remindActions = row(ctx());
-        TextView editTimeBtn = StudySheet.link(
-            ctx(),
-            "设置提醒时间 · " + plan.remindTime,
-            DEEP,
-            () -> reminderSettingsDialog(plan, refresh)
-        );
-        editTimeBtn.setTextSize(12);
-        editTimeBtn.setMinimumHeight(dp(ctx(), 34));
-        editTimeBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 10), false));
-        remindActions.addView(editTimeBtn, new LinearLayout.LayoutParams(0, -2, 1));
-
-        TextView testRemindBtn = StudySheet.link(ctx(), "测试提醒通知", DEEP, () -> {
-            allowStudyNotifications();
-            boolean ok = StudyNotifications.sendImmediateReminder(
-                ctx(),
-                plan.id,
-                "待办即将截止提醒",
-                "这是来自森林自习室的截止提醒消息预览"
-            );
-            toast(ok ? "已发送提醒通知" : "请先开启系统通知权限");
-        });
-        testRemindBtn.setTextSize(12);
-        testRemindBtn.setMinimumHeight(dp(ctx(), 34));
-        testRemindBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xffeaf1e5, 0xffb8cbb2, 10), false));
-        LinearLayout.LayoutParams testLp = new LinearLayout.LayoutParams(0, -2, 1);
-        testLp.setMarginStart(dp(ctx(), 8));
-        remindActions.addView(testRemindBtn, testLp);
-        ForestUi.add(pane.body, remindActions, 6);
+        LinearLayout timeRow = row(ctx());
+        timeRow.setMinimumHeight(dp(ctx(), 44));
+        timeRow.setPadding(dp(ctx(), 2), dp(ctx(), 6), dp(ctx(), 2), dp(ctx(), 6));
+        timeRow.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+        timeRow.addView(text(ctx(), "提醒时间设置", 13, 0xff5b5447), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView timeVal = text(ctx(), plan.remindTime + " ›", 13, 0xff315e3a);
+        timeVal.setFontFeatureSettings("tnum");
+        timeRow.addView(timeVal);
+        timeRow.setOnClickListener(v -> reminderSettingsDialog(plan, refresh));
+        ForestMotion.bind(timeRow);
+        pane.body.addView(timeRow, new LinearLayout.LayoutParams(-1, -2));
 
         if (plan.remindDeadlines && !StudyNotifications.permitted(ctx())) {
             ForestUi.add(pane.body, StudySheet.link(ctx(), "开启系统通知", DEEP,
@@ -1623,50 +2485,63 @@ public final class StudyFragment extends Fragment {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, 1);
         String tomorrowKey = StudyNotebook.dayKey(cal.getTimeInMillis());
+        Calendar yCal = Calendar.getInstance();
+        yCal.add(Calendar.DATE, -1);
+        String yesterdayKey = StudyNotebook.dayKey(yCal.getTimeInMillis());
 
-        int[] filterMode = {0}; // 0: 全部按日期, 1: 今天, 2: 未来安排, 3: 已完成
-        LinearLayout filterTabs = row(ctx());
-        filterTabs.setBackground(rounded(ctx(), 0xffebe7da, 0xffdcd8c8, 12));
-        filterTabs.setPadding(dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4), dp(ctx(), 4));
-        String[] filterLabels = {"按日期分类", "今天", "未来安排", "已完成"};
-        List<TextView> tabViews = new ArrayList<>();
+        int[] filterMode = {0}; // 0: 今天（含逾期）, 1: 计划（未来与不限）, 2: 已完成
+        LinearLayout filterHost = column(ctx());
         LinearLayout taskListContainer = column(ctx());
 
-        Runnable renderTasks = () -> {
-            for (int i = 0; i < tabViews.size(); i++) {
-                boolean active = filterMode[0] == i;
-                TextView tv = tabViews.get(i);
-                tv.setTextColor(active ? 0xff243624 : 0xff6b7568);
-                tv.setTypeface(Typeface.create(active ? "sans-serif-medium" : "sans-serif",
-                    active ? Typeface.BOLD : Typeface.NORMAL));
-                tv.setBackground(ripple(ctx(), rounded(ctx(),
-                    active ? 0xfffffcf3 : Color.TRANSPARENT,
-                    active ? 0xffc6d4c0 : 0, 9), false));
-            }
+        Runnable[] renderTasksRef = new Runnable[1];
+        renderTasksRef[0] = () -> {
+            filterHost.removeAllViews();
+            filterHost.addView(editorialChartTabs(
+                new String[] {"今天", "计划", "已完成"},
+                new int[] {View.NO_ID, View.NO_ID, View.NO_ID},
+                filterMode[0],
+                idx -> {
+                    if (filterMode[0] == idx) return;
+                    filterMode[0] = idx;
+                    renderTasksRef[0].run();
+                }
+            ));
+
             taskListContainer.removeAllViews();
-            if (filterMode[0] == 3) {
+            if (filterMode[0] == 2) {
                 List<StudyWork.Task> doneTasks = store.notebook().completedTasks(plan.id, 0, Long.MAX_VALUE);
                 if (doneTasks.isEmpty()) {
-                    ForestUi.add(taskListContainer, note("还没有已完成的待办事项"), 6);
+                    ForestUi.add(taskListContainer, note("还没有已完成的事项"), 10);
                 } else {
-                    for (StudyWork.Task doneTask : doneTasks) {
-                        StudySubject subj = plan.book(doneTask.subjectId);
-                        MaterialCheckBox cb = ForestUi.checkWithSubtitle(
-                            ctx(),
-                            doneTask.title,
-                            (subj == null ? "" : subj.title + " · ") + "已完成"
-                        );
-                        cb.setChecked(true);
-                        cb.setOnClickListener(v -> perform(() -> {
-                            store.update(n -> {
-                                n.changeTask(doneTask.id, doneTask.title, doneTask.day,
-                                    doneTask.dueTime, doneTask.remind, doneTask.remindLeadMinutes,
-                                    false, System.currentTimeMillis());
-                                return null;
-                            });
-                            refresh.run();
-                        }));
-                        ForestUi.add(taskListContainer, cb, 6);
+                    Map<String, List<StudyWork.Task>> doneByDay = new LinkedHashMap<>();
+                    for (StudyWork.Task dt : doneTasks) {
+                        String dKey = dt.completed > 0 ? StudyNotebook.dayKey(dt.completed) : todayKey;
+                        doneByDay.computeIfAbsent(dKey, k -> new ArrayList<>()).add(dt);
+                    }
+                    SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.CHINA);
+                    for (Map.Entry<String, List<StudyWork.Task>> entry : doneByDay.entrySet()) {
+                        TextView dayHd = text(ctx(),
+                            formatTodoDayHeader(entry.getKey(), todayKey, tomorrowKey, yesterdayKey, true),
+                            12, WOOD);
+                        dayHd.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                        ForestUi.add(taskListContainer, dayHd, 12);
+                        for (StudyWork.Task doneTask : entry.getValue()) {
+                            StudySubject subj = plan.book(doneTask.subjectId);
+                            String sub = (doneTask.completed > 0 ? hm.format(new java.util.Date(doneTask.completed)) + " 完成" : "已完成")
+                                + (subj == null ? "" : " · " + subj.title);
+                            MaterialCheckBox cb = ForestUi.flatCheckWithSubtitle(ctx(), doneTask.title, sub);
+                            cb.setChecked(true);
+                            cb.setOnClickListener(v -> perform(() -> {
+                                store.update(n -> {
+                                    n.changeTask(doneTask.id, doneTask.title, doneTask.day,
+                                        doneTask.dueTime, doneTask.remind, doneTask.remindLeadMinutes,
+                                        false, System.currentTimeMillis());
+                                    return null;
+                                });
+                                refresh.run();
+                            }));
+                            taskListContainer.addView(cb, new LinearLayout.LayoutParams(-1, -2));
+                        }
                     }
                 }
                 return;
@@ -1674,12 +2549,13 @@ public final class StudyFragment extends Fragment {
 
             List<StudyWork.Task> filtered = new ArrayList<>();
             for (StudyWork.Task t : tasks) {
-                if (filterMode[0] == 1 && !t.day.equals(todayKey)) continue;
-                if (filterMode[0] == 2 && t.day.compareTo(todayKey) <= 0) continue;
+                boolean isTodayOrOverdue = !t.day.isEmpty() && t.day.compareTo(todayKey) <= 0;
+                if (filterMode[0] == 0 && !isTodayOrOverdue) continue;
+                if (filterMode[0] == 1 && isTodayOrOverdue) continue;
                 filtered.add(t);
             }
             if (filtered.isEmpty()) {
-                ForestUi.add(taskListContainer, note("还没有待做事项"), 6);
+                ForestUi.add(taskListContainer, note(filterMode[0] == 0 ? "今天暂时没有待做事项" : "暂无后续安排"), 10);
                 return;
             }
             Map<String, List<StudyWork.Task>> grouped = groupTasksByDate(filtered, todayKey, tomorrowKey);
@@ -1688,54 +2564,47 @@ public final class StudyFragment extends Fragment {
                     ctx(),
                     entry.getKey() + " · " + entry.getValue().size() + " 项",
                     12,
-                    WOOD
+                    entry.getKey().startsWith("已逾期") ? 0xff9e4c37 : WOOD
                 );
                 dateHeader.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-                ForestUi.add(taskListContainer, dateHeader, 10);
+                ForestUi.add(taskListContainer, dateHeader, 12);
+                int rowIdx = 0;
                 for (StudyWork.Task task : entry.getValue()) {
+                    if (rowIdx++ > 0) StudySheet.addHairline(taskListContainer, 0, 0);
                     StudySubject subject = plan.book(task.subjectId);
                     String detail = formatTaskMeta(subject, task, todayKey, tomorrowKey);
                     Runnable start = store.notebook().hasSession() ? null : () -> perform(() -> startTask(task.id));
-                    ForestUi.add(
-                        taskListContainer,
+                    taskListContainer.addView(
                         StudySheet.item(
                             ctx(),
                             task.title,
                             detail,
                             0,
-                            0xfff7f4ea,
+                            Color.TRANSPARENT,
                             "›",
                             false,
                             () -> work.taskForm(plan, subject, task, refresh, start)
                         ),
-                        5
+                        new LinearLayout.LayoutParams(-1, -2)
                     );
                 }
             }
         };
 
-        for (int i = 0; i < filterLabels.length; i++) {
-            int idx = i;
-            TextView tab = text(ctx(), filterLabels[i], 11, 0xff6b7568);
-            tab.setGravity(Gravity.CENTER);
-            tab.setOnClickListener(v -> {
-                filterMode[0] = idx;
-                renderTasks.run();
-            });
-            tabViews.add(tab);
-            addEqual(filterTabs, tab, 34);
-        }
-        ForestUi.add(pane.body, filterTabs, 12);
+        ForestUi.add(pane.body, filterHost, 8);
         ForestUi.add(pane.body, taskListContainer, 2);
-        renderTasks.run();
+        renderTasksRef[0].run();
 
-        ForestUi.add(pane.body, StudySheet.section(ctx(), "近期考试与截止"), 16);
+        StudySheet.addHairline(pane.body, 14, 14);
+        pane.body.addView(StudySheet.section(ctx(), "近期考试与截止"));
         List<StudySubject> deadlines = StudyWorkDialogs.deadlines(plan);
         if (deadlines.isEmpty()) ForestUi.add(pane.body, note("还没有设置近期日期"), 6);
+        int dlIdx = 0;
         for (StudySubject subject : deadlines) {
+            if (dlIdx++ > 0) StudySheet.addHairline(pane.body, 0, 0);
             String detail = subject.due + (subject.assessment.isEmpty() ? "" : " · " + subject.assessment);
-            ForestUi.add(pane.body, StudySheet.item(ctx(), subject.title, detail, 0, 0, "›", false,
-                () -> work.taskForm(plan, subject, null, refresh, null)), 4);
+            pane.body.addView(StudySheet.item(ctx(), subject.title, detail, 0, Color.TRANSPARENT, "›", false,
+                () -> work.taskForm(plan, subject, null, refresh, null)), new LinearLayout.LayoutParams(-1, -2));
         }
         sheet.push(pane);
     }
@@ -1798,11 +2667,47 @@ public final class StudyFragment extends Fragment {
 
     private void updateTimer() {
         StudyNotebook notebook = store.notebook();
-        long elapsed = notebook.currentHasSession() ? store.elapsedMillis() : 0;
-        if (clock != null) clock.setText(StudyFormat.clock(elapsed));
-        if (dial != null) dial.setProgress(
-            (float) elapsed / (notebook.activeGoal() * 60_000L)
-        );
+        boolean active = notebook.currentHasSession();
+        long elapsed = active ? store.elapsedMillis() : 0L;
+        int goalMin = active ? notebook.activeGoal() : notebook.sessionGoal();
+        long goalMillis = Math.max(1L, goalMin * 60_000L);
+        if (clock != null) {
+            if (countdownMode) {
+                if (!active) {
+                    clock.setText(StudyFormat.clock(goalMillis));
+                } else if (elapsed <= goalMillis) {
+                    clock.setText(StudyFormat.clock(goalMillis - elapsed));
+                } else {
+                    clock.setText("+" + StudyFormat.clock(elapsed - goalMillis));
+                }
+            } else {
+                clock.setText(StudyFormat.clock(elapsed));
+            }
+        }
+        if (dialGoalCaption != null) {
+            dialGoalCaption.setText((countdownMode ? "倒计时目标 " : "目标 ") + goalMin + " 分钟");
+            dialGoalCaption.setTextColor(MUTED);
+        }
+        if (dialRightCaption != null) {
+            if (!active) {
+                dialRightCaption.setText("0%");
+                dialRightCaption.setTextColor(0xff8f8675);
+            } else if (elapsed > goalMillis) {
+                long overMin = Math.max(1L, (elapsed - goalMillis) / 60_000L);
+                dialRightCaption.setText("已超额 +" + overMin + " 分钟");
+                dialRightCaption.setTextColor(0xff315e3a);
+            } else {
+                int pct = (int) Math.min(100L, (elapsed * 100L) / goalMillis);
+                dialRightCaption.setText("已完成 " + pct + "%");
+                dialRightCaption.setTextColor(0xff315e3a);
+            }
+        }
+        if (activeStatusText != null) {
+            activeStatusText.setText(
+                notebook.running() ? "静心计时中 · 随时可暂停" : "已暂停 · 暂停时长不计入"
+            );
+        }
+        if (dial != null) dial.setProgress((float) elapsed / goalMillis);
         if (today != null) {
             StudyNotebook n = store.notebook();
             String planId = n.currentPlan().id;
@@ -1813,66 +2718,150 @@ public final class StudyFragment extends Fragment {
             renderedToday = day;
             for (StudyNotebook.Record r : n.records())
                 if (r.planId.equals(planId) && StudyNotebook.dayKey(r.completedAt).equals(day)) count++;
+            long todayMillis = n.totalForDay(planId, now);
+            int dailyGoalMin = Math.max(1, n.dailyGoal());
+            long todayMin = todayMillis / 60_000L;
+            int dailyPct = (int) Math.min(100L, (todayMin * 100L) / dailyGoalMin);
             today.setText(
                 "今日已专注 " +
-                    StudyFormat.duration(n.totalForDay(planId, now)) +
+                    StudyFormat.duration(todayMillis) +
                     "\n每日目标 " +
-                    n.dailyGoal() +
+                    dailyGoalMin +
                     "分钟 · " +
                     count +
                     "次学习"
             );
+            if (dailyProgressBar != null) dailyProgressBar.setProgress(dailyPct);
+            if (dailyProgressText != null) {
+                if (todayMin >= dailyGoalMin) {
+                    dailyProgressText.setText("今日目标已达成 ✓（100%）");
+                    dailyProgressText.setTextColor(0xff34603a);
+                } else {
+                    dailyProgressText.setText("今日进度 " + dailyPct + "% · 还差 " + (dailyGoalMin - todayMin) + " 分钟达标");
+                    dailyProgressText.setTextColor(MUTED);
+                }
+            }
         }
+    }
+
+    private void syncRunningStateInPlace(boolean running) {
+        renderedRunning = running;
+        if (focusStatusPill != null) {
+            focusStatusPill.setBackground(rounded(ctx(), running ? 0xffeef3e8 : 0xfff5efe3, 0, 999));
+        }
+        if (statusPulseAnimator != null) {
+            statusPulseAnimator.cancel();
+            statusPulseAnimator = null;
+        }
+        if (focusStatusDot != null) {
+            focusStatusDot.setAlpha(1f);
+            focusStatusDot.setBackground(rounded(ctx(), running ? 0xff456444 : 0xffb8894f, 0, 99));
+            if (running && (Build.VERSION.SDK_INT < 26 || android.animation.ValueAnimator.areAnimatorsEnabled())) {
+                statusPulseAnimator = android.animation.ObjectAnimator.ofFloat(focusStatusDot, View.ALPHA, 1f, 0.35f);
+                statusPulseAnimator.setDuration(1100);
+                statusPulseAnimator.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+                statusPulseAnimator.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                statusPulseAnimator.start();
+            }
+        }
+        if (focusStatusLabel != null) {
+            focusStatusLabel.setText(running ? "正在专注" : "休息一下");
+            focusStatusLabel.setTextColor(running ? 0xff315e3a : 0xff7b5c3b);
+        }
+        if (activeStatusText != null) {
+            activeStatusText.setText(running ? "静心计时中 · 随时可暂停" : "已暂停 · 暂停时长不计入");
+        }
+        if (startPauseButton != null) {
+            startPauseButton.setText(running ? "暂停一下" : "继续学习");
+        }
+        syncKeepScreenOn();
+        updateTimer();
+    }
+
+    private void syncKeepScreenOn() {
+        if (!isAdded() || getActivity() == null) return;
+        boolean keep = keepScreenOn && page == AppDestination.STUDY_FOCUS && store != null && store.notebook().currentHasSession();
+        if (keep) {
+            getActivity().getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    private android.graphics.drawable.Drawable roundedProgressDrawable() {
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(0xffe7e3d6);
+        bg.setCornerRadius(dp(ctx(), 99));
+        android.graphics.drawable.GradientDrawable fill = new android.graphics.drawable.GradientDrawable();
+        fill.setColor(0xff456444);
+        fill.setCornerRadius(dp(ctx(), 99));
+        android.graphics.drawable.ClipDrawable clip = new android.graphics.drawable.ClipDrawable(
+            fill, Gravity.START, android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable layers = new android.graphics.drawable.LayerDrawable(
+            new android.graphics.drawable.Drawable[] { bg, clip });
+        layers.setId(0, android.R.id.background);
+        layers.setId(1, android.R.id.progress);
+        return layers;
     }
 
     private void dailyGoalDialog() {
         StudySheet sheet = newSheet();
-        StudySheet.Pane pane = sheetPane("每日学习目标", "每天首次达标时获得一颗种子。",
-            R.drawable.ic_study_sprout);
+        StudySheet.Pane pane = sheetPane("每日学习目标", "每天首次达标时获得一颗种子。", 0);
+        StudySheet.addHairline(pane.body, 0, 12);
+
         EditText input = new EditText(ctx());
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setText(String.valueOf(store.notebook().dailyGoal()));
         input.setSelectAllOnFocus(true);
         input.setContentDescription("每日学习目标分钟");
-        StudySheet.styleField(input);
+        StudySheet.styleUnderlineField(input);
+        input.setTextSize(22f);
+        input.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        input.setFontFeatureSettings("tnum");
         pane.body.addView(StudySheet.section(ctx(), "目标时长（分钟）"));
-        ForestUi.add(pane.body, input, 7);
+        ForestUi.add(pane.body, input, 4);
+
         LinearLayout presets = row(ctx());
         int[] presetValues = { 60, 120, 180 };
+        List<TextView> presetChips = new ArrayList<>();
+        Runnable syncPresets = () -> {
+            String cur = input.getText().toString().trim();
+            for (int i = 0; i < presetValues.length; i++) {
+                StudySheet.styleChoiceChip(presetChips.get(i), cur.equals(String.valueOf(presetValues[i])));
+            }
+        };
         for (int i = 0; i < presetValues.length; i++) {
             int minutes = presetValues[i];
-            TextView option = StudySheet.link(ctx(), minutes + " 分钟", DEEP,
-                () -> input.setText(String.valueOf(minutes)));
+            TextView option = StudySheet.link(ctx(), minutes + " 分钟", DEEP, () -> {
+                input.setText(String.valueOf(minutes));
+                input.setSelection(input.getText().length());
+            });
+            option.setTextSize(12);
+            option.setFontFeatureSettings("tnum");
             option.setMinimumHeight(dp(ctx(), 38));
-            option.setBackground(ripple(ctx(), rounded(ctx(), 0xfff5f2e6, 0xffd8d5c2, 10), false));
             LinearLayout.LayoutParams presetParams = new LinearLayout.LayoutParams(0, -2, 1);
-            if (i > 0) presetParams.setMarginStart(dp(ctx(), 6));
+            if (i > 0) presetParams.setMarginStart(dp(ctx(), 8));
             presets.addView(option, presetParams);
+            presetChips.add(option);
         }
-        ForestUi.add(pane.body, presets, 8);
+        ForestUi.add(pane.body, presets, 14);
+
         TextView errorMessage = text(ctx(), "", 12, 0xff8d4836);
         errorMessage.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         ForestUi.add(pane.body, errorMessage, 8);
         errorMessage.setVisibility(View.GONE);
         input.addTextChangedListener(
             new TextWatcher() {
-                @Override
-                public void beforeTextChanged(
-                    CharSequence value,
-                    int start,
-                    int count,
-                    int after
-                ) {}
-
-                @Override
-                public void onTextChanged(CharSequence value, int start, int before, int count) {
+                @Override public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence value, int start, int before, int count) {
                     errorMessage.setVisibility(View.GONE);
+                    syncPresets.run();
                 }
-
-                @Override
-                public void afterTextChanged(Editable value) {}
+                @Override public void afterTextChanged(Editable value) {}
             }
         );
+        syncPresets.run();
+
         pane.primary("保存目标", () -> {
             try {
                 int value = Integer.parseInt(input.getText().toString().trim());
@@ -1889,8 +2878,14 @@ public final class StudyFragment extends Fragment {
     }
 
     private void finishDialog() {
-        if (store.notebook().running()) store.pause();
-        render();
+        if (store.notebook().running()) {
+            store.pause();
+            if (focusStatusPill != null && startPauseButton != null && store.notebook().currentHasSession()) {
+                syncRunningStateInPlace(false);
+            } else {
+                render();
+            }
+        }
         long elapsed = store.elapsedMillis();
         if (elapsed < 1000) {
             confirmDiscard(newSheet());
@@ -1898,7 +2893,7 @@ public final class StudyFragment extends Fragment {
         }
         StudySheet sheet = newSheet();
         StudyWorkDialogs work = workDialogs(sheet);
-        StudySheet.Pane pane = sheetPane("保存这段专注", null, R.drawable.ic_leaf);
+        StudySheet.Pane pane = sheetPane("保存这段专注", null, 0);
         StudyNotebook notebook = store.notebook();
         String sessionId = notebook.sessionId();
         StudyPlan plan = notebook.plan(notebook.activePlanId());
@@ -1906,18 +2901,19 @@ public final class StudyFragment extends Fragment {
         StudySubject[] subject = { notebook.activeSubject() };
         long[] duration = { elapsed };
 
+        // 1. Direct Editorial Receipt Summary (ZERO nested card box inside sheet!)
+        StudySheet.addHairline(pane.body, 0, 14);
         LinearLayout receipt = row(ctx());
-        receipt.setPadding(dp(ctx(), 16), dp(ctx(), 14), dp(ctx(), 16), dp(ctx(), 14));
-        receipt.setBackground(rounded(ctx(), 0xffebf2e6, 0xffc8dac2, 16));
         LinearLayout receiptCopy = column(ctx());
         TextView subjectName = text(ctx(), "", 13, 0xff355336);
         subjectName.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         subjectName.setText(ForestUi.badgeText(ctx(), subject[0].hint, subject[0].title, ""));
-        TextView length = heading(ctx(), StudyFormat.duration(elapsed), 26);
+        TextView length = heading(ctx(), StudyFormat.duration(elapsed), 30);
         length.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        length.setFontFeatureSettings("tnum");
         length.setTextColor(0xff243624);
         receiptCopy.addView(subjectName);
-        ForestUi.add(receiptCopy, length, 6);
+        ForestUi.add(receiptCopy, length, 5);
         receipt.addView(receiptCopy, new LinearLayout.LayoutParams(0, -2, 1));
 
         TextView correctBtn = StudySheet.link(ctx(), "修正时长或科目", 0xff355336, () -> {
@@ -1937,38 +2933,54 @@ public final class StudyFragment extends Fragment {
         correctBtn.setTextSize(12);
         correctBtn.setMinimumHeight(dp(ctx(), 34));
         correctBtn.setPadding(dp(ctx(), 12), dp(ctx(), 6), dp(ctx(), 12), dp(ctx(), 6));
-        correctBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfffffcf3, 0xffc8d6c3, 999), false));
+        correctBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfff2eee3, 0, 999), false));
         LinearLayout.LayoutParams correctLp = new LinearLayout.LayoutParams(-2, -2);
         correctLp.setMarginStart(dp(ctx(), 10));
         receipt.addView(correctBtn, correctLp);
-        ForestUi.add(pane.body, receipt, 0);
+        pane.body.addView(receipt, new LinearLayout.LayoutParams(-1, -2));
 
-        LinearLayout noteHeader = row(ctx());
-        noteHeader.addView(StudySheet.section(ctx(), "学习手记（选填）"),
-            new LinearLayout.LayoutParams(0, -2, 1));
-        TextView discardLink = StudySheet.link(ctx(), "放弃本次", 0xff8d4836,
-            () -> confirmDiscard(sheet));
-        discardLink.setTextSize(12);
-        discardLink.setMinimumHeight(dp(ctx(), 30));
-        discardLink.setPadding(dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 4), dp(ctx(), 2));
-        noteHeader.addView(discardLink);
-        ForestUi.add(pane.body, noteHeader, 12);
+        StudySheet.addHairline(pane.body, 14, 4);
 
+        MaterialCheckBox done = null;
+        if (task != null) {
+            done = ForestUi.flatCheckWithSubtitle(ctx(), "本次目标已完成", task.title);
+            pane.body.addView(done, new LinearLayout.LayoutParams(-1, -2));
+            StudySheet.addHairline(pane.body, 2, 10);
+        }
+
+        // 2. Borderless Editorial Underline Inputs directly on porcelain sheet
+        ForestUi.add(pane.body, StudySheet.section(ctx(), "学习手记（选填）"), task != null ? 0 : 8);
         EditText input = new EditText(ctx());
         input.setId(R.id.study_note_input);
-        input.setHint("留一句学习手记（选填）");
+        input.setHint("留一句今天的收获或卡点");
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setFilters(new InputFilter[] { new InputFilter.LengthFilter(120) });
         input.setMinLines(1);
-        StudySheet.styleField(input);
-        ForestUi.add(pane.body, input, 5);
+        StudySheet.styleUnderlineField(input);
+        ForestUi.add(pane.body, input, 2);
 
-        String doneSub = task != null ? task.title : "保存后累计水滴，不满 25 分钟也会留到下一次";
-        MaterialCheckBox done = ForestUi.checkWithSubtitle(ctx(), "本次目标已完成", doneSub);
-        if (task == null) done.setChecked(true);
-        ForestUi.add(pane.body, done, 10);
+        ForestUi.add(pane.body, StudySheet.section(ctx(), "下次从哪继续（选填）"), 14);
+        EditText next = new EditText(ctx());
+        next.setSingleLine(true);
+        next.setInputType(InputType.TYPE_CLASS_TEXT);
+        next.setHint("例如 接着做第 5–8 题");
+        next.setContentDescription("下次从哪继续（选填）");
+        next.setFilters(new InputFilter[] { new InputFilter.LengthFilter(120) });
+        StudySheet.styleUnderlineField(next);
+        ForestUi.add(pane.body, next, 2);
 
-        EditText next = work.input(pane.body, "下次从哪继续（选填）", "例如 接着做第 5–8 题", "", 120);
+        LinearLayout metaBar = row(ctx());
+        TextView waterHint = text(ctx(), "满 25 分钟自动累计水滴，未满也会留存", 12, MUTED);
+        metaBar.addView(waterHint, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView discardLink = StudySheet.link(ctx(), "放弃本次", 0xff9b4c38,
+            () -> confirmDiscard(sheet));
+        discardLink.setTextSize(12);
+        discardLink.setMinimumHeight(dp(ctx(), 32));
+        discardLink.setPadding(dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 2), dp(ctx(), 2));
+        metaBar.addView(discardLink);
+        ForestUi.add(pane.body, metaBar, 12);
+
+        final MaterialCheckBox doneBox = done;
         pane.primary("保存学习", () -> perform(() -> {
             if (store.notebook().running() || !sessionId.equals(store.notebook().sessionId())) {
                 sheet.dismiss();
@@ -1976,10 +2988,11 @@ public final class StudyFragment extends Fragment {
                 toast("计时状态已变化，请重新结束这段学习");
                 return;
             }
+            boolean taskDone = doneBox != null && doneBox.isChecked();
             StudyNotebook.Completion reward = store.finish(input.getText().toString(), subject[0].id,
-                duration[0] == elapsed ? 0 : duration[0], done.isChecked(), StudyWorkDialogs.value(next));
+                duration[0] == elapsed ? 0 : duration[0], taskDone, StudyWorkDialogs.value(next));
             render();
-            StudySheet.Pane result = sheetPane("学习已保存", null, R.drawable.ic_study_sprout);
+            StudySheet.Pane result = sheetPane("学习已保存", null, 0);
             result.body.addView(rewardReceipt(reward));
             ForestUi.add(result.body, StudySheet.link(ctx(), "去看看我的小树", DEEP, () -> {
                 sheet.dismiss();
@@ -1997,8 +3010,7 @@ public final class StudyFragment extends Fragment {
     }
 
     private void confirmDiscard(StudySheet sheet) {
-        StudySheet.Pane pane = sheetPane("放弃这段学习？", "放弃后，本次计时将被清除。",
-            R.drawable.ic_study_book);
+        StudySheet.Pane pane = sheetPane("放弃这段学习？", "放弃后，本次计时将被清除。", 0);
         pane.primary("保留计时", sheet::pop);
         pane.secondary("确认放弃", () -> perform(() -> {
             store.update(n -> { n.discard(); return null; });
@@ -2010,45 +3022,43 @@ public final class StudyFragment extends Fragment {
 
     private View rewardReceipt(StudyNotebook.Completion reward) {
         LinearLayout receipt = column(ctx());
+        StudySheet.addHairline(receipt, 0, 14);
         LinearLayout summary = row(ctx());
         TextView subject = text(ctx(), reward.record.subject.title, 13, WOOD);
         summary.addView(subject, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView stamp = text(ctx(), "✓ 已收录", 10, GREEN);
-        stamp.setPadding(dp(ctx(), 9), dp(ctx(), 5), dp(ctx(), 9), dp(ctx(), 5));
-        stamp.setBackground(rounded(ctx(), 0xffedf1e3, 0xffcbd6bb, 9));
+        TextView stamp = text(ctx(), "✓ 已收录", 11, GREEN);
+        stamp.setPadding(dp(ctx(), 10), dp(ctx(), 4), dp(ctx(), 10), dp(ctx(), 4));
+        stamp.setBackground(rounded(ctx(), 0xffeef4ea, 0, 999));
         summary.addView(stamp);
         ForestMotion.stamp(stamp);
         receipt.addView(summary);
-        ForestUi.add(
-            receipt,
-            heading(ctx(), StudyFormat.duration(reward.record.durationMillis), 28),
-            14
-        );
+        TextView dur = heading(ctx(), StudyFormat.duration(reward.record.durationMillis), 30);
+        dur.setFontFeatureSettings("tnum");
+        ForestUi.add(receipt, dur, 10);
+        StudySheet.addHairline(receipt, 14, 14);
         LinearLayout rewards = row(ctx());
-        rewards.setGravity(Gravity.CENTER);
-        rewards.setPadding(dp(ctx(), 14), dp(ctx(), 17), dp(ctx(), 14), dp(ctx(), 17));
-        rewards.setBackground(
-            new ForestSurface(ctx(), ForestSurface.Kind.PAPER, 0xffedf1e3, 0xffcbd6bb, 13)
-        );
+        rewards.setGravity(Gravity.CENTER_VERTICAL);
         android.widget.ImageView drop = new android.widget.ImageView(ctx());
         drop.setImageResource(R.drawable.ic_study_drop);
-        rewards.addView(drop, new LinearLayout.LayoutParams(dp(ctx(), 23), dp(ctx(), 23)));
+        rewards.addView(drop, new LinearLayout.LayoutParams(dp(ctx(), 22), dp(ctx(), 22)));
         TextView earned = text(
             ctx(),
             "  +" + reward.water + " 水滴" + (reward.seeds > 0 ? "    +1 种子" : ""),
             16,
             DEEP
         );
+        earned.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        earned.setFontFeatureSettings("tnum");
         rewards.addView(earned);
-        ForestUi.add(receipt, rewards, 18);
+        receipt.addView(rewards);
         ForestUi.add(
             receipt,
             note(
                 reward.water == 0
-                    ? "时间已积攒，累计满25分钟就能收到水滴。"
+                    ? "时间已积攒，累计满 25 分钟就能收到水滴。"
                     : "把水滴带去林地，给小树一点滋养吧。"
             ),
-            12
+            10
         );
         return receipt;
     }
@@ -2061,24 +3071,29 @@ public final class StudyFragment extends Fragment {
         String scopeId = scope == null ? null : scope.id;
         StudyPlan initialForRecord = scope != null ? scope : notebook.currentPlan();
 
-        LinearLayout headerRow = row(ctx());
-        headerRow.addView(heading(ctx(), "学习足迹", 25), new LinearLayout.LayoutParams(0, -2, 1));
-        if (initialForRecord != null) {
-            TextView manualBtn = StudySheet.link(ctx(), "补记学习", 0xff355336, () -> {
-                StudySheet sheet = newSheet();
-                workDialogs(sheet).recordForm(initialForRecord, null, () -> {
-                    sheet.dismiss();
-                    render();
-                    toast("已补记学习");
-                });
-            });
-            manualBtn.setTextSize(12);
-            manualBtn.setMinimumHeight(dp(ctx(), 34));
-            manualBtn.setPadding(dp(ctx(), 12), dp(ctx(), 6), dp(ctx(), 12), dp(ctx(), 6));
-            manualBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfff3efe3, 0xffdcd8c8, 999), false));
-            headerRow.addView(manualBtn);
-        }
-        ForestUi.add(content, headerRow, 14);
+        // Top bar right side: title only, aligned parallel to the 56dp return door
+        setBarTitle("学习足迹");
+
+        // Editorial Hairline Plan Header (Proposal 1): clean serif title-dropdown + porcelain outline action
+        LinearLayout statsActions = row(ctx());
+        statsActions.setGravity(Gravity.CENTER_VERTICAL);
+        statsActions.setPadding(0, dp(ctx(), 2), 0, dp(ctx(), 10));
+        statsActions.setBackground(bottomHairlineBg(0x1f5c4938));
+
+        LinearLayout scopeWrap = row(ctx());
+        scopeWrap.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        scopeWrap.setMinimumHeight(dp(ctx(), 40));
+        scopeWrap.setPadding(0, dp(ctx(), 4), dp(ctx(), 8), dp(ctx(), 4));
+        scopeWrap.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 10), false));
+        scopeWrap.setOnClickListener(v -> filterPlans());
+        ForestMotion.bind(scopeWrap);
+
+        View scopeDot = new View(ctx());
+        scopeDot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        scopeDot.setBackground(rounded(ctx(), GREEN, 0, 99));
+        LinearLayout.LayoutParams scopeDotLp = new LinearLayout.LayoutParams(dp(ctx(), 7.5f), dp(ctx(), 7.5f));
+        scopeDotLp.setMarginEnd(dp(ctx(), 8));
+        scopeWrap.addView(scopeDot, scopeDotLp);
 
         TextView scopeButton = StudySheet.link(
             ctx(),
@@ -2086,16 +3101,41 @@ public final class StudyFragment extends Fragment {
             0xff243624,
             this::filterPlans
         );
-        scopeButton.setTextSize(12);
-        scopeButton.setMinimumHeight(dp(ctx(), 32));
-        scopeButton.setPadding(dp(ctx(), 12), dp(ctx(), 5), dp(ctx(), 12), dp(ctx(), 5));
-        scopeButton.setBackground(ripple(ctx(), rounded(ctx(), 0xffe9efe3, 0xffbfd0b9, 999), false));
-        LinearLayout.LayoutParams scopeLp = new LinearLayout.LayoutParams(-2, -2);
-        scopeLp.topMargin = dp(ctx(), 8);
-        content.addView(scopeButton, scopeLp);
+        scopeButton.setTextSize(19);
+        scopeButton.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        scopeButton.setSingleLine(true);
+        scopeButton.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        scopeButton.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        scopeButton.setPadding(0, 0, 0, 0);
+        scopeButton.setBackground(null);
+        scopeWrap.addView(scopeButton, new LinearLayout.LayoutParams(-2, -2));
+        statsActions.addView(scopeWrap, new LinearLayout.LayoutParams(0, -2, 1));
+
+        if (initialForRecord != null) {
+            TextView manualBtn = StudySheet.link(ctx(), "补记学习", DEEP, () -> {
+                StudySheet sheet = newSheet();
+                workDialogs(sheet).recordForm(initialForRecord, null, () -> {
+                    sheet.dismiss();
+                    render();
+                    toast("已补记学习");
+                });
+            });
+            manualBtn.setTextSize(12.5f);
+            manualBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            manualBtn.setGravity(Gravity.CENTER);
+            manualBtn.setMinimumHeight(dp(ctx(), 36));
+            manualBtn.setPadding(dp(ctx(), 13), dp(ctx(), 6), dp(ctx(), 13), dp(ctx(), 6));
+            manualBtn.setCompoundDrawablesRelative(tintedIcon(R.drawable.ic_editorial_pen, 14, DEEP), null, null, null);
+            manualBtn.setCompoundDrawablePadding(dp(ctx(), 5));
+            manualBtn.setBackground(ripple(ctx(), rounded(ctx(), 0xfffffefa, 0x38315e3a, 999), false));
+            LinearLayout.LayoutParams manualLp = new LinearLayout.LayoutParams(-2, -2);
+            manualLp.setMarginStart(dp(ctx(), 10));
+            statsActions.addView(manualBtn, manualLp);
+        }
+        ForestUi.add(content, statsActions, 4);
 
         int[] periods = {1, 7, 30, 0};
-        LinearLayout periodSelector = statsSegments(
+        LinearLayout periodSelector = editorialPeriodTabs(
             new String[] {"今天", "近7天", "近30天", "全部"},
             new int[] {R.id.study_date_today, R.id.study_date_week, R.id.study_date_month, View.NO_ID},
             days == 0 ? 3 : days == 30 ? 2 : days == 7 ? 1 : 0,
@@ -2105,7 +3145,7 @@ public final class StudyFragment extends Fragment {
                 render();
             }
         );
-        ForestUi.add(content, periodSelector, 12);
+        ForestUi.add(content, periodSelector, 2);
         List<StudyNotebook.Record> allScoped = notebook.forPlan(scopeId);
         Calendar end = Calendar.getInstance();
         if (days == 0 && !allScoped.isEmpty()) end.setTimeInMillis(allScoped.get(0).completedAt);
@@ -2133,13 +3173,31 @@ public final class StudyFragment extends Fragment {
             dates.add(StudyNotebook.dayKey(record.completedAt));
         }
         String range = statsRange(start, end, records.isEmpty());
-        ForestUi.add(content, durationSummary(range, total, records.size(), dates.size()), 14);
+        int streak = computeStudyStreak(allScoped);
+        long avgDaily = dates.isEmpty() ? 0L : total / dates.size();
+        ForestUi.add(content, durationSummary(range, total, records.size(), dates.size(), avgDaily, streak), 14);
         LinearLayout card = statsPanel(LIGHT, LINE);
-        card.addView(heading(ctx(), chart == StudyChartView.Kind.TREND && !records.isEmpty()
-            ? "学习趋势" : "科目分布", 19));
+        Set<StudySubject> activeSubjects = new HashSet<>();
+        for (StudyNotebook.Record r : records) activeSubjects.add(r.subject);
+        String periodTag = days == 1 ? "今天" : days == 7 ? "近7天" : days == 30 ? "近30天" : "全部";
+        LinearLayout chartHeader = row(ctx());
+        chartHeader.addView(
+            heading(ctx(), chart == StudyChartView.Kind.TREND && !records.isEmpty()
+                ? "学习趋势" : "科目分布", 19),
+            new LinearLayout.LayoutParams(0, -2, 1)
+        );
+        TextView chartMeta = text(
+            ctx(),
+            records.isEmpty() ? periodTag : (periodTag + " · " + activeSubjects.size() + "门科目"),
+            12,
+            MUTED
+        );
+        chartMeta.setFontFeatureSettings("tnum");
+        chartHeader.addView(chartMeta);
+        card.addView(chartHeader);
         if (!records.isEmpty()) {
-            ForestUi.add(card, statsSegments(
-                new String[] {"环形时长", "科目时长", "每日趋势"},
+            ForestUi.add(card, editorialChartTabs(
+                new String[] {"环形占比", "科目时长", "每日趋势"},
                 new int[] {R.id.study_chart_ring, R.id.study_chart_bars, R.id.study_chart_trend},
                 chart.ordinal(),
                 index -> {
@@ -2148,7 +3206,7 @@ public final class StudyFragment extends Fragment {
                     chart = type;
                     render();
                 }
-            ), 11);
+            ), 8);
         }
         if (records.isEmpty()) {
             LinearLayout empty = column(ctx());
@@ -2173,7 +3231,8 @@ public final class StudyFragment extends Fragment {
         } else if (records.isEmpty() && scope != null && scope == notebook.currentPlan() && scope.archived == 0) {
             ForestUi.add(card, StudySheet.link(ctx(), "去专注", DEEP, () -> open(AppDestination.STUDY_FOCUS)), 0);
         }
-        ForestUi.add(content, card, 16);
+        ForestUi.add(content, card, 14);
+        ForestUi.add(content, heatmapCard(allScoped, streak), 14);
         weeklyReview(content, scopeId);
         if (allScoped.isEmpty()) return;
         LinearLayout history = row(ctx());
@@ -2281,47 +3340,103 @@ public final class StudyFragment extends Fragment {
 
     private LinearLayout statsPanel(int color, int border) {
         LinearLayout panel = column(ctx());
-        panel.setBackground(rounded(ctx(), color, border, 20));
-        panel.setPadding(dp(ctx(), 15), dp(ctx(), 15), dp(ctx(), 15), dp(ctx(), 14));
+        int resolvedFill = color == LIGHT ? 0xfffffefa : color;
+        int resolvedStroke = border == LINE ? 0x1c5c4938 : border;
+        panel.setBackground(rounded(ctx(), resolvedFill, resolvedStroke, 20));
+        panel.setElevation(dp(ctx(), 1));
+        panel.setPadding(dp(ctx(), 16), dp(ctx(), 15), dp(ctx(), 16), dp(ctx(), 14));
         return panel;
     }
 
-    private LinearLayout statsSegments(String[] labels, int[] ids, int selected, IntConsumer change) {
-        LinearLayout panel = column(ctx());
-        panel.setBackground(rounded(ctx(), 0xffebe7da, 0xffdcd8c8, 13));
-        int gap = dp(ctx(), 4);
-        panel.setPadding(gap, gap, gap, gap);
-        android.content.res.Configuration config = ctx().getResources().getConfiguration();
-        int columns = config.screenWidthDp >= 350 && config.fontScale <= 1.2f
-            ? labels.length : labels.length == 4 ? 2 : 1;
-        for (int start = 0; start < labels.length; start += columns) {
-            LinearLayout options = row(ctx());
-            for (int i = start; i < start + columns; i++) {
-                int index = i;
-                boolean isSelected = i == selected;
-                TextView chip = text(ctx(), labels[i], 12, isSelected ? 0xff243624 : 0xff6b7568);
-                chip.setId(ids[i]);
-                chip.setGravity(Gravity.CENTER);
-                chip.setMinHeight(dp(ctx(), 38));
-                chip.setMinimumHeight(dp(ctx(), 38));
-                chip.setSelected(isSelected);
-                chip.setFocusable(true);
-                chip.setTypeface(Typeface.create(
-                    isSelected ? "sans-serif-medium" : "sans-serif",
-                    isSelected ? Typeface.BOLD : Typeface.NORMAL
-                ));
-                chip.setBackground(ripple(ctx(), rounded(ctx(),
-                    isSelected ? 0xfffffcf3 : Color.TRANSPARENT,
-                    isSelected ? 0xffc6d4c0 : 0, 10), false));
-                chip.setOnClickListener(v -> change.accept(index));
-                ForestMotion.bind(chip);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1);
-                if (i != start) params.setMarginStart(gap);
-                options.addView(chip, params);
-            }
-            ForestUi.add(panel, options, start == 0 ? 0 : 4);
+    private LinearLayout editorialChartTabs(String[] labels, int[] ids, int selected, IntConsumer change) {
+        LinearLayout strip = row(ctx());
+        strip.setGravity(Gravity.BOTTOM);
+        android.graphics.drawable.GradientDrawable hairline = new android.graphics.drawable.GradientDrawable();
+        hairline.setColor(0x1f5c4938);
+        android.graphics.drawable.LayerDrawable stripBg = new android.graphics.drawable.LayerDrawable(
+            new android.graphics.drawable.Drawable[] { hairline }
+        );
+        stripBg.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        stripBg.setLayerHeight(0, Math.max(1, dp(ctx(), 1)));
+        strip.setBackground(stripBg);
+
+        float density = ctx().getResources().getDisplayMetrics().density;
+        int indicatorHeight = Math.max(3, Math.round(2.5f * density));
+        int tabGap = dp(ctx(), 22);
+
+        for (int i = 0; i < labels.length; i++) {
+            int index = i;
+            boolean isSelected = i == selected;
+            LinearLayout tab = column(ctx());
+            tab.setId(ids[i]);
+            tab.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+            tab.setMinimumHeight(dp(ctx(), 42));
+            tab.setClickable(true);
+            tab.setFocusable(true);
+            tab.setSelected(isSelected);
+            tab.setContentDescription(labels[i]);
+            tab.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 8), false));
+
+            TextView label = text(ctx(), labels[i], 13, isSelected ? 0xff283f2c : 0xff736c5d);
+            label.setTypeface(Typeface.create(
+                isSelected ? "sans-serif-medium" : "sans-serif",
+                isSelected ? Typeface.BOLD : Typeface.NORMAL
+            ));
+            label.setPadding(dp(ctx(), 2), dp(ctx(), 8), dp(ctx(), 2), dp(ctx(), 9));
+            tab.addView(label, new LinearLayout.LayoutParams(-2, -2));
+
+            View indicator = new View(ctx());
+            indicator.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            indicator.setBackground(rounded(ctx(), isSelected ? 0xff315e3a : Color.TRANSPARENT, 0, 99));
+            tab.addView(indicator, new LinearLayout.LayoutParams(-1, indicatorHeight));
+
+            tab.setOnClickListener(v -> change.accept(index));
+            ForestMotion.bind(tab);
+
+            LinearLayout.LayoutParams tabLp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) tabLp.setMarginStart(tabGap);
+            strip.addView(tab, tabLp);
         }
-        return panel;
+        return strip;
+    }
+
+    private LinearLayout editorialPeriodTabs(String[] labels, int[] ids, int selected, IntConsumer change) {
+        LinearLayout strip = row(ctx());
+        strip.setGravity(Gravity.BOTTOM);
+        float density = ctx().getResources().getDisplayMetrics().density;
+        int indicatorHeight = Math.max(3, Math.round(2.5f * density));
+
+        for (int i = 0; i < labels.length; i++) {
+            int index = i;
+            boolean isSelected = i == selected;
+            LinearLayout tab = column(ctx());
+            tab.setId(ids[i]);
+            tab.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+            tab.setMinimumHeight(dp(ctx(), 42));
+            tab.setClickable(true);
+            tab.setFocusable(true);
+            tab.setSelected(isSelected);
+            tab.setContentDescription(labels[i]);
+            tab.setBackground(ripple(ctx(), rounded(ctx(), Color.TRANSPARENT, 0, 8), false));
+
+            TextView label = text(ctx(), labels[i], 13, isSelected ? 0xff274c2f : 0xff7a7364);
+            label.setTypeface(Typeface.create(
+                isSelected ? "sans-serif-medium" : "sans-serif",
+                isSelected ? Typeface.BOLD : Typeface.NORMAL
+            ));
+            label.setPadding(dp(ctx(), 4), dp(ctx(), 9), dp(ctx(), 4), dp(ctx(), 8));
+            tab.addView(label, new LinearLayout.LayoutParams(-2, -2));
+
+            View indicator = new View(ctx());
+            indicator.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            indicator.setBackground(rounded(ctx(), isSelected ? 0xff3b613f : Color.TRANSPARENT, 0, 99));
+            tab.addView(indicator, new LinearLayout.LayoutParams(dp(ctx(), 26), indicatorHeight));
+
+            tab.setOnClickListener(v -> change.accept(index));
+            ForestMotion.bind(tab);
+            strip.addView(tab, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        return strip;
     }
 
     private String statsRange(Calendar start, Calendar end, boolean empty) {
@@ -2336,17 +3451,48 @@ public final class StudyFragment extends Fragment {
         return first.equals(until) ? first : first + " 至 " + until;
     }
 
-    private LinearLayout durationSummary(String range, long total, int sessions, int activeDays) {
-        LinearLayout card = statsPanel(0xffe7edda, 0xffcdd8bb);
+    private int computeStudyStreak(List<StudyNotebook.Record> records) {
+        if (records == null || records.isEmpty()) return 0;
+        Set<String> activeDays = new HashSet<>();
+        for (StudyNotebook.Record r : records) activeDays.add(StudyNotebook.dayKey(r.completedAt));
+        Calendar cursor = StudyFormat.day(StudyNotebook.dayKey(System.currentTimeMillis()));
+        if (!activeDays.contains(StudyNotebook.dayKey(cursor.getTimeInMillis()))) {
+            cursor.add(Calendar.DATE, -1);
+            if (!activeDays.contains(StudyNotebook.dayKey(cursor.getTimeInMillis()))) return 0;
+        }
+        int streak = 0;
+        while (activeDays.contains(StudyNotebook.dayKey(cursor.getTimeInMillis()))) {
+            streak++;
+            cursor.add(Calendar.DATE, -1);
+        }
+        return streak;
+    }
+
+    private LinearLayout heatmapCard(List<StudyNotebook.Record> allScoped, int streak) {
+        LinearLayout card = statsPanel(LIGHT, LINE);
+        LinearLayout top = row(ctx());
+        top.addView(heading(ctx(), "专注热力图", 18), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView detailLabel = text(ctx(), streak > 0 ? "已连续打卡 " + streak + " 天" : "点按格子查看当天时长", 11, DEEP);
+        top.addView(detailLabel);
+        card.addView(top);
+        StudyHeatmapView heatmap = new StudyHeatmapView(ctx());
+        heatmap.setData(allScoped, detailLabel::setText);
+        ForestUi.add(card, heatmap, 10);
+        return card;
+    }
+
+    private LinearLayout durationSummary(String range, long total, int sessions, int activeDays, long avgDaily, int streak) {
+        LinearLayout card = statsPanel(0xfff1f6e9, 0x24456444);
+        card.setElevation(dp(ctx(), 2));
         LinearLayout top = row(ctx());
         top.addView(text(ctx(), "累计专注", 13, DEEP), new LinearLayout.LayoutParams(0, -2, 1));
         ImageView icon = new ImageView(ctx());
         icon.setImageResource(R.drawable.ic_study_sprout);
         icon.setImageTintList(ColorStateList.valueOf(DEEP));
         icon.setPadding(dp(ctx(), 7), dp(ctx(), 7), dp(ctx(), 7), dp(ctx(), 7));
-        icon.setBackground(rounded(ctx(), 0xfff8faed, 0, 12));
+        icon.setBackground(rounded(ctx(), 0xfffffefa, 0x18456444, 12));
         icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        top.addView(icon, new LinearLayout.LayoutParams(dp(ctx(), 36), dp(ctx(), 36)));
+        top.addView(icon, new LinearLayout.LayoutParams(dp(ctx(), 34), dp(ctx(), 34)));
         card.addView(top);
 
         String formatted = StudyFormat.duration(total);
@@ -2359,15 +3505,17 @@ public final class StudyFragment extends Fragment {
         ForestUi.add(card, number, 1);
         ForestUi.add(card, text(ctx(), range, 12, MUTED), 5);
         View line = new View(ctx());
-        line.setBackgroundColor(0xffcdd8bb);
+        line.setBackgroundColor(0x22456444);
         LinearLayout.LayoutParams divider = new LinearLayout.LayoutParams(-1, dp(ctx(), 1));
-        divider.topMargin = dp(ctx(), 13);
+        divider.topMargin = dp(ctx(), 12);
         card.addView(line, divider);
         LinearLayout details = row(ctx());
         details.setGravity(Gravity.TOP);
         stat(details, "学习次数", sessions + " 次", 1);
         stat(details, "学习天数", activeDays + " 天", 1);
-        ForestUi.add(card, details, 12);
+        stat(details, "日均专注", avgDaily > 0 ? StudyFormat.duration(avgDaily) : "0分钟", 1.25f);
+        stat(details, "连续打卡", streak + " 天", 1);
+        ForestUi.add(card, details, 11);
         return card;
     }
 
@@ -2407,9 +3555,9 @@ public final class StudyFragment extends Fragment {
     private void stat(LinearLayout summary, String title, String value, float weight) {
         LinearLayout column = column(ctx());
         column.addView(text(ctx(), title, 10, MUTED));
-        TextView number = heading(ctx(), value, 18);
+        TextView number = heading(ctx(), value, 15);
         number.setMaxLines(2);
-        ForestUi.add(column, number, 8);
+        ForestUi.add(column, number, 5);
         summary.addView(column, new LinearLayout.LayoutParams(0, -2, weight));
     }
 
@@ -2487,22 +3635,21 @@ public final class StudyFragment extends Fragment {
 
     private StudySheet.Pane recordPane(StudySheet sheet, StudyNotebook.Record record, Runnable changed,
                                        boolean editable) {
-        StudySheet.Pane pane = sheetPane(record.subject.title, store.notebook().plan(record.planId).title,
-            R.drawable.ic_study_book);
-        LinearLayout summary = column(ctx());
-        summary.setPadding(dp(ctx(), 16), dp(ctx(), 14), dp(ctx(), 16), dp(ctx(), 14));
-        summary.setBackground(rounded(ctx(), StudySheet.MOSS, 0, 18));
-        summary.addView(heading(ctx(), StudyFormat.duration(record.durationMillis), 28));
-        ForestUi.add(summary, note(new SimpleDateFormat("yyyy年M月d日 HH:mm", Locale.CHINA)
-            .format(new java.util.Date(record.completedAt)) + recordOrigin(record)), 8);
-        pane.body.addView(summary);
+        StudySheet.Pane pane = sheetPane(record.subject.title, store.notebook().plan(record.planId).title, 0);
+        StudySheet.addHairline(pane.body, 0, 14);
+        TextView durHeading = heading(ctx(), StudyFormat.duration(record.durationMillis), 30);
+        durHeading.setFontFeatureSettings("tnum");
+        pane.body.addView(durHeading);
+        ForestUi.add(pane.body, note(new SimpleDateFormat("yyyy年M月d日 HH:mm", Locale.CHINA)
+            .format(new java.util.Date(record.completedAt)) + recordOrigin(record)), 6);
+        StudySheet.addHairline(pane.body, 14, 0);
         StudyWork.Task task = store.notebook().task(record.taskId);
         if (task != null) ForestUi.add(pane.body, note("学习事项 · " + task.title), 12);
         if (!record.note.isEmpty()) {
-            ForestUi.add(pane.body, StudySheet.section(ctx(), "学习手记"), 18);
+            ForestUi.add(pane.body, StudySheet.section(ctx(), "学习手记"), 16);
             TextView entry = text(ctx(), record.note, 14, DEEP);
             entry.setLineSpacing(dp(ctx(), 5), 1);
-            ForestUi.add(pane.body, entry, 7);
+            ForestUi.add(pane.body, entry, 6);
         }
         if (editable) {
             StudyWorkDialogs work = workDialogs(sheet);
@@ -2685,15 +3832,29 @@ public final class StudyFragment extends Fragment {
 
     private void garden() {
         StudyNotebook n = store.notebook();
+
+        // Top bar right side: title only, aligned parallel to the 56dp return door
+        setBarTitle("我的小林地");
+
         LinearLayout content = content();
         body.addView(content);
-        ForestUi.add(content, heading(ctx(), "我的小林地", 27), 15);
-        ForestUi.add(content, note("你在认真生活，森林就在悄悄长大。"), 9);
-        wallet = text(ctx(), "水滴 " + n.water() + "     种子 " + n.seeds(), 13, WOOD);
+        LinearLayout introRow = row(ctx());
+        introRow.setGravity(Gravity.CENTER_VERTICAL);
+        introRow.addView(note("你在认真生活，森林就在悄悄长大。"), new LinearLayout.LayoutParams(0, -2, 1));
+        wallet = text(ctx(), "水滴 " + n.water() + " · 种子 " + n.seeds(), 13, 0xff2e4f2f);
         wallet.setId(R.id.study_wallet);
-        ForestUi.add(content, wallet, 12);
+        wallet.setFontFeatureSettings("tnum");
+        wallet.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        wallet.setPadding(dp(ctx(), 12), dp(ctx(), 6), dp(ctx(), 12), dp(ctx(), 6));
+        wallet.setBackground(rounded(ctx(), 0xffe9efe3, 0xffbfd0b9, 999));
+        LinearLayout.LayoutParams walletLp = new LinearLayout.LayoutParams(-2, -2);
+        walletLp.setMarginStart(dp(ctx(), 10));
+        introRow.addView(wallet, walletLp);
+        ForestUi.add(content, introRow, 8);
         garden = new StudyGardenView(ctx());
         garden.setId(R.id.study_garden_view);
+        StudyPlan currentGardenPlan = n.currentPlan();
+        garden.setCompanion(partnerDrawable(currentGardenPlan == null ? StudyPlan.Partner.SQUIRREL : currentGardenPlan.partner));
         garden.setState(n.planted(), n.growth());
         garden.setOnClickListener(v -> {
             if (garden.busy()) return;
@@ -2703,7 +3864,7 @@ public final class StudyFragment extends Fragment {
             } else toast("这片小小的空地，正等你种下一颗种子。");
         });
         LinearLayout.LayoutParams sceneParams = new LinearLayout.LayoutParams(-1, dp(ctx(), 248));
-        sceneParams.topMargin = dp(ctx(), 14);
+        sceneParams.topMargin = dp(ctx(), 12);
         content.addView(garden, sceneParams);
         TextView name = heading(
             ctx(),
@@ -2744,14 +3905,27 @@ public final class StudyFragment extends Fragment {
             ForestUi.add(content, next, 5);
         }
         boolean canPlantNow = !n.planted() && n.seeds() > 0;
+        boolean canExchangeSeed = !n.planted() && n.seeds() <= 0 && n.water() >= StudyNotebook.SEED_WATER_COST;
         String actionLabel = n.planted()
             ? "给小树浇水 · 1水滴"
-            : (canPlantNow ? "种下一颗种子 · 1种子" : "去专注攒种子（满25分钟 +1）");
-        waterButton = button(ctx(), actionLabel, n.planted() || canPlantNow);
+            : canPlantNow ? "种下一颗种子 · 1种子"
+            : canExchangeSeed ? ("用 " + StudyNotebook.SEED_WATER_COST + " 水滴兑换种子并种下")
+            : ("去专注达标领种子（每日目标 " + n.dailyGoal() + " 分钟）");
+        waterButton = button(ctx(), actionLabel, n.planted() || canPlantNow || canExchangeSeed);
         waterButton.setId(R.id.study_water_button);
         waterButton.setOnClickListener(v -> {
             if (!n.planted() && n.seeds() <= 0) {
-                open(AppDestination.STUDY_FOCUS);
+                if (store.notebook().water() >= StudyNotebook.SEED_WATER_COST) {
+                    perform(() -> {
+                        store.update(book -> {
+                            book.exchangeWaterForSeed();
+                            return null;
+                        });
+                        care();
+                    });
+                } else {
+                    open(AppDestination.STUDY_FOCUS);
+                }
             } else {
                 perform(this::care);
             }
@@ -2760,8 +3934,10 @@ public final class StudyFragment extends Fragment {
         String gentleCopy;
         if (n.planted()) {
             gentleCopy = "休息不会枯萎，小树会一直等你。";
+        } else if (canExchangeSeed) {
+            gentleCopy = "当前已有 " + n.water() + " 滴水，可直接兑换 1 颗种子开始种树。";
         } else if (n.seeds() <= 0) {
-            gentleCopy = "累计专注满 25 分钟，即可领到 1 颗新种子。";
+            gentleCopy = "达成每日 " + n.dailyGoal() + " 分钟目标，或累计满 " + StudyNotebook.SEED_WATER_COST + " 滴水即可获得新种子。";
         } else if (n.trees() == 0) {
             gentleCopy = "第一颗种子，送给愿意开始的你。";
         } else {
@@ -2772,12 +3948,14 @@ public final class StudyFragment extends Fragment {
         ForestUi.add(content, gentle, 10);
         section(content, "一点点，长成了森林", n.trees() + "棵收藏");
         LinearLayout collection = row(ctx());
-        collection.setPadding(dp(ctx(), 12), dp(ctx(), 12), dp(ctx(), 12), dp(ctx(), 12));
-        collection.setBackground(rounded(ctx(), 0xffe9eddd, 0xffd8dec6, 12));
-        for (int i = 0; i < Math.min(3, n.trees()); i++) collection.addView(
-            image(ctx(), R.drawable.savings_tree_stage_3, "已长成的小树"),
-            new LinearLayout.LayoutParams(dp(ctx(), 34), dp(ctx(), 52))
-        );
+        collection.setPadding(dp(ctx(), 14), dp(ctx(), 12), dp(ctx(), 14), dp(ctx(), 12));
+        collection.setBackground(rounded(ctx(), 0xfffffdfa, 0x1e5c4938, 16));
+        collection.setElevation(dp(ctx(), 1));
+        for (int i = 0; i < Math.min(3, n.trees()); i++) {
+            LinearLayout.LayoutParams treeLp = new LinearLayout.LayoutParams(dp(ctx(), 42), dp(ctx(), 48));
+            treeLp.setMarginEnd(dp(ctx(), 6));
+            collection.addView(image(ctx(), R.drawable.savings_tree_stage_3, "已长成的小树"), treeLp);
+        }
         TextView collected = text(
             ctx(),
             n.trees() == 0 ? "森林的故事，等你写下。" : "每一棵，都有你的时间。",
@@ -2786,14 +3964,15 @@ public final class StudyFragment extends Fragment {
         );
         collection.addView(collected, new LinearLayout.LayoutParams(0, -2, 1));
         ForestUi.add(content, collection, 12);
-        section(content, "森林的小小约定", "努力有回响");
+        section(content, "森林的小小约定", "约 1~2 周养成一棵");
         String goal = n.currentPlan() == null ? "达到任一计划的每日学习目标"
-            : "每天达到" + n.dailyGoal() + "分钟目标";
+            : "每天达到 " + n.dailyGoal() + " 分钟目标";
         ForestUi.add(
             content,
             note(
-                "每累计专注25分钟  →  +1水滴\n跨次累计，短短一段也不会浪费。\n\n" +
-                    goal + "  →  +1种子\n每天最多一次，休息和暂停不扣奖励。\n\n浇满100次水  →  收藏小树\n小树长大后，可以再种下新的期待。"
+                "每累计专注 25 分钟  →  +1 水滴\n跨次累计，短短一段也不会浪费。\n\n" +
+                    goal + "  →  +1 种子\n空地无种子时也可用 " + StudyNotebook.SEED_WATER_COST + " 滴水兑换 1 颗。\n\n浇满 " +
+                    StudyGrowth.REQUIRED_WATER + " 次水（约 42 小时，每天 5 小时约 8~9 天）  →  收藏小树\n小树长大后，可以再种下新的期待。"
             ),
             12
         );
@@ -2812,7 +3991,7 @@ public final class StudyFragment extends Fragment {
               });
         garden.setState(store.notebook().planted(), store.notebook().growth());
         wallet.setText(
-            "水滴 " + store.notebook().water() + "     种子 " + store.notebook().seeds()
+            "水滴 " + store.notebook().water() + " · 种子 " + store.notebook().seeds()
         );
         if (growthProgress != null) growthProgress.advanceTo(wasPlanted ? from + 1 : 0);
         waterButton.setEnabled(false);
@@ -2854,6 +4033,13 @@ public final class StudyFragment extends Fragment {
     @Override
     public void onPause() {
         handler.removeCallbacks(tick);
+        if (statusPulseAnimator != null) {
+            statusPulseAnimator.cancel();
+            statusPulseAnimator = null;
+        }
+        if (getActivity() != null) {
+            getActivity().getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
         if (garden != null) garden.setActive(false);
         super.onPause();
     }
@@ -2874,11 +4060,24 @@ public final class StudyFragment extends Fragment {
             activeSheet = null;
         }
         handler.removeCallbacks(tick);
+        if (statusPulseAnimator != null) {
+            statusPulseAnimator.cancel();
+            statusPulseAnimator = null;
+        }
         if (garden != null) garden.setActive(false);
+        topBarTitle = null;
         body = null;
         scroll = null;
         clock = null;
         today = null;
+        dialGoalCaption = null;
+        dialRightCaption = null;
+        activeStatusText = null;
+        focusStatusPill = null;
+        focusStatusDot = null;
+        focusStatusLabel = null;
+        focusGentleNote = null;
+        startPauseButton = null;
         garden = null;
         growthProgress = null;
         dial = null;

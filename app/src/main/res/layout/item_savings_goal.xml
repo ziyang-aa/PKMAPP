@@ -19,7 +19,7 @@
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="GOAL CARD · SEEDLING"
+            android:text="攒钱心愿卡"
             android:textColor="@color/forest_green"
             android:textSize="10sp"
             android:textStyle="bold" />

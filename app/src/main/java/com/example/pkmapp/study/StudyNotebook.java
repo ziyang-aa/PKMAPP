@@ -524,12 +524,23 @@ public final class StudyNotebook {
         return total;
     }
 
+    public static final int SEED_WATER_COST = 6;
+
     public void plant() {
         if (planted) throw new IllegalStateException("这棵小树还在成长中");
         if (seeds < 1) throw new IllegalStateException("达成每日学习目标，就能获得一颗新种子");
         seeds--;
         planted = true;
         growth = 0;
+    }
+
+    public void exchangeWaterForSeed() {
+        if (planted) throw new IllegalStateException("这棵小树还在成长中");
+        if (water < SEED_WATER_COST) {
+            throw new IllegalStateException("累计满 " + SEED_WATER_COST + " 滴水即可兑换一颗新种子");
+        }
+        water -= SEED_WATER_COST;
+        seeds++;
     }
 
     /** The complete transaction is saved before the UI starts its animation. */

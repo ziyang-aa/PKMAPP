@@ -2,32 +2,24 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="#20456444" />
+        </shape>
+    </item>
+    <item android:bottom="1dp" android:left="1dp" android:right="1dp" android:top="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="23dp" />
             <gradient
                 android:angle="135"
-                android:endColor="#C6E1AA"
-                android:startColor="#E2EFCF" />
-            <corners android:radius="28dp" />
+                android:startColor="#F5F9EE"
+                android:endColor="#E6F0DA" />
         </shape>
     </item>
-
-    <item
-        android:gravity="right|center_vertical"
-        android:width="236dp"
-        android:height="236dp"
-        android:right="8dp">
-        <shape android:shape="oval">
-            <solid android:color="#35F1F5D7" />
-        </shape>
-    </item>
-
-    <item
-        android:gravity="right|top"
-        android:width="76dp"
-        android:height="76dp"
-        android:top="12dp"
-        android:right="48dp">
-        <shape android:shape="oval">
-            <solid android:color="#70FFF8DF" />
+    <item android:bottom="2dp" android:left="2dp" android:right="2dp" android:top="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="22.5dp" />
+            <stroke android:width="1dp" android:color="#75FFFFFF" />
+            <solid android:color="@android:color/transparent" />
         </shape>
     </item>
 </layer-list>

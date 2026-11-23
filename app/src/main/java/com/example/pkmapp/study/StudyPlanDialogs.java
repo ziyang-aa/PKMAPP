@@ -171,13 +171,13 @@ final class StudyPlanDialogs {
         for (StudyNotebook.Record record : records) total += record.durationMillis;
         String latest = records.isEmpty() ? "暂无学习记录" : StudyNotebook.dayKey(records.get(0).completedAt);
         StudySheet.Pane pane = pane("完成「" + plan.title + "」", null, R.drawable.ic_study_sprout);
-        LinearLayout report = column(context);
-        report.setPadding(dp(context, 17), dp(context, 15), dp(context, 17), dp(context, 15));
-        report.setBackground(rounded(context, MOSS, 0, 18));
-        add(report, text(context, "累计专注", 12, DEEP), 0);
-        add(report, heading(context, StudyFormat.duration(total), 30), 5);
-        add(report, text(context, records.size() + " 次学习 · 最后学习日 " + latest, 12, MUTED), 9);
-        add(pane.body, report, 0);
+        StudySheet.addHairline(pane.body, 0, 14);
+        add(pane.body, text(context, "累计专注", 12, DEEP), 0);
+        TextView dur = heading(context, StudyFormat.duration(total), 30);
+        dur.setFontFeatureSettings("tnum");
+        add(pane.body, dur, 5);
+        add(pane.body, text(context, records.size() + " 次学习 · 最后学习日 " + latest, 12, MUTED), 8);
+        StudySheet.addHairline(pane.body, 14, 0);
         pane.primary("完成并归档", () -> save(() -> store.update(n -> {
             n.archive(plan.id, System.currentTimeMillis());
             return null;
@@ -347,22 +347,83 @@ final class StudyPlanDialogs {
 
         private void showPartner() {
             partnerView.removeAllViews();
-            add(partnerView, StudySheet.item(context, "学习伙伴", partner.title, R.drawable.ic_leaf,
-                OAT, "›", false, this::partners), 0);
+            LinearLayout row = partnerOptionRow(
+                "学习伙伴",
+                partner.title + " · " + partner.subtitle,
+                StudyFragment.partnerDrawable(partner),
+                "›",
+                false,
+                this::partners
+            );
+            add(partnerView, row, 0);
         }
 
         private void partners() {
-            StudySheet.Pane pane = pane("学习伙伴", null, R.drawable.ic_leaf);
-            for (StudyPlan.Partner choice : StudyPlan.Partner.values()) {
+            StudySheet.Pane pane = pane("学习伙伴", "选一位手绘森林伙伴，陪你完成这段学习计划", R.drawable.ic_leaf);
+            StudyPlan.Partner[] all = StudyPlan.Partner.values();
+            for (int i = 0; i < all.length; i++) {
+                StudyPlan.Partner choice = all[i];
                 boolean current = choice == partner;
-                add(pane.body, StudySheet.item(context, choice.title, null, R.drawable.ic_study_sprout,
-                    current ? MOSS : Color.TRANSPARENT, current ? "✓" : null, current, () -> {
+                LinearLayout option = partnerOptionRow(
+                    choice.title,
+                    choice.subtitle,
+                    StudyFragment.partnerDrawable(choice),
+                    current ? "✓" : null,
+                    current,
+                    () -> {
                         partner = choice;
                         showPartner();
                         sheet.pop();
-                    }), 6);
+                    }
+                );
+                add(pane.body, option, i == 0 ? 4 : 6);
+                if (i < all.length - 1) {
+                    View divider = new View(context);
+                    divider.setBackgroundColor(0x185c4938);
+                    LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-1, Math.max(1, dp(context, 0.75f)));
+                    dlp.topMargin = dp(context, 4);
+                    pane.body.addView(divider, dlp);
+                }
             }
             sheet.push(pane);
+        }
+
+        private LinearLayout partnerOptionRow(String titleText, String detailText, int avatarRes,
+                                              String trailing, boolean selected, Runnable click) {
+            LinearLayout row = row(context);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(context, 10), dp(context, 10), dp(context, 12), dp(context, 10));
+            row.setMinimumHeight(dp(context, 64));
+            row.setBackground(ripple(context, rounded(context, selected ? MOSS : Color.TRANSPARENT, 0, 14), false));
+            row.setClickable(true);
+            row.setFocusable(true);
+            row.setSelected(selected);
+            row.setOnClickListener(v -> click.run());
+            ForestMotion.bind(row);
+
+            ImageView avatar = new ImageView(context);
+            avatar.setImageResource(avatarRes);
+            avatar.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            avatar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            LinearLayout.LayoutParams avatarLp = new LinearLayout.LayoutParams(dp(context, 50), dp(context, 50));
+            avatarLp.setMarginEnd(dp(context, 14));
+            row.addView(avatar, avatarLp);
+
+            LinearLayout copy = column(context);
+            TextView title = text(context, titleText, 16, selected ? DEEP : 0xff243624);
+            title.setTypeface(Typeface.create(selected ? "serif" : "sans-serif-medium", Typeface.BOLD));
+            copy.addView(title);
+            if (detailText != null && !detailText.isEmpty()) {
+                add(copy, text(context, detailText, 12, MUTED), 3);
+            }
+            row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
+
+            if (trailing != null) {
+                TextView end = text(context, trailing, selected ? 17 : 18, selected ? DEEP : MUTED);
+                end.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                row.addView(end);
+            }
+            return row;
         }
 
         private void showShelf() {
@@ -580,16 +641,10 @@ final class StudyPlanDialogs {
             StudySheet.Pane pane = pane(track.title + "专业", "期末课程",
                 R.drawable.ic_study_book);
             LinearLayout list = column(context);
-            list.setBackground(rounded(context, LIGHT, 0, 16));
             for (StudyCatalog.Group group : StudyCatalog.GROUPS) {
                 if (group.track != track) continue;
                 if (list.getChildCount() > 0) {
-                    View divider = new View(context);
-                    divider.setBackgroundColor(LINE);
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(context, 1));
-                    params.setMarginStart(dp(context, 12));
-                    params.setMarginEnd(dp(context, 12));
-                    list.addView(divider, params);
+                    StudySheet.addHairline(list, 0, 0);
                 }
                 String count = group.entries.size() + " 门";
                 LinearLayout major = StudySheet.item(context, group.title, null, 0, Color.TRANSPARENT,

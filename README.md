@@ -1,99 +1,130 @@
-# PKMAPP（芽叶记）
+# 芽叶记（PKMAPP）
 
-宝可梦森林绘本风格的个人记账 Android 应用，使用 Java 和 XML 开发。
+静奢纸感 × 手绘蜡笔森林绘本风格的个人**学习 + 生活记账**双空间 Android 应用，采用纯 **Java + XML / 原生自定义 View** 开发（无 Kotlin / Jetpack Compose 依赖，全量本地离线存储）。
 
-## 项目功能
+---
 
-- 森林绘本风格的横向首页，以及固定的五项底部导航。
-- 支出和收入分类记账，支持备注、日期、自定义分类和四则计算器。
-- 多账本创建与切换、按日期分组的交易明细、本月收入/支出/结余统计。
-- 收支趋势图表、周/月/年统计和分类排行。
-- 攒钱目标、存入金额和目标进度。
-- 借入/借出记录、联系人、日期和借钱统计。
-- 汇率换算，支持联网刷新和上次成功汇率缓存。
-- 个人资料、昵称、头像裁剪、每日签到和资产管理。
+## 核心功能
 
-## 技术结构
+### 1. 森林门厅（Home）
+- 手绘蜡笔双小屋全景入口：**学习小屋（松栗）** 与 **生活小屋（小刺猬与小芽）**。
+- **今日速览**：展示今日专注时长、待办事项数与本月支出，点击直达对应页面。
+- 支持「记住上次进入的小屋」叶片开关；若存在进行中/暂停中的专注会话，顶部显示快捷续接入口。
+
+### 2. 学习小屋（Study Space）
+- **专注（森林自习室）**：支持多学习计划（考研 / 期末 / 自定义科目书架）、正计时 / 倒计时切换、自定义专注时长、屏幕常亮与通知栏后台控时，结束时可修正时长/科目并记录学习手记与下次续接点。
+- **待办（独立草稿本）**：与学习计划完全解耦，采用互斥三分区 **「今天（逾期置顶 + 今日）/ 计划（未来按日 + 随时可做）/ 已完成（按实际完成日期与时刻倒序日志）」**，内置自绘瓷白日历**按日期筛选**（带待办/逾期/已完成三色圆点标记与相邻日翻页）、草稿本底部快记以及独立的截止通知提醒。
+- **学习足迹（统计）**：累计专注摘要（次数/天数/日均/连续打卡）、科目分布（环形占比点按高亮 / 科目时长条形图 / 每日趋势）、6 周森林专注热力图、科目汇总与历史手记搜索/补记/待回顾。
+- **我的小林地（成长花园）**：每累计专注 25 分钟获得 1 水滴，每日首次达标获得 1 种子（也可用 6 水滴兑换 1 种子）；浇灌 100 次水滴养成一棵手绘蜡笔成树并永久收录进林地收藏。
+
+### 3. 生活小屋（Life Space）
+- **明细**：多账本切换、本月收入/支出/结余统计、按日期分组的交易流水，内嵌**汇率换算**与**借钱统计**快捷入口。
+- **图表**：周 / 月 / 年收支趋势折线图与分类占比排行榜。
+- **记一笔**：23+1 项支出分类与 10+1 项收入分类（支持自定义分类）、四则计算器、日期选择与借贷自动联动。
+- **攒钱**：创建多个攒钱目标，记录存入进度与幼芽成长阶段。
+- **我的（森林档案）**：头像裁剪、昵称编辑、每日签到、总资产快照与账单 JSON 导出/导入。
+
+---
+
+## 项目结构
 
 ```text
-app/src/main/java/com/example/pkmapp/
-├─ data/       账本、交易和本地数据管理
-├─ home/       首页森林场景
-├─ details/    交易明细和账本切换
-├─ record/     记账、金额解析和计算器
-├─ charts/     图表统计和趋势绘制
-├─ savings/    攒钱目标
-├─ borrowing/  借钱/借出记录
-├─ exchange/   汇率换算
-├─ profile/    头像、昵称、签到和资产
-└─ navigation/ 页面导航
+PKMAPP/
+├─ README.md                                  # 项目说明与结构导航
+├─ AGENTS.md                                  # 项目 Agent 工程与设计总规范（反多纯色卡片、三图层等）
+├─ DESIGN.md                                  # 芽叶记视觉与交互设计规范（静奢纸感体系）
+├─ docs/
+│  ├─ REFACTORING-PLAN.md                     # 长期维护与渐进式重构执行计划（Agent 可执行版）
+│  └─ WORKLOG-2026-11-22.md                   # 阶段性改版工作日志
+├─ build.gradle.kts                           # 根工程 Gradle 配置
+├─ settings.gradle.kts                        # 模块与仓库配置
+├─ gradle.properties                          # Gradle 构建参数
+├─ gradlew / gradlew.bat                      # Gradle Wrapper 脚本
+├─ gradle/                                    # Wrapper 与依赖版本目录
+└─ app/
+   ├─ build.gradle.kts                        # Android App 模块构建配置
+   ├─ proguard-rules.pro                      # 混淆规则
+   └─ src/
+      ├─ main/
+      │  ├─ AndroidManifest.xml               # 组件、通知与权限声明
+      │  ├─ java/com/example/pkmapp/
+      │  │  ├─ SplashActivity.java            # 手绘蜡笔启动过渡页
+      │  │  ├─ SplashScreenTiming.java        # 启动页展示时长控制
+      │  │  ├─ MainActivity.java              # 单 Activity 容器、双空间切换与底部磨砂导航
+      │  │  ├─ navigation/                    # 全局页面枚举（AppDestination）
+      │  │  ├─ home/                          # 森林门厅（HomeFragment、PanoramaSizing）
+      │  │  ├─ forest/                        # 公共森林组件库（设计系统底座）
+      │  │  │  ├─ ForestUi.java               # 通用排版、按钮、无框叶片开关与复选框工厂
+      │  │  │  ├─ ForestCalendarView.java     # 自绘瓷白纸感日历（含三色待办圆点标记）
+      │  │  │  ├─ ForestSegmentedControl.java # 弹性滑动胶囊分段栏
+      │  │  │  ├─ ForestNotebookPad.java      # 手工草稿纸待办容器
+      │  │  │  ├─ ForestTodoRow.java          # 笔绘打勾与划线动效待办行
+      │  │  │  ├─ ForestSceneView.java        # 首页双小屋全景画布
+      │  │  │  ├─ FrostedNavigationBar.java   # 底部悬浮磨砂导航栏
+      │  │  │  ├─ CrayonCard.java             # 暖瓷纸感卡片背景
+      │  │  │  ├─ StudyBackdrop.java          # 森林纸纹与落叶背景
+      │  │  │  └─ ForestButton / ForestSurface / ForestMotion / ForestBitmaps / ForestDialogBuilder
+      │  │  ├─ study/                         # 学习小屋核心业务与自绘视图
+      │  │  │  ├─ StudyFragment.java          # 专注 / 待办 / 学习足迹 / 小林地四页主控制器
+      │  │  │  ├─ StudySheet.java             # 多层级返回栈瓷白底部弹窗框架
+      │  │  │  ├─ StudyPlanDialogs.java       # 学习计划与科目书架管理弹窗
+      │  │  │  ├─ StudyWorkDialogs.java       # 学习记录补记、回顾与计划事项表单
+      │  │  │  ├─ StudyClockFace.java         # 极简横向渐变进度条时钟组件
+      │  │  │  ├─ StudyChartView.java         # 环形占比（可点按）/ 科目条形 / 每日趋势自绘图
+      │  │  │  ├─ StudyHeatmapView.java       # 近 6 周每日专注热力图
+      │  │  │  ├─ StudyGardenView.java        # 手绘蜡笔小树生长与浇水动画场景
+      │  │  │  ├─ StudyGrowth / StudyGrowthProgress / StudyNotebook / StudyStore
+      │  │  │  └─ StudyPlan / StudySubject / StudyCatalog / StudyWork / StudyFormat / StudyNotifications
+      │  │  ├─ todo/                          # 独立待办数据层与截止提醒通知
+      │  │  │  ├─ TodoStore.java              # 独立待办持久化与排序
+      │  │  │  └─ TodoNotifications.java      # 截止前提醒闹钟与测试通知
+      │  │  ├─ data/                          # 生活记账核心数据模型与本地持久化（Ledger、Transaction、AssetStore）
+      │  │  ├─ details/                       # 明细页与账本列表适配器
+      │  │  ├─ record/                        # 记一笔页面、分类图标解析（CategoryIconResolver）与计算器
+      │  │  ├─ charts/                        # 收支趋势折线图与分类排行
+      │  │  ├─ savings/                       # 攒钱目标页面与存储
+      │  │  ├─ borrowing/                     # 借入/借出统计、自定义日历与账本联动
+      │  │  ├─ exchange/                      # 实时汇率拉取、缓存与换算
+      │  │  ├─ profile/                       # 森林档案、头像裁剪与每日签到
+      │  │  └─ backup/                        # 账单 JSON 导入导出与去重合并
+      │  └─ res/
+      │     ├─ layout/                        # 25 个 XML 页面与列表项布局
+      │     ├─ drawable/                      # 矢量图标、卡片圆角与按钮状态样式
+      │     ├─ drawable-nodpi/                # 手绘蜡笔插画、分类图标（norm_type_*）与纸纹图
+      │     ├─ mipmap-*/                      # 应用桌面图标
+      │     ├─ color/ & values/               # 色彩 Token、尺寸、样式与主题定义
+      │     └─ anim/ & xml/                   # 转场动画与备份规则
+      ├─ test/                                # 33 个 JVM 本地单元测试（无需设备）
+      └─ androidTest/                         # 7 个真机/模拟器 UI 与集成测试
 ```
 
-- `MainActivity` 是页面容器，负责底部导航和 Fragment 切换。
-- `SplashActivity` 是启动画面。
-- `app/src/main/res/layout` 存放 XML 页面布局。
-- `app/src/main/res/drawable` 存放图标、按钮和背景样式。
-- `app/src/main/res/drawable-nodpi` 存放森林背景、角色和分类图片。PNG 和 WebP 可以混用；大图优先使用无损 WebP 或经过检查的高质量 WebP。
-- `app/src/test` 存放不需要手机的单元测试。
-- `app/src/androidTest` 存放需要模拟器或真机的 Android 测试。
+---
 
-## 数据保存方式
+## 数据存储与备份
 
-项目目前不使用云端账号和数据库，数据保存在手机本地：
+所有数据均保存在设备本地，不依赖云端账号：
 
-- 账本和交易：应用私有的 `SharedPreferences`。
-- 攒钱目标、借钱记录和资产：各自的本地存储。
-- 用户头像：应用私有文件目录。
-- 汇率：联网获取，并缓存最近一次成功结果。
+- **生活记账数据**：账本、交易、攒钱目标、借钱记录、资产与自定义分类存放在应用私有 `SharedPreferences`，头像保存在应用私有目录。可在 **「生活小屋 → 我的 → 导出/导入账单」** 保存或恢复 `.pkmbackup.json`（支持完全覆盖或按「时间 + 金额 + 备注」去重合并）。
+- **学习与待办数据**：学习计划、专注记录、林地成长与独立待办分别保存在 `forest_study_v1` 与 `forest_todo_v1`。可在 **「学习小屋 → 当前计划 → 学习备份」** 导出或合并恢复 JSON 备份。
 
-卸载 App 或清除 App 数据会删除这些本地数据。
-
-## 账单备份与恢复
-
-在 App 的“我的”页面：
-
-1. 点击“导出账单”，通过系统保存窗口保存一个 `.pkmbackup.json` 文件。
-2. 重装 App 后，点击“导入账单”并选择这个备份文件。
-3. 根据需要选择“完全覆盖”或“合并导入”。
-
-“完全覆盖”会用备份内容替换本地账本、交易、攒钱目标、资产和借钱记录。“合并导入”会保留本地数据，并按“发生时间 + 金额 + 备注”跳过重复交易。导入成功后，明细、图表、攒钱和资产页面会重新读取数据。
-
-备份文件只保存在你选择的位置，不会自动上传到服务器。建议把它保存到电脑、云盘或其他安全位置。
+---
 
 ## 构建与测试
 
-Windows PowerShell 可以在项目根目录执行：
+在项目根目录（Windows PowerShell）执行编译与全部本地单元测试：
 
 ```powershell
-./gradlew.bat testDebugUnitTest compileDebugAndroidTestSources assembleDebug
+.\gradlew.bat testDebugUnitTest compileDebugAndroidTestSources assembleDebug
 ```
 
-如果已经连接 Android 模拟器或真机，还可以执行：
+连接 Android 模拟器或真机后，可执行 UI 集成测试：
 
 ```powershell
-./gradlew.bat connectedDebugAndroidTest
+.\gradlew.bat connectedDebugAndroidTest
 ```
 
-调试 APK 生成在：
+生成的调试安装包位于：
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
-
-## GitHub 上传说明
-
-应该上传：
-
-- `app/src` 中的 Java、XML、图片和测试代码。
-- `build.gradle.kts`、`settings.gradle.kts`、`gradle.properties`。
-- `gradle/`、`gradlew`、`gradlew.bat`。
-- `README.md`、`.gitignore` 和 `app/proguard-rules.pro`。
-
-不应该上传：
-
-- `build/` 和 `app/build/` 生成的构建产物。
-- `.gradle/`、`.idea/`、`local.properties` 等本机配置。
-- 开发过程中的 `build-*.png` 截图和模拟器临时文件。
-- 含有密码、密钥、令牌或个人路径的配置文件。
-
-本仓库会保留能让其他人从源码重新构建 App 所需的代码、资源和 Gradle 配置，不会把本机生成文件一起提交。

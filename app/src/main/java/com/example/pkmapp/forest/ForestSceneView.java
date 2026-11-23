@@ -63,8 +63,8 @@ public final class ForestSceneView extends View {
                 0,
                 0,
                 h,
-                new int[] { 0xff000000, 0xff000000, 0xdd000000, 0x55000000, 0x00000000 },
-                new float[] { 0, .64f, .74f, .90f, 1 },
+                new int[] { 0xff000000, 0xff000000, 0xe8000000, 0x66000000, 0x00000000 },
+                new float[] { 0, .84f, .91f, .97f, 1 },
                 Shader.TileMode.CLAMP
             )
         );

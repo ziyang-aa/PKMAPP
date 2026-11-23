@@ -117,7 +117,26 @@ public final class HomeFragment extends Fragment {
         ScrollView scroll = new ScrollView(requireContext());
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
-        ForestUi.paper(scroll);
+        scroll.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(scroll, (view, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                    | androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            );
+            view.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 12));
+            return insets;
+        });
+        androidx.core.view.WindowInsetsCompat initialInsets =
+            androidx.core.view.ViewCompat.getRootWindowInsets(
+                requireActivity().getWindow().getDecorView()
+            );
+        if (initialInsets != null) {
+            androidx.core.graphics.Insets bars = initialInsets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                    | androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            );
+            scroll.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 12));
+        }
         LinearLayout content = column(requireContext());
         scroll.addView(content);
 
@@ -138,20 +157,13 @@ public final class HomeFragment extends Fragment {
         TextView brand = heading(requireContext(), "芽叶记", 20);
         brand.setPadding(dp(requireContext(), 7), 0, 0, 0);
         header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView badge = text(requireContext(), "你的生活集合", 10, DEEP);
-        badge.setPadding(
-            dp(requireContext(), 10),
-            dp(requireContext(), 5),
-            dp(requireContext(), 10),
-            dp(requireContext(), 5)
-        );
-        badge.setBackground(rounded(requireContext(), 0xffe8eddb, 0xffccd5b9, 20));
+        TextView badge = text(requireContext(), "学习 · 记账", 11, MUTED);
         header.addView(badge);
         content.addView(header);
 
         FrameLayout scene = new FrameLayout(requireContext());
         scene.addView(
-            new ForestSceneView(requireContext(), R.drawable.crayon_cottages, .32f, false),
+            new ForestSceneView(requireContext(), R.drawable.crayon_cottages, .52f, false),
             new FrameLayout.LayoutParams(-1, -1)
         );
         LinearLayout greeting = column(requireContext());
@@ -162,7 +174,7 @@ public final class HomeFragment extends Fragment {
         FrameLayout.LayoutParams copy = new FrameLayout.LayoutParams(-1, -2);
         copy.setMargins(
             dp(requireContext(), 22),
-            dp(requireContext(), 14),
+            dp(requireContext(), 10),
             dp(requireContext(), 14),
             0
         );
@@ -183,18 +195,18 @@ public final class HomeFragment extends Fragment {
         );
         FrameLayout.LayoutParams doorParams = new FrameLayout.LayoutParams(
             -1,
-            dp(requireContext(), 124),
+            dp(requireContext(), 148),
             Gravity.BOTTOM
         );
-        doorParams.bottomMargin = dp(requireContext(), 12);
+        doorParams.bottomMargin = dp(requireContext(), 8);
         scene.addView(doors, doorParams);
-        content.addView(scene, new LinearLayout.LayoutParams(-1, dp(requireContext(), 316)));
+        content.addView(scene, new LinearLayout.LayoutParams(-1, dp(requireContext(), 356)));
 
         LinearLayout partners = row(requireContext());
         partners.setGravity(Gravity.TOP);
         partners.setPadding(
             dp(requireContext(), 12),
-            dp(requireContext(), 20),
+            dp(requireContext(), 16),
             dp(requireContext(), 12),
             0
         );
@@ -402,7 +414,7 @@ public final class HomeFragment extends Fragment {
         ForestMotion.bind(choice);
         ImageView art = image(
             requireContext(),
-            study ? R.drawable.crayon_study_companion : R.drawable.balance_bulbasaur_coin,
+            study ? R.drawable.crayon_study_companion : R.drawable.turtwig_carrying_acorn_jar,
             null
         );
         choice.addView(art, new LinearLayout.LayoutParams(-1, dp(requireContext(), 148)));

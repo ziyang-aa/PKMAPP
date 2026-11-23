@@ -2,6 +2,7 @@ package com.example.pkmapp.study;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -9,12 +10,14 @@ import android.graphics.Typeface;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.MotionEvent;
 import android.view.View;
 import com.example.pkmapp.forest.ForestUi;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class StudyChartView extends View {
@@ -29,13 +32,15 @@ public final class StudyChartView extends View {
     private List<StudyNotebook.Record> records = new ArrayList<>();
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Map<StudySubject, Long> times = new LinkedHashMap<>();
-    private float ringHeight = 274;
+    private StudySubject selectedSubject;
+    private float ringHeight = 252;
     private long start;
     private int days = 7;
 
     public StudyChartView(Context context) {
         super(context);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        setClickable(true);
     }
 
     public void setData(List<StudyNotebook.Record> records, Kind kind, long start, int days) {
@@ -43,6 +48,7 @@ public final class StudyChartView extends View {
         this.kind = kind;
         this.start = start;
         this.days = days;
+        this.selectedSubject = null;
         Map<StudySubject, Long> durations = new LinkedHashMap<>();
         for (StudyNotebook.Record record : records)
             durations.merge(record.subject, record.durationMillis, Long::sum);
@@ -58,7 +64,7 @@ public final class StudyChartView extends View {
             if (Math.cos(Math.toRadians(angle + sweep / 2)) >= 0) right++;
             angle += sweep;
         }
-        ringHeight = Math.max(250, 54 + Math.max(right, times.size() - right) * 38f);
+        ringHeight = Math.max(236, 48 + Math.max(right, times.size() - right) * 36f);
         StringBuilder description = new StringBuilder(kind == Kind.TREND ? "学习趋势，" : "各科目学习时长，");
         description.append("合计").append(StudyFormat.duration(total)).append("。");
         for (Map.Entry<StudySubject, Long> entry : times.entrySet())
@@ -79,8 +85,8 @@ public final class StudyChartView extends View {
             resolveSize(
                 Math.round(
                     chartWidth(width) / 360f * (records.isEmpty() ? 0
-                        : kind == Kind.BARS ? 15 + times.size() * 38
-                        : kind == Kind.TREND ? 234 : ringHeight)
+                        : kind == Kind.BARS ? 14 + times.size() * 40
+                        : kind == Kind.TREND ? 228 : ringHeight)
                 ),
                 heightSpec
             )
@@ -101,11 +107,26 @@ public final class StudyChartView extends View {
         int color,
         Paint.Align align
     ) {
+        text(c, value, x, y, size, color, align, Typeface.create("sans-serif", Typeface.NORMAL));
+    }
+
+    private void text(
+        Canvas c,
+        String value,
+        float x,
+        float y,
+        float size,
+        int color,
+        Paint.Align align,
+        Typeface typeface
+    ) {
         paint.setShader(null);
+        paint.setPathEffect(null);
         paint.setStyle(Paint.Style.FILL);
         paint.setStrokeWidth(1);
         paint.setTextSize(size);
-        paint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        paint.setTypeface(typeface);
+        paint.setFontFeatureSettings("tnum");
         paint.setColor(color);
         paint.setTextAlign(align);
         c.drawText(value, x, y, paint);
@@ -121,9 +142,56 @@ public final class StudyChartView extends View {
         c.translate((getWidth() - width) / 2, 0);
         c.scale(width / 360f, width / 360f);
         if (kind == Kind.RING) drawRing(c, total);
-        else if (kind == Kind.BARS) drawBars(c);
+        else if (kind == Kind.BARS) drawBars(c, total);
         else drawTrend(c);
         c.restore();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (kind == Kind.RING && event.getAction() == MotionEvent.ACTION_UP && getWidth() > 0) {
+            long total = total();
+            if (total > 0) {
+                float width = chartWidth(getWidth());
+                float scale = width / 360f;
+                float lx = (event.getX() - (getWidth() - width) / 2f) / scale;
+                float ly = event.getY() / scale;
+                float cx = 180f;
+                float cy = ringHeight / 2f - 2f;
+                float dx = lx - cx;
+                float dy = ly - cy;
+                float dist = (float) Math.hypot(dx, dy);
+                if (dist < 42f) {
+                    if (selectedSubject != null) {
+                        selectedSubject = null;
+                        invalidate();
+                        performClick();
+                        return true;
+                    }
+                } else if (dist <= 86f) {
+                    double deg = Math.toDegrees(Math.atan2(dy, dx));
+                    float fromTop = (float) ((deg + 90 + 360) % 360);
+                    float acc = 0f;
+                    for (Map.Entry<StudySubject, Long> entry : times.entrySet()) {
+                        float sweep = (360f * entry.getValue()) / total;
+                        if (fromTop >= acc && fromTop <= acc + sweep) {
+                            StudySubject tapped = entry.getKey();
+                            selectedSubject = tapped.equals(selectedSubject) ? null : tapped;
+                            invalidate();
+                            performClick();
+                            return true;
+                        }
+                        acc += sweep;
+                    }
+                }
+            }
+        }
+        return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean performClick() {
+        return super.performClick();
     }
 
     private long total() {
@@ -142,24 +210,31 @@ public final class StudyChartView extends View {
             long duration = entry.getValue();
             float sweep = (360f * duration) / total;
             double mid = Math.toRadians(angle + sweep / 2);
+            boolean isSelected = subject.equals(selectedSubject);
+            boolean dimmed = selectedSubject != null && !isSelected;
+
+            paint.setPathEffect(null);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(24);
+            paint.setStrokeWidth(isSelected ? 24f : 21f);
             paint.setStrokeCap(Paint.Cap.BUTT);
             paint.setColor(subject.color);
+            paint.setAlpha(dimmed ? 90 : 255);
+            float gap = count > 1 ? Math.min(1.4f, sweep * .08f) : 0f;
             c.drawArc(
-                new RectF(120, center - 60, 240, center + 60),
-                angle,
-                sweep - (count > 1 ? Math.min(.9f, sweep * .08f) : 0),
+                new RectF(122, center - 58, 238, center + 58),
+                angle + gap / 2f,
+                Math.max(0.5f, sweep - gap),
                 false,
                 paint
             );
+            paint.setAlpha(255);
             labels.add(
                 new Label(
                     subject,
                     duration,
-                    180 + (float) Math.cos(mid) * 72,
-                    center + (float) Math.sin(mid) * 72,
-                    center + (float) Math.sin(mid) * 95,
+                    180 + (float) Math.cos(mid) * 70,
+                    center + (float) Math.sin(mid) * 70,
+                    center + (float) Math.sin(mid) * 92,
                     Math.cos(mid) >= 0
                 )
             );
@@ -171,79 +246,115 @@ public final class StudyChartView extends View {
             side.sort((a, b) -> Float.compare(a.target, b.target));
             for (int i = 0; i < side.size(); i++) side.get(i).target = Math.max(
                 side.get(i).target,
-                i == 0 ? 26 : side.get(i - 1).target + 38
+                i == 0 ? 22 : side.get(i - 1).target + 36
             );
             if (!side.isEmpty()) {
-                side.get(side.size() - 1).target = Math.min(ringHeight - 30, side.get(side.size() - 1).target);
+                side.get(side.size() - 1).target = Math.min(ringHeight - 24, side.get(side.size() - 1).target);
                 for (int i = side.size() - 2; i >= 0; i--) side.get(i).target = Math.min(
                     side.get(i).target,
-                    side.get(i + 1).target - 38
+                    side.get(i + 1).target - 36
                 );
             }
         }
         TextPaint measure = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         for (Label label : labels) {
-            float elbow = label.right ? 257 : 103,
-                end = label.right ? 264 : 96,
-                x = label.right ? 268 : 92;
-            paint.setColor(0xff8e8e75);
+            boolean isSelected = label.subject.equals(selectedSubject);
+            boolean dimmed = selectedSubject != null && !isSelected;
+            float elbow = label.right ? 255 : 105,
+                end = label.right ? 262 : 98,
+                x = label.right ? 266 : 94;
+            paint.setPathEffect(null);
+            paint.setColor(0x597b5c3b);
+            paint.setAlpha(dimmed ? 45 : 95);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(.9f);
+            paint.setStrokeWidth(.95f);
             Path path = new Path();
             path.moveTo(label.x, label.y);
             path.lineTo(elbow, label.y);
             path.lineTo(end, label.target);
             c.drawPath(path, paint);
+
             Paint.Align align = label.right ? Paint.Align.LEFT : Paint.Align.RIGHT;
-            measure.setTextSize(11.5f);
+            measure.setTextSize(11.2f);
             String labelText = TextUtils.ellipsize(label.subject.title, measure, 90, TextUtils.TruncateAt.END).toString();
-            text(c, labelText, x, label.target - 4, 11.5f, ForestUi.WOOD, align);
+            int nameColor = dimmed ? 0x707b5c3b : ForestUi.WOOD;
+            int valColor = dimmed ? 0x70283f2c : ForestUi.DEEP;
+            text(
+                c,
+                labelText,
+                x,
+                label.target - 3.5f,
+                11.2f,
+                nameColor,
+                align,
+                Typeface.create(isSelected ? "sans-serif-medium" : "sans-serif", isSelected ? Typeface.BOLD : Typeface.NORMAL)
+            );
             String duration = StudyFormat.duration(label.duration);
             measure.setTextSize(10.5f);
             text(c, measure.measureText(duration) <= 90 ? duration : compact(label.duration),
-                x, label.target + 11, 10.5f, ForestUi.DEEP, align);
+                x, label.target + 10.5f, 10.5f, valColor, align);
         }
-        text(c, "合计", 180, center - 9, 11, ForestUi.MUTED, Paint.Align.CENTER);
-        String duration = StudyFormat.duration(total);
-        measure.setTextSize(14);
-        String totalLabel = measure.measureText(duration) <= 86 ? duration : compact(total);
-        text(
-            c,
-            totalLabel,
-            180,
-            center + 12,
-            14,
-            ForestUi.DEEP,
-            Paint.Align.CENTER
-        );
+
+        if (selectedSubject != null && times.containsKey(selectedSubject)) {
+            long selMillis = times.get(selectedSubject);
+            measure.setTextSize(10.5f);
+            String title = TextUtils.ellipsize(selectedSubject.title, measure, 84, TextUtils.TruncateAt.END).toString();
+            text(c, title, 180, center - 12, 10.5f, ForestUi.MUTED, Paint.Align.CENTER);
+            String selDur = StudyFormat.duration(selMillis);
+            measure.setTextSize(14f);
+            String selLabel = measure.measureText(selDur) <= 84 ? selDur : compact(selMillis);
+            text(c, selLabel, 180, center + 6, 14f, ForestUi.DEEP, Paint.Align.CENTER, Typeface.create("serif", Typeface.BOLD));
+            double share = (100.0 * selMillis) / total;
+            String pct = share < .1 ? "<0.1%" : String.format(Locale.CHINA, "%.1f%%", share);
+            text(c, pct, 180, center + 21, 10f, 0xff456444, Paint.Align.CENTER, Typeface.create("sans-serif-medium", Typeface.BOLD));
+        } else {
+            text(c, "合计", 180, center - 9, 10.5f, ForestUi.MUTED, Paint.Align.CENTER);
+            String duration = StudyFormat.duration(total);
+            measure.setTextSize(14.5f);
+            String totalLabel = measure.measureText(duration) <= 88 ? duration : compact(total);
+            text(
+                c,
+                totalLabel,
+                180,
+                center + 11,
+                14.5f,
+                ForestUi.DEEP,
+                Paint.Align.CENTER,
+                Typeface.create("serif", Typeface.BOLD)
+            );
+        }
     }
 
-    private void drawBars(Canvas c) {
+    private void drawBars(Canvas c, long total) {
         long max = 1;
         for (long time : times.values()) max = Math.max(max, time);
         int index = 0;
         TextPaint measure = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        measure.setTextSize(11);
+        measure.setTextSize(11.5f);
         for (Map.Entry<StudySubject, Long> entry : times.entrySet()) {
             StudySubject subject = entry.getKey();
             long duration = entry.getValue();
-            float y = 24 + index++ * 38;
-            String label = TextUtils.ellipsize(subject.title, measure, 240, TextUtils.TruncateAt.END).toString();
-            text(c, label, 8, y, 11, ForestUi.WOOD, Paint.Align.LEFT);
+            float y = 22 + index++ * 40;
+            String label = TextUtils.ellipsize(subject.title, measure, 196, TextUtils.TruncateAt.END).toString();
+            text(c, label, 6, y, 11.5f, ForestUi.WOOD, Paint.Align.LEFT);
+            double share = (100.0 * duration) / total;
+            String pct = share < .1 ? "<0.1%" : String.format(Locale.CHINA, "%.1f%%", share);
             text(
                 c,
-                StudyFormat.duration(duration),
-                352,
+                StudyFormat.duration(duration) + " · " + pct,
+                354,
                 y,
-                10,
+                10.5f,
                 ForestUi.DEEP,
                 Paint.Align.RIGHT
             );
-            paint.setColor(0xffececdf);
-            c.drawRoundRect(new RectF(8, y + 8, 352, y + 16), 4, 4, paint);
+            paint.setPathEffect(null);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0xffefece2);
+            c.drawRoundRect(new RectF(6, y + 8, 354, y + 15.5f), 4, 4, paint);
             paint.setColor(subject.color);
             c.drawRoundRect(
-                new RectF(8, y + 8, 8 + (344f * duration) / max, y + 16),
+                new RectF(6, y + 8, 6 + Math.max(8f, (348f * duration) / max), y + 15.5f),
                 4,
                 4,
                 paint
@@ -269,26 +380,43 @@ public final class StudyChartView extends View {
                     record.durationMillis;
             max = Math.max(max, values[i]);
         }
+        paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(1);
+        paint.setColor(0x225c4938);
+        paint.setPathEffect(new DashPathEffect(new float[] { 4f, 4f }, 0));
         for (int i = 0; i < 4; i++) {
-            paint.setColor(0xffe2e2d1);
-            c.drawLine(7, 40 + i * 45, 353, 40 + i * 45, paint);
+            float gy = 36 + i * 46;
+            c.drawLine(6, gy, 354, gy, paint);
         }
-        float column = 344f / count;
+        paint.setPathEffect(null);
+        paint.setStyle(Paint.Style.FILL);
+        float column = 346f / count;
         for (int i = 0; i < count; i++) {
-            float x = 8 + column * (i + .5f),
-                height = (138f * values[i]) / max;
-            paint.setColor(i == count - 1 ? ForestUi.GREEN : 0xff9aad86);
-            c.drawRoundRect(new RectF(x - 12, 180 - Math.max(2, height), x + 12, 180), 5, 5, paint);
-            text(c, compact(values[i]), x, 171 - height, 9, ForestUi.WOOD, Paint.Align.CENTER);
-            text(c, labels[i], x, 199, 10, ForestUi.MUTED, Paint.Align.CENTER);
+            float x = 7 + column * (i + .5f),
+                height = (134f * values[i]) / max;
+            boolean isToday = i == count - 1;
+            paint.setColor(values[i] == 0 ? 0xffeae5d9 : isToday ? 0xff456444 : 0xff9aad86);
+            c.drawRoundRect(new RectF(x - 11.5f, 174 - Math.max(3, height), x + 11.5f, 174), 5, 5, paint);
+            if (values[i] > 0) {
+                text(c, compact(values[i]), x, 165 - height, 9.2f, ForestUi.WOOD, Paint.Align.CENTER);
+            }
+            text(
+                c,
+                labels[i],
+                x,
+                194,
+                10,
+                isToday ? ForestUi.DEEP : ForestUi.MUTED,
+                Paint.Align.CENTER,
+                Typeface.create(isToday ? "sans-serif-medium" : "sans-serif", isToday ? Typeface.BOLD : Typeface.NORMAL)
+            );
         }
         text(
             c,
-            step > 1 ? "每柱最多合计" + step + "天，日期为区间起日" : "每柱代表一天的具体学习时长",
+            step > 1 ? "每柱最多合计" + step + "天 · 深绿为最新区间" : "每柱代表当天学习时长 · 深绿为今日",
             180,
-            224,
-            9,
+            218,
+            9.5f,
             ForestUi.MUTED,
             Paint.Align.CENTER
         );

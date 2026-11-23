@@ -172,7 +172,9 @@ public final class StudyNotebookTest {
         n.start(DAY, 1000, 8);
         StudySubject database = StudyCatalog.book("数据库原理", "", 0);
         StudyPlan finals = n.createPlan("大三上期末", StudyPlan.Kind.FINALS, "2027-01-15",
-            StudyPlan.Partner.TREECKO, Collections.singletonList(database), DAY + 1000);
+            StudyPlan.Partner.BEAR, Collections.singletonList(database), DAY + 1000);
+        assertEquals(StudyPlan.Partner.BEAR, StudyPlan.Partner.parse("TREECKO"));
+        assertEquals(StudyPlan.Partner.BUNNY, StudyPlan.Partner.parse("BULBASAUR"));
         assertFalse(n.currentHasSession());
         assertEquals(45, n.sessionGoal());
         assertEquals(database, n.selected());

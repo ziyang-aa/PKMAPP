@@ -25,6 +25,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.core.datastore.AppPreferences;
 import com.example.pkmapp.forest.ForestDialogBuilder;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSceneView;
@@ -68,17 +69,17 @@ public final class HomeFragment extends Fragment {
     };
 
     public static boolean isRememberLastCottage(@NonNull Context context) {
-        return prefs(context).getBoolean(KEY_REMEMBER_LAST, false);
+        return AppPreferences.getInstance(context).getCurrent().getRememberLastCottage();
     }
 
     public static void setRememberLastCottage(@NonNull Context context, boolean enabled) {
-        prefs(context).edit().putBoolean(KEY_REMEMBER_LAST, enabled).apply();
+        AppPreferences.getInstance(context).setRememberLastCottage(enabled);
     }
 
     public static void recordLastCottage(@NonNull Context context, @NonNull AppDestination destination) {
         if (destination == AppDestination.HOME) return;
         String value = destination.isStudy() ? COTTAGE_STUDY : COTTAGE_LIFE;
-        prefs(context).edit().putString(KEY_LAST_COTTAGE, value).apply();
+        AppPreferences.getInstance(context).setLastCottage(value);
     }
 
     @NonNull
@@ -86,7 +87,7 @@ public final class HomeFragment extends Fragment {
         if (!isRememberLastCottage(context)) {
             return AppDestination.HOME;
         }
-        String last = prefs(context).getString(KEY_LAST_COTTAGE, "");
+        String last = AppPreferences.getInstance(context).getCurrent().getLastCottage();
         if (COTTAGE_STUDY.equals(last)) {
             return AppDestination.STUDY_FOCUS;
         }
@@ -98,14 +99,10 @@ public final class HomeFragment extends Fragment {
 
     @NonNull
     public static String lastCottageLabel(@NonNull Context context) {
-        String last = prefs(context).getString(KEY_LAST_COTTAGE, "");
+        String last = AppPreferences.getInstance(context).getCurrent().getLastCottage();
         if (COTTAGE_STUDY.equals(last)) return "学习小屋";
         if (COTTAGE_LIFE.equals(last)) return "生活小屋";
         return "上次进入的小屋";
-    }
-
-    private static SharedPreferences prefs(@NonNull Context context) {
-        return context.getApplicationContext().getSharedPreferences(PREFS_HOME, Context.MODE_PRIVATE);
     }
 
     @Nullable

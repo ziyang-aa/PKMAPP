@@ -31,6 +31,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.pkmapp.MainActivity
 import com.example.pkmapp.R
+import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.forest.CrayonCard
 import com.example.pkmapp.forest.ForestMotion
 import com.example.pkmapp.forest.ForestUi
@@ -367,13 +368,13 @@ abstract class BaseStudyFragment : Fragment() {
 
     internal fun allowStudyNotifications() {
         if (StudyNotifications.permitted(ctx())) return
-        val flags = ctx().getSharedPreferences("study_ui", Context.MODE_PRIVATE)
+        val appPrefs = AppPreferences.getInstance(ctx())
         if (Build.VERSION.SDK_INT >= 33 && (
-                !flags.getBoolean("askedNotifications", false) ||
+                !appPrefs.current.askedNotifications ||
                     shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
                 )
         ) {
-            flags.edit().putBoolean("askedNotifications", true).apply()
+            appPrefs.setAskedNotifications(true)
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }

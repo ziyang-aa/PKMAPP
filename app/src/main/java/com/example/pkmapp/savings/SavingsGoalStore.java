@@ -1,11 +1,10 @@
 package com.example.pkmapp.savings;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.SavingsGoalDao;
+import com.example.pkmapp.core.database.SavingsGoalEntity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,39 +12,27 @@ import java.util.List;
 import java.util.UUID;
 
 public final class SavingsGoalStore {
-    private static final String PREFERENCES = "savings_goals";
-    private static final String GOALS_KEY = "goals";
-
-    private final SharedPreferences preferences;
+    private final SavingsGoalDao savingsGoalDao;
 
     public SavingsGoalStore(Context context) {
-        preferences = context.getApplicationContext().getSharedPreferences(
-                PREFERENCES, Context.MODE_PRIVATE);
-        if (!preferences.contains(GOALS_KEY)) {
-            save(Collections.emptyList());
-        } else {
-            removeLegacyDemoGoals();
-        }
+        savingsGoalDao = AppDatabase.getInstance(context).savingsGoalDao();
     }
 
     public synchronized List<SavingsGoal> getGoals() {
-        String encoded = preferences.getString(GOALS_KEY, "[]");
-        try {
-            JSONArray array = new JSONArray(encoded);
-            List<SavingsGoal> goals = new ArrayList<>();
-            for (int index = 0; index < array.length(); index++) {
-                JSONObject item = array.getJSONObject(index);
+        List<SavingsGoal> goals = new ArrayList<>();
+        for (SavingsGoalEntity row : savingsGoalDao.getAll()) {
+            try {
                 goals.add(new SavingsGoal(
-                        item.getString("id"),
-                        item.getString("name"),
-                        item.getLong("targetCents"),
-                        item.getLong("savedCents"),
-                        item.getLong("createdAtMillis")));
+                        row.getId(),
+                        row.getTitle(),
+                        row.getTargetCents(),
+                        row.getSavedCents(),
+                        row.getCreatedAtMillis()
+                ));
+            } catch (IllegalArgumentException ignored) {
             }
-            return Collections.unmodifiableList(goals);
-        } catch (JSONException | IllegalArgumentException exception) {
-            return Collections.emptyList();
         }
+        return Collections.unmodifiableList(goals);
     }
 
     public synchronized void replaceGoals(List<SavingsGoal> goals) {
@@ -102,33 +89,23 @@ public final class SavingsGoalStore {
     }
 
     public synchronized void clear() {
-        save(Collections.emptyList());
+        savingsGoalDao.clear();
     }
 
     private void save(List<SavingsGoal> goals) {
-        JSONArray array = new JSONArray();
-        for (SavingsGoal goal : goals) {
-            JSONObject item = new JSONObject();
-            try {
-                item.put("id", goal.getId());
-                item.put("name", goal.getName());
-                item.put("targetCents", goal.getTargetCents());
-                item.put("savedCents", goal.getSavedCents());
-                item.put("createdAtMillis", goal.getCreatedAtMillis());
-            } catch (JSONException exception) {
-                throw new IllegalStateException("保存攒钱目标失败", exception);
-            }
-            array.put(item);
+        List<SavingsGoalEntity> entities = new ArrayList<>(goals.size());
+        for (int index = 0; index < goals.size(); index++) {
+            SavingsGoal goal = goals.get(index);
+            entities.add(new SavingsGoalEntity(
+                    goal.getId(),
+                    goal.getName(),
+                    goal.getTargetCents(),
+                    goal.getSavedCents(),
+                    "",
+                    goal.getCreatedAtMillis(),
+                    index
+            ));
         }
-        preferences.edit().putString(GOALS_KEY, array.toString()).apply();
-    }
-
-    private void removeLegacyDemoGoals() {
-        List<SavingsGoal> goals = new ArrayList<>(getGoals());
-        boolean removed = goals.removeIf(goal -> goal.getId().equals("default-autumn-trip")
-                || goal.getId().equals("default-forest-home"));
-        if (removed) {
-            save(goals);
-        }
+        savingsGoalDao.replaceAll(entities);
     }
 }

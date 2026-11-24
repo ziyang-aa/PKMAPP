@@ -23,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import com.example.pkmapp.R
+import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.forest.ForestMotion
 import com.example.pkmapp.forest.ForestUi
 import com.example.pkmapp.forest.ForestUi.DEEP
@@ -91,9 +92,9 @@ class StudyFocusFragment : BaseStudyFragment() {
         dailyProgressText = null
         dailyProgressBar = null
         renderedToday = null
-        val uiPrefs = ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE)
-        countdownMode = uiPrefs.getBoolean("countdown_mode", false)
-        keepScreenOn = uiPrefs.getBoolean("keep_screen_on", false)
+        val uiSnapshot = AppPreferences.getInstance(ctx()).current
+        countdownMode = uiSnapshot.countdownMode
+        keepScreenOn = uiSnapshot.keepScreenOn
         val notebook = store.notebook()
         renderedRunning = notebook.running()
         renderedSession = notebook.sessionId()
@@ -269,15 +270,13 @@ class StudyFocusFragment : BaseStudyFragment() {
             initialKeepScreenOn = keepScreenOn,
             onToggleCountdown = {
                 countdownMode = !countdownMode
-                ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE)
-                    .edit().putBoolean("countdown_mode", countdownMode).apply()
+                AppPreferences.getInstance(ctx()).setCountdownMode(countdownMode)
                 updateTimer()
                 countdownMode
             },
             onToggleKeepScreenOn = {
                 keepScreenOn = !keepScreenOn
-                ctx().getSharedPreferences("forest_study_ui", Context.MODE_PRIVATE)
-                    .edit().putBoolean("keep_screen_on", keepScreenOn).apply()
+                AppPreferences.getInstance(ctx()).setKeepScreenOn(keepScreenOn)
                 syncKeepScreenOn()
                 keepScreenOn
             },

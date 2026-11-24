@@ -14,6 +14,7 @@ import com.example.pkmapp.borrowing.BorrowingDirection
 import com.example.pkmapp.borrowing.BorrowingRecord
 import com.example.pkmapp.borrowing.BorrowingRecordStore
 import com.example.pkmapp.borrowing.BorrowingTransactionSync
+import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.data.AssetSnapshot
 import com.example.pkmapp.data.AssetStore
 import com.example.pkmapp.data.InMemoryLedgerRepository
@@ -89,7 +90,7 @@ interface LifeDataSource {
 
 internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     private val appContext = context.applicationContext
-    private val profilePrefs = appContext.getSharedPreferences(PREFS_PROFILE, Context.MODE_PRIVATE)
+    private val appPreferences = AppPreferences.getInstance(appContext)
     private val assetStore = AssetStore(appContext)
     private val borrowingStore = BorrowingRecordStore(appContext)
     private val savingsStore = SavingsGoalStore(appContext)
@@ -149,21 +150,21 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
         categoryStore.deleteCategory(type, name)
 
     override fun getNickname(): String =
-        profilePrefs.getString(KEY_NICKNAME, DEFAULT_NICKNAME) ?: DEFAULT_NICKNAME
+        appPreferences.current.nickname
 
     override fun setNickname(nickname: String) {
-        profilePrefs.edit().putString(KEY_NICKNAME, nickname).apply()
+        appPreferences.setNickname(nickname)
     }
 
     override fun getCheckedDates(): Set<String> =
-        HashSet(profilePrefs.getStringSet(KEY_CHECKED_DATES, emptySet()) ?: emptySet())
+        HashSet(appPreferences.current.checkedDates)
 
     override fun saveCheckedDates(dates: Set<String>) {
-        profilePrefs.edit().putStringSet(KEY_CHECKED_DATES, HashSet(dates)).apply()
+        appPreferences.setCheckedDates(dates)
     }
 
     override fun clearProfileAndAvatar() {
-        profilePrefs.edit().clear().apply()
+        appPreferences.clearProfileIdentity()
         AvatarStore.clear(appContext)
     }
 

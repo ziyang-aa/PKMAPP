@@ -1,7 +1,13 @@
 package com.example.pkmapp.todo;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+
+import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.TodoDao;
+import com.example.pkmapp.core.database.TodoItemEntity;
+import com.example.pkmapp.core.datastore.AppPreferences;
+import com.example.pkmapp.core.datastore.AppPreferencesSnapshot;
+
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -9,25 +15,25 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import org.json.JSONArray;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/** Standalone To-Do store, completely independent of study plans and subjects. */
+/** Room + DataStore backed standalone To-Do store, independent of study plans and subjects. */
 public final class TodoStore {
-    private static final String PREFS = "forest_todo_v1";
-    private static final String KEY_DATA = "data";
     private static TodoStore instance;
 
     private final Context appContext;
-    private final SharedPreferences prefs;
+    private final TodoDao todoDao;
+    private final AppPreferences appPreferences;
     private final List<TodoItem> items = new ArrayList<>();
     private boolean remindEnabled = true;
     private String defaultRemindTime = "18:00";
 
     private TodoStore(Context context) {
         this.appContext = context.getApplicationContext();
-        this.prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        this.todoDao = AppDatabase.getInstance(appContext).todoDao();
+        this.appPreferences = AppPreferences.getInstance(appContext);
         load();
     }
 
@@ -38,15 +44,15 @@ public final class TodoStore {
         return instance;
     }
 
-    public boolean remindEnabled() {
+    public synchronized boolean remindEnabled() {
         return remindEnabled;
     }
 
-    public String defaultRemindTime() {
+    public synchronized String defaultRemindTime() {
         return defaultRemindTime;
     }
 
-    public List<TodoItem> pending() {
+    public synchronized List<TodoItem> pending() {
         List<TodoItem> result = new ArrayList<>();
         for (TodoItem item : items) {
             if (item.completed == 0) result.add(item);
@@ -64,7 +70,7 @@ public final class TodoStore {
         return result;
     }
 
-    public List<TodoItem> completed() {
+    public synchronized List<TodoItem> completed() {
         List<TodoItem> result = new ArrayList<>();
         for (TodoItem item : items) {
             if (item.completed > 0) result.add(item);
@@ -73,7 +79,7 @@ public final class TodoStore {
         return result;
     }
 
-    public TodoItem add(
+    public synchronized TodoItem add(
         String title,
         String note,
         String day,
@@ -94,11 +100,11 @@ public final class TodoStore {
             0
         );
         items.add(item);
-        save();
+        saveItems();
         return item;
     }
 
-    public void update(
+    public synchronized void update(
         String id,
         String title,
         String note,
@@ -125,13 +131,13 @@ public final class TodoStore {
                     old.created,
                     completedAt
                 ));
-                save();
+                saveItems();
                 return;
             }
         }
     }
 
-    public void toggleDone(String id, boolean done) {
+    public synchronized void toggleDone(String id, boolean done) {
         for (int i = 0; i < items.size(); i++) {
             TodoItem old = items.get(i);
             if (old.id.equals(id)) {
@@ -147,23 +153,24 @@ public final class TodoStore {
                     old.created,
                     completedAt
                 ));
-                save();
+                saveItems();
                 return;
             }
         }
     }
 
-    public void delete(String id) {
+    public synchronized void delete(String id) {
         items.removeIf(item -> item.id.equals(id));
-        save();
+        saveItems();
     }
 
-    public void setReminderConfig(boolean enabled, String defaultTime) {
+    public synchronized void setReminderConfig(boolean enabled, String defaultTime) {
         String clean = TodoItem.validateTime(defaultTime);
         if (clean.isEmpty()) throw new IllegalArgumentException("请输入时间，例如 18:00");
         this.remindEnabled = enabled;
         this.defaultRemindTime = clean;
-        save();
+        appPreferences.setTodoReminderConfig(enabled, clean);
+        TodoNotifications.refresh(appContext, this);
     }
 
     public static String dayKey(long millis) {
@@ -182,36 +189,47 @@ public final class TodoStore {
 
     private void load() {
         items.clear();
-        String raw = prefs.getString(KEY_DATA, null);
-        if (raw == null || raw.isEmpty()) return;
-        try {
-            JSONObject root = new JSONObject(raw);
-            remindEnabled = root.optBoolean("remindEnabled", true);
-            String rt = TodoItem.validateTime(root.optString("defaultRemindTime", "18:00"));
-            defaultRemindTime = rt.isEmpty() ? "18:00" : rt;
-            JSONArray arr = root.optJSONArray("items");
-            if (arr != null) {
-                for (int i = 0; i < arr.length(); i++) {
-                    items.add(TodoItem.fromJson(arr.getJSONObject(i)));
-                }
+        AppPreferencesSnapshot prefs = appPreferences.getCurrent();
+        remindEnabled = prefs.getTodoRemindEnabled();
+        String rt = TodoItem.validateTime(prefs.getTodoDefaultRemindTime());
+        defaultRemindTime = rt.isEmpty() ? "18:00" : rt;
+        for (TodoItemEntity row : todoDao.getAll()) {
+            try {
+                items.add(new TodoItem(
+                    row.getId(),
+                    row.getTitle(),
+                    row.getNote(),
+                    row.getDueDate(),
+                    row.getDueTime(),
+                    row.getRemind(),
+                    row.getRemindBeforeMinutes(),
+                    row.getCreatedAt(),
+                    row.getCompletedAt()
+                ));
+            } catch (IllegalArgumentException ignored) {
             }
-        } catch (JSONException | IllegalArgumentException ignored) {
-            items.clear();
         }
     }
 
-    private void save() {
-        try {
-            JSONObject root = new JSONObject();
-            root.put("remindEnabled", remindEnabled);
-            root.put("defaultRemindTime", defaultRemindTime);
-            JSONArray arr = new JSONArray();
-            for (TodoItem item : items) arr.put(item.toJson());
-            root.put("items", arr);
-            prefs.edit().putString(KEY_DATA, root.toString()).apply();
-            TodoNotifications.refresh(appContext, this);
-        } catch (JSONException ignored) {
+    private void saveItems() {
+        List<TodoItemEntity> entities = new ArrayList<>(items.size());
+        for (int index = 0; index < items.size(); index++) {
+            TodoItem item = items.get(index);
+            entities.add(new TodoItemEntity(
+                item.id,
+                item.title,
+                item.note,
+                item.day,
+                item.dueTime,
+                item.remind,
+                item.remindLeadMinutes,
+                item.created,
+                item.completed,
+                index
+            ));
         }
+        todoDao.replaceAll(entities);
+        TodoNotifications.refresh(appContext, this);
     }
 
     public static final class TodoItem {

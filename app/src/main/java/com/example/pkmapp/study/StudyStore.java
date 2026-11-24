@@ -4,44 +4,42 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.provider.Settings;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-/** All learning state is committed together, without touching any financial preferences. */
+import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.PkmStorageBootstrap;
+import com.example.pkmapp.core.database.StudyDao;
+import com.example.pkmapp.core.database.StudyDatabaseSnapshot;
+
+/** Room-backed learning store with a cold-standby shadow mirror in SharedPreferences. */
 public final class StudyStore {
 
     private static StudyStore instance;
-    private final SharedPreferences preferences;
+    private final SharedPreferences shadowPreferences;
+    private final StudyDao studyDao;
     private final Context context;
     private StudyNotebook notebook;
     private boolean recoveryWarning;
-    private String pendingLegacy;
 
     private StudyStore(Context context) {
         this.context = context.getApplicationContext();
-        preferences = this.context.getSharedPreferences("forest_study_v1", Context.MODE_PRIVATE);
-        String json = preferences.getString("notebook", null);
+        this.studyDao = AppDatabase.getInstance(this.context).studyDao();
+        this.shadowPreferences = this.context.getSharedPreferences(
+                "forest_study_v1", Context.MODE_PRIVATE);
+        this.recoveryWarning = PkmStorageBootstrap.takeStudyRecoveryWarning();
+
+        StudyDatabaseSnapshot loadedSnapshot = studyDao.loadSnapshot();
+        StudyNotebook restored = null;
         try {
-            notebook = json == null ? new StudyNotebook() : StudyNotebook.fromJson(json);
-            if (json != null && new JSONObject(json).getInt("version") < 3) {
-                pendingLegacy = json;
-            }
-        } catch (RuntimeException | JSONException e) {
-            // Preserve unreadable data before offering a fresh notebook; never silently overwrite it.
-            if (
-                !preferences
-                    .edit()
-                    .putString("unreadable_" + System.currentTimeMillis(), json)
-                    .commit()
-            ) {
-                throw new IllegalStateException("学习存档无法读取，原始数据仍保留在本机", e);
-            }
+            restored = StudyNotebookSqlBridge.fromSnapshot(loadedSnapshot);
+        } catch (RuntimeException e) {
             recoveryWarning = true;
-            notebook = new StudyNotebook();
         }
-        if (pendingLegacy != null && preferences.edit().putString("notebook_before_plans", pendingLegacy)
-            .putString("notebook", notebook.toJson()).commit()) {
-            pendingLegacy = null;
+        if (restored == null) {
+            notebook = new StudyNotebook();
+            studyDao.replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(notebook));
+            shadowPreferences.edit().putString("notebook", notebook.toJson()).commit();
+        } else {
+            notebook = restored;
         }
     }
 
@@ -77,12 +75,10 @@ public final class StudyStore {
         T result;
         try {
             result = action.run(notebook);
-            SharedPreferences.Editor editor = preferences.edit().putString("notebook", notebook.toJson());
-            if (pendingLegacy != null) editor.putString("notebook_before_plans", pendingLegacy);
-            if (!editor.commit()) {
+            studyDao.replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(notebook));
+            if (!shadowPreferences.edit().putString("notebook", notebook.toJson()).commit()) {
                 throw new IllegalStateException("保存未完成，请检查手机存储空间后重试");
             }
-            pendingLegacy = null;
         } catch (RuntimeException e) {
             notebook = StudyNotebook.fromJson(previous);
             throw e;

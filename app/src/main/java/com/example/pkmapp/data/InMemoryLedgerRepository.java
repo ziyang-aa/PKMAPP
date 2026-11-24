@@ -2,6 +2,8 @@ package com.example.pkmapp.data;
 
 import android.content.Context;
 
+import com.example.pkmapp.core.database.AppDatabase;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -50,7 +52,7 @@ public final class InMemoryLedgerRepository {
     }
 
     public static void initialize(Context context) {
-        INSTANCE.attachPersistence(new SharedPreferencesLedgerPersistence(context));
+        INSTANCE.attachPersistence(new RoomLedgerPersistence(AppDatabase.getInstance(context)));
     }
 
     static InMemoryLedgerRepository createForTest() {

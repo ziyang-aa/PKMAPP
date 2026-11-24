@@ -262,6 +262,8 @@ app/src/main/java/com/example/pkmapp/
 - 现有 `BackupCodecTest`、`BackupMergerTest`、`InMemoryLedgerRepositoryTest`、`StudyNotebookTest` 等全部通过；
 - 模拟「先装旧版 v2.0 写测试数据 → 覆盖安装新版 APK」实机验证零丢数、零崩溃。
 
+**执行状态**：已完成（2026-11-24），接入 `Room 2.8.4` + `KSP 2.3.4`（导出 `app/schemas/` `AppDatabase/1.json`）+ `Preferences DataStore 1.1.7`（`AppPreferences`），落地 12 张规范化 SQLite 表与幂等无损迁移器 `LegacySharedPrefsMigrator.kt`（自动冷备至 `filesDir/migration_backup_v1/` 且保留旧版 `SharedPreferences`），新增覆盖全表字段与旧版升级的 `LegacySharedPrefsMigratorTest.kt`（详见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)）。
+
 ---
 
 ### Phase 5：长列表性能优化与真机后台保活（预估 2 天）

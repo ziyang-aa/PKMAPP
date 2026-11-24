@@ -86,8 +86,11 @@ PKMAPP/
       │  │  ├─ todo/                          # 独立待办数据层与截止提醒通知
       │  │  │  ├─ TodoStore.java              # 独立待办持久化与排序
       │  │  │  └─ TodoNotifications.java      # 截止前提醒闹钟与测试通知
+      │  │  ├─ core/                          # 现代化存储底座（Room SQLite + Preferences DataStore）
+      │  │  │  ├─ database/                   # AppDatabase（12 张规范化表、DAO）、LegacySharedPrefsMigrator 无损迁移器
+      │  │  │  └─ datastore/                  # AppPreferences（统一管理档案、门厅、专注与待办提醒偏好）
       │  │  ├─ life/                          # 生活小屋共享 MVVM 状态层（LifeSharedViewModel、LifeSnapshot）
-      │  │  ├─ data/                          # 生活记账核心数据模型与本地持久化（Ledger、Transaction、AssetStore）
+      │  │  ├─ data/                          # 生活记账核心数据模型与 Room 持久化桥接（Ledger、Transaction、AssetStore）
       │  │  ├─ details/                       # 明细页与账本列表适配器
       │  │  ├─ record/                        # 记一笔页面、分类图标解析（CategoryIconResolver）与计算器
       │  │  ├─ charts/                        # 收支趋势折线图与分类排行
@@ -103,7 +106,8 @@ PKMAPP/
       │     ├─ mipmap-*/                      # 应用桌面图标
       │     ├─ color/ & values/               # 色彩 Token、尺寸、样式与主题定义
       │     └─ anim/ & xml/                   # 转场动画与备份规则
-      ├─ test/                                # 35 个 JVM 本地单元测试文件（116 条用例，无需设备）
+      ├─ schemas/                             # Room 自动导出的数据库版本 Schema JSON
+      ├─ test/                                # 36 个 JVM 本地单元测试文件（118 条用例，无需设备）
       └─ androidTest/                         # 7 个真机/模拟器 UI 与集成测试
 ```
 
@@ -113,8 +117,9 @@ PKMAPP/
 
 所有数据均保存在设备本地，不依赖云端账号：
 
-- **生活记账数据**：账本、交易、攒钱目标、借钱记录、资产与自定义分类存放在应用私有 `SharedPreferences`，头像保存在应用私有目录。可在 **「生活小屋 → 我的 → 导出/导入账单」** 保存或恢复 `.pkmbackup.json`（支持完全覆盖或按「时间 + 金额 + 备注」去重合并）。
-- **学习与待办数据**：学习计划、专注记录、林地成长与独立待办分别保存在 `forest_study_v1` 与 `forest_todo_v1`。可在 **「学习小屋 → 当前计划 → 学习备份」** 导出或合并恢复 JSON 备份。
+- **本地结构化存储与平滑升级**：账本、交易、借还记录、攒钱目标、自定义分类、学习计划/科目/记录/事项/回顾/林地与独立待办统一持久化于 **Jetpack Room（SQLite `pkm_app.db`）**，个人档案与界面偏好存储于 **Jetpack Preferences DataStore**；旧版 `SharedPreferences` 升级时由 `LegacySharedPrefsMigrator` 自动先落盘原始 JSON 冷备（`filesDir/migration_backup_v1/`）再单事务无损迁入。
+- **生活记账备份**：可在 **「生活小屋 → 我的 → 导出/导入账单」** 保存或恢复向后兼容的 `.pkmbackup.json`（支持完全覆盖或按「时间 + 金额 + 备注」去重合并）。
+- **学习备份**：可在 **「学习小屋 → 当前计划 → 学习备份」** 导出或合并恢复 JSON 备份。
 
 ---
 

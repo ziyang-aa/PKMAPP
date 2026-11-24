@@ -1,42 +1,45 @@
 package com.example.pkmapp.record;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
+import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.CategoryDao;
+import com.example.pkmapp.core.database.CustomCategoryEntity;
 import com.example.pkmapp.data.TransactionType;
-
-import org.json.JSONArray;
-import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-/** Persists the categories shown by the record page. */
+/** Room-backed category store for the record and profile management pages. */
 public final class CategoryStore {
-    private static final String PREFERENCES = "record_categories";
-    private static final String CUSTOM_EXPENSE = "custom_expense";
-    private static final String CUSTOM_INCOME = "custom_income";
-    private static final String DELETED_EXPENSE = "deleted_expense";
-    private static final String DELETED_INCOME = "deleted_income";
-
-    private final SharedPreferences preferences;
+    private final CategoryDao categoryDao;
 
     public CategoryStore(Context context) {
-        preferences = context.getApplicationContext().getSharedPreferences(
-                PREFERENCES, Context.MODE_PRIVATE);
+        categoryDao = AppDatabase.getInstance(context).categoryDao();
     }
 
     public synchronized List<String> getCategories(TransactionType type) {
+        List<CustomCategoryEntity> rows = categoryDao.getByType(type.name());
+        Set<String> deletedDefaults = new HashSet<>();
+        List<String> customAdded = new ArrayList<>();
+        for (CustomCategoryEntity row : rows) {
+            if (row.isDeletedDefault()) {
+                deletedDefaults.add(row.getName());
+            } else {
+                customAdded.add(row.getName());
+            }
+        }
         List<String> categories = new ArrayList<>();
-        List<String> deleted = readList(deletedKey(type));
         for (String category : defaultCategories(type)) {
-            if (!deleted.contains(category)) {
+            if (!deletedDefaults.contains(category)) {
                 categories.add(category);
             }
         }
-        for (String category : readList(customKey(type))) {
+        for (String category : customAdded) {
             if (!categories.contains(category)) {
                 categories.add(category);
             }
@@ -46,15 +49,23 @@ public final class CategoryStore {
 
     public synchronized boolean addCustomCategory(TransactionType type, String name) {
         String normalized = normalize(name);
-        if (normalized.isEmpty() || defaultCategories(type).contains(normalized)) {
+        if (normalized.isEmpty() || "自定义".equals(normalized)) {
             return false;
         }
-        List<String> categories = new ArrayList<>(readList(customKey(type)));
-        if (categories.contains(normalized)) {
+        List<String> defaults = defaultCategories(type);
+        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized);
+        if (defaults.contains(normalized)) {
+            if (existing != null && existing.isDeletedDefault()) {
+                categoryDao.deleteByTypeAndName(type.name(), normalized);
+                return true;
+            }
             return false;
         }
-        categories.add(normalized);
-        writeList(customKey(type), categories);
+        if (existing != null) {
+            return false;
+        }
+        int nextSort = categoryDao.maxSortOrder(type.name()) + 1;
+        categoryDao.upsert(new CustomCategoryEntity(0L, type.name(), normalized, false, nextSort));
         return true;
     }
 
@@ -63,20 +74,18 @@ public final class CategoryStore {
         if (normalized.isEmpty() || "自定义".equals(normalized)) {
             return false;
         }
-        List<String> custom = new ArrayList<>(readList(customKey(type)));
-        if (custom.remove(normalized)) {
-            writeList(customKey(type), custom);
-            return true;
+        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized);
+        if (existing != null && !existing.isDeletedDefault()) {
+            return categoryDao.deleteByTypeAndName(type.name(), normalized) > 0;
         }
         if (!defaultCategories(type).contains(normalized)) {
             return false;
         }
-        List<String> deleted = new ArrayList<>(readList(deletedKey(type)));
-        if (deleted.contains(normalized)) {
+        if (existing != null && existing.isDeletedDefault()) {
             return false;
         }
-        deleted.add(normalized);
-        writeList(deletedKey(type), deleted);
+        int nextSort = categoryDao.maxSortOrder(type.name()) + 1;
+        categoryDao.upsert(new CustomCategoryEntity(0L, type.name(), normalized, true, nextSort));
         return true;
     }
 
@@ -93,39 +102,6 @@ public final class CategoryStore {
         }
         return Arrays.asList("工资", "奖金", "兼职", "生活费", "收红包", "退款报销", "理财利息",
                 "转卖", "收回欠款", "借入");
-    }
-
-    private String customKey(TransactionType type) {
-        return type == TransactionType.EXPENSE ? CUSTOM_EXPENSE : CUSTOM_INCOME;
-    }
-
-    private String deletedKey(TransactionType type) {
-        return type == TransactionType.EXPENSE ? DELETED_EXPENSE : DELETED_INCOME;
-    }
-
-    private List<String> readList(String key) {
-        String encoded = preferences.getString(key, "[]");
-        try {
-            JSONArray array = new JSONArray(encoded);
-            List<String> values = new ArrayList<>();
-            for (int index = 0; index < array.length(); index++) {
-                String value = normalize(array.getString(index));
-                if (!value.isEmpty() && !values.contains(value)) {
-                    values.add(value);
-                }
-            }
-            return values;
-        } catch (JSONException exception) {
-            return Collections.emptyList();
-        }
-    }
-
-    private void writeList(String key, List<String> values) {
-        JSONArray array = new JSONArray();
-        for (String value : values) {
-            array.put(value);
-        }
-        preferences.edit().putString(key, array.toString()).apply();
     }
 
     private String normalize(String value) {

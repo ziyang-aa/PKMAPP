@@ -1,4 +1,4 @@
-# Kotlin 由 AGP 9 内置提供（KGP 2.2.10），不单独声明 kotlin-android 插件；ksp 先占位给 Phase 4，当前不应用。
+# Kotlin 由 AGP 9 内置提供（KGP 2.2.10），不单独声明 kotlin-android 插件；Phase 4 启用 ksp + Room + DataStore。
 [versions]
 agp = "9.1.1"
 junit = "4.13.2"
@@ -14,6 +14,8 @@ lifecycle = "2.9.4"
 coroutines = "1.10.2"
 activityKtx = "1.10.1"
 ksp = "2.3.4"
+room = "2.8.4"
+datastore = "1.1.7"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -32,7 +34,13 @@ lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtim
 lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }

@@ -53,3 +53,16 @@
 | `ProfileFragment` 拆解粒度与线程模型 | 拆为 `ProfileFragment`（`< 350` 行）+ `AvatarCropSheetController` + `AssetAndLedgerDialogs` + `BackupCoordinator` | 移除 970 行 `ProfileFragment.java`，落地 138 行 `ProfileFragment.kt` + `AvatarCropSheetController.kt` + `BackupCoordinator.kt` + `AssetAndLedgerDialogs.kt` + `ProfileIdentityDialogs.kt`，并彻底淘汰原有的 2 个裸 `ExecutorService` 线程池，统一改用 `viewLifecycleOwner.lifecycleScope` + `Dispatchers.IO` | 将昵称编辑、签到日历与清空全部数据进一步内聚到 `ProfileIdentityDialogs.kt`，使主 Fragment 与所有子控制器均保持在 `138–290` 行的极薄规模，且异步 IO 随视图生命周期自动取消、无泄漏 |
 | Java Fragment 订阅 `StateFlow` 桥接方式 | Java 侧调用处通过轻量桥接或 `LiveData` 兼容 | 在 `LifeSharedViewModel`、`ExchangeViewModel`、`StudySharedViewModel` 上提供基于 `owner.lifecycleScope` + `repeatOnLifecycle(Lifecycle.State.STARTED)` 的 `observe(LifecycleOwner, Consumer)` / `observeOverview` 桥接方法 | 无需额外引入 `LiveData` 中间层开销，Java Fragment 仅需 1 行即可安全绑定 `getViewLifecycleOwner()` 生命周期收集 `StateFlow`，同时保持存量稳定的 Java 视图构建逻辑不作无意义的语言重写 |
 | `SavingsFragment` 差量重绘保护 | 观察 `LifeSharedViewModel` 自动同步 | 在 `SavingsFragment` 中缓存已渲染目标快照并按字段比对（`sameGoals`），仅在攒钱目标集合实际变化时重建卡片 | 既保证了备份导入或清空数据后攒钱页自动刷新，又避免无关字段（如昵称/签到）更新时误刷用户正在填写的新建空白目标卡 |
+
+---
+
+## Phase 4：存储层现代化 —— Jetpack Room + DataStore + 无损迁移（2026-11-24）
+
+### 方案与结构偏离
+
+| 调整项 | 计划原文 | 实际做法 | 理由 |
+| --- | --- | --- | --- |
+| 表结构细节增强（11 表 → 12 表 + 复合主键） | 定义 `study_subjects`（单主键 `id`）与 11 张表 | 增设 `study_reviews` 表承接 `StudyNotebook` 回顾事项，共 **12 张规范化表**；同时将 `study_subjects` 主键设为复合主键 `(planId, id)`（外键级联 `planId`） | 计划开启下一轮复习（如「408 二轮」）时会沿用相同科目标识（如 `"DATA_STRUCTURES"`），若仅以 `id` 为主键会覆盖上一轮已归档计划的科目考试日期；复合主键 `(planId, id)` 与新增 `study_reviews` 实现了 100% 领域保真 |
+| `StudyNotebook` 与 Room 表映射方式 | 将 `forest_study_v1` 拆入 `study_*` 表 | 在保持 922 行 `StudyNotebook.java` 纯领域校验逻辑零修改的前提下，提供同包 `StudyNotebookSqlBridge.kt` 在 6 张规范化 SQL 表与 `StudyNotebook` 间做双向无损拆解/重组，并在 `StudyStore` 写入 Room 后同步维护 `forest_study_v1` 过渡期影子镜像 | 既让 SQLite 表完全结构化可查询、自动触发 `StudyNotebook` 完整性校验，又完整保留了 `StudyPlanFlowTest` 与 `StudyNavigationTest` 对 `forest_study_v1`（含 `notebook_before_plans`）的测试契约及降级安全兜底 |
+| 迁移触发时机 | 在 `Application` / 数据库首次打开时检查并执行 | 通过 `PkmStorageBootstrap.ensureInitialized(context)` 在 `AppDatabase.getInstance` / `AppPreferences.getInstance` 首次访问时懒触发幂等迁移 | 仪表测试（如 `StudyPlanFlowTest`）会在进程启动后、`MainActivity` 拉起前向 `SharedPreferences` 写入旧版测试夹具；懒触发迁移确保测试夹具与真实用户旧档都能在首次读取前精准迁入 Room + DataStore |
+| `BackupManager` 导入资产顺序兼容 | `ledgers` 表直接承载 `initialAssetsCents` 与 `liabilitiesCents` | `LedgerDao.saveStartingValues` 对尚未入表的账本先写入 `sortOrder = -1` 资产占位行，待 `saveLedgerAndTransactionState` 执行时自动合并真实账本名与排序 | `BackupManager.apply()` 先调用 `assetStore.saveStartingValues` 再调用 `repository.replaceState`；占位合并机制无需额外拆表即可保证 JSON 备份覆盖/合并导入时资产与负债分毫不差 |

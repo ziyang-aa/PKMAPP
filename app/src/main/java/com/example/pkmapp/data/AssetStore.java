@@ -1,34 +1,33 @@
 package com.example.pkmapp.data;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
-/** Persists the starting asset and liability values for each ledger. */
+import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.LedgerDao;
+import com.example.pkmapp.core.database.LedgerEntity;
+
+/** Persists the starting asset and liability values for each ledger in Room. */
 public final class AssetStore {
-    private static final String PREFERENCES = "forest_assets";
-    private static final String INITIAL_ASSETS_PREFIX = "initial_assets_";
-    private static final String LIABILITIES_PREFIX = "liabilities_";
-
-    private final SharedPreferences preferences;
+    private final LedgerDao ledgerDao;
 
     public AssetStore(Context context) {
-        preferences = context.getApplicationContext().getSharedPreferences(
-                PREFERENCES, Context.MODE_PRIVATE);
+        ledgerDao = AppDatabase.getInstance(context).ledgerDao();
     }
 
     public AssetSnapshot getSnapshot(String ledgerId, long ledgerNetFlowInCents) {
         String safeLedgerId = requireLedgerId(ledgerId);
-        return new AssetSnapshot(
-                preferences.getLong(INITIAL_ASSETS_PREFIX + safeLedgerId, 0L),
-                preferences.getLong(LIABILITIES_PREFIX + safeLedgerId, 0L),
-                ledgerNetFlowInCents);
+        LedgerEntity row = ledgerDao.getById(safeLedgerId);
+        long initialAssets = row == null ? 0L : row.getInitialAssetsCents();
+        long liabilities = row == null ? 0L : row.getLiabilitiesCents();
+        return new AssetSnapshot(initialAssets, liabilities, ledgerNetFlowInCents);
     }
 
     public StartingValues getStartingValues(String ledgerId) {
         String safeLedgerId = requireLedgerId(ledgerId);
-        return new StartingValues(
-                preferences.getLong(INITIAL_ASSETS_PREFIX + safeLedgerId, 0L),
-                preferences.getLong(LIABILITIES_PREFIX + safeLedgerId, 0L));
+        LedgerEntity row = ledgerDao.getById(safeLedgerId);
+        long initialAssets = row == null ? 0L : row.getInitialAssetsCents();
+        long liabilities = row == null ? 0L : row.getLiabilitiesCents();
+        return new StartingValues(initialAssets, liabilities);
     }
 
     public void saveStartingValues(String ledgerId, long initialAssetsInCents,
@@ -37,10 +36,7 @@ public final class AssetStore {
         if (initialAssetsInCents < 0L || liabilitiesInCents < 0L) {
             throw new IllegalArgumentException("资产和负债不能为负数");
         }
-        preferences.edit()
-                .putLong(INITIAL_ASSETS_PREFIX + safeLedgerId, initialAssetsInCents)
-                .putLong(LIABILITIES_PREFIX + safeLedgerId, liabilitiesInCents)
-                .apply();
+        ledgerDao.saveStartingValues(safeLedgerId, initialAssetsInCents, liabilitiesInCents);
     }
 
     public void addLiability(String ledgerId, long amountInCents) {
@@ -48,22 +44,16 @@ public final class AssetStore {
         if (amountInCents <= 0L) {
             throw new IllegalArgumentException("负债金额必须大于零");
         }
-        long current = preferences.getLong(LIABILITIES_PREFIX + safeLedgerId, 0L);
-        preferences.edit()
-                .putLong(LIABILITIES_PREFIX + safeLedgerId, current + amountInCents)
-                .apply();
+        ledgerDao.addLiability(safeLedgerId, amountInCents);
     }
 
     public void clear() {
-        preferences.edit().clear().apply();
+        ledgerDao.clearAllAssetValues();
     }
 
     public void deleteStartingValues(String ledgerId) {
         String safeLedgerId = requireLedgerId(ledgerId);
-        preferences.edit()
-                .remove(INITIAL_ASSETS_PREFIX + safeLedgerId)
-                .remove(LIABILITIES_PREFIX + safeLedgerId)
-                .apply();
+        ledgerDao.resetAssetValuesForLedger(safeLedgerId);
     }
 
     private static String requireLedgerId(String ledgerId) {

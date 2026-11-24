@@ -5,7 +5,6 @@ import static com.example.pkmapp.forest.ForestUi.*;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
@@ -44,9 +43,6 @@ import java.util.List;
 
 public final class HomeFragment extends Fragment {
 
-    private static final String PREFS_HOME = "forest_home_prefs";
-    private static final String KEY_REMEMBER_LAST = "remember_last_cottage";
-    private static final String KEY_LAST_COTTAGE = "last_cottage";
     private static final String COTTAGE_STUDY = "STUDY";
     private static final String COTTAGE_LIFE = "LIFE";
 
@@ -499,6 +495,7 @@ public final class HomeFragment extends Fragment {
             lifeViewModel.refresh();
         }
         refreshOverview();
+        handler.removeCallbacks(tick);
         handler.post(tick);
         if (
             Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()
@@ -520,6 +517,7 @@ public final class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         handler.removeCallbacks(tick);
+        for (ObjectAnimator animation : breathing) animation.cancel();
         breathing.clear();
         resume = null;
         summaryFocusValue = null;

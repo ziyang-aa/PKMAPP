@@ -295,6 +295,7 @@ app/src/main/java/com/example/pkmapp/
 1. **Release 打包与安全签名**：
    - 在 `app/build.gradle.kts` 的 `release` 构建开启 `isMinifyEnabled = true` 与 `isShrinkResources = true`，完善 `app/proguard-rules.pro`（保留 Room Entity/DAO、动态反射图标、JSON 序列化字段）。
    - 配置基于 `local.properties` / 环境变量的稳定签名 keystore（keystore 文件严禁入库），保证自己手机可长期覆盖升级。
+   - **执行状态（6.1）**：已完成（2026-11-24），已启用 `isMinifyEnabled = true` + `isShrinkResources = true`，新增 `app/src/main/res/raw/keep.xml` 保护 `norm_type_*` 等动态分类图标，完善 `app/proguard-rules.pro` 与 `.gitignore`（屏蔽 `*.jks`/`*.keystore`/`keystore.properties`），配置 `local.properties`（`release.storeFile` 等）与环境变量（`PKM_STORE_*`）签名接入及 `CategoryIconKeepContractTest.kt`（详见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)）。第 6.2 节（WebDAV）与第 6.3 节（Compose 新页）作为后续按需扩展项保留。
 2. **可选个人数据云同步（WebDAV）**：
    - 基于 Room + 现有 JSON/SQLite 快照机制，新增一个轻量 WebDAV 同步模块（兼容坚果云 / 自建 NAS），支持手动同步与 `WorkManager` 每日 Wi-Fi 自动备份，零服务器运维成本。
 3. **可选新页采用 Jetpack Compose**：

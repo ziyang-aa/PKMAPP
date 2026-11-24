@@ -38,3 +38,8 @@ local.properties
 /build-*.png
 /build-*.xml
 /emulator-window.xml
+
+# Release signing keystores and credentials (never commit)
+*.jks
+*.keystore
+keystore.properties

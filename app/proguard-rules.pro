@@ -1,21 +1,30 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# PKMAPP (芽叶记) R8 / ProGuard 规则
+-keepattributes SourceFile,LineNumberTable,Signature,InnerClasses,EnclosingMethod,*Annotation*
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Room 数据库、Entity、DAO 与自动生成实现类
+-keep class com.example.pkmapp.core.database.** { *; }
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.room.paging.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# WorkManager 反射构造的后台 Worker
+-keep class com.example.pkmapp.core.work.ReminderRescheduleWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# XML 布局反射实例化的自定义 View
+-keep public class com.example.pkmapp.** extends android.view.View {
+    public <init>(android.content.Context);
+    public <init>(android.content.Context, android.util.AttributeSet);
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+}
+
+# 动态资源解析（Resources.getIdentifier("norm_type_...", "drawable", ...)）
+-keep class com.example.pkmapp.record.CategoryIconResolver { *; }
+
+# 枚举反射与序列化安全保留
+-keepclassmembers enum com.example.pkmapp.** {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

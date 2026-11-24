@@ -2,6 +2,7 @@ package com.example.pkmapp.life
 
 import com.example.pkmapp.borrowing.BorrowingDirection
 import com.example.pkmapp.borrowing.BorrowingRecord
+import com.example.pkmapp.core.datastore.AppPreferencesSnapshot
 import com.example.pkmapp.data.AssetSnapshot
 import com.example.pkmapp.data.InMemoryLedgerRepository
 import com.example.pkmapp.data.TransactionType
@@ -26,7 +27,7 @@ class LifeSharedViewModelTest {
         private val goals = ArrayList<SavingsGoal>()
         private val expCategories = ArrayList(CategoryStore.defaultCategories(TransactionType.EXPENSE))
         private val incCategories = ArrayList(CategoryStore.defaultCategories(TransactionType.INCOME))
-        private var currentNickname = AndroidLifeDataSource.DEFAULT_NICKNAME
+        private var currentNickname = AppPreferencesSnapshot.DEFAULT_NICKNAME
         private val dates = LinkedHashSet<String>()
         var avatarClearedCount = 0
 
@@ -113,6 +114,13 @@ class LifeSharedViewModelTest {
             return list.remove(name.trim())
         }
 
+        override fun clearCategories() {
+            expCategories.clear()
+            expCategories.addAll(CategoryStore.defaultCategories(TransactionType.EXPENSE))
+            incCategories.clear()
+            incCategories.addAll(CategoryStore.defaultCategories(TransactionType.INCOME))
+        }
+
         override fun getNickname(): String = currentNickname
 
         override fun setNickname(nickname: String) {
@@ -127,7 +135,7 @@ class LifeSharedViewModelTest {
         }
 
         override fun clearProfileAndAvatar() {
-            currentNickname = AndroidLifeDataSource.DEFAULT_NICKNAME
+            currentNickname = AppPreferencesSnapshot.DEFAULT_NICKNAME
             dates.clear()
             avatarClearedCount++
         }
@@ -207,10 +215,14 @@ class LifeSharedViewModelTest {
         vm.updateNickname("芽叶测试员")
         assertEquals("芽叶测试员", vm.snapshot.value.nickname)
 
+        assertTrue(vm.addCustomCategory(TransactionType.EXPENSE, "手办盲盒"))
+        assertTrue(vm.snapshot.value.expenseCategories.contains("手办盲盒"))
+
         vm.clearAllUserData()
         val cleared = vm.snapshot.value
-        assertEquals(AndroidLifeDataSource.DEFAULT_NICKNAME, cleared.nickname)
+        assertEquals(AppPreferencesSnapshot.DEFAULT_NICKNAME, cleared.nickname)
         assertTrue(cleared.checkedDates.isEmpty())
+        assertFalse(cleared.expenseCategories.contains("手办盲盒"))
         assertEquals(1, fake.avatarClearedCount)
     }
 }

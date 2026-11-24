@@ -94,6 +94,10 @@ public final class CategoryStore {
                 + getCategories(TransactionType.INCOME).size();
     }
 
+    public synchronized void clear() {
+        categoryDao.clear();
+    }
+
     public static List<String> defaultCategories(TransactionType type) {
         if (type == TransactionType.EXPENSE) {
             return Arrays.asList("餐饮", "美团", "淘宝闪购", "饮料", "实体购物", "网购", "零食",

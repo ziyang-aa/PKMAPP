@@ -1,6 +1,19 @@
 # 芽叶记（PKMAPP）
 
-静奢纸感 × 手绘蜡笔森林绘本风格的个人**学习 + 生活记账**双空间 Android 应用，以 **Java + XML / 原生自定义 View** 为主，已开启 **Kotlin 混编基础设施**（AGP 9 内置 Kotlin、Lifecycle、Coroutines），无 Jetpack Compose 依赖，全量本地离线存储。
+> **当前版本：`v3.0.0`**（基于 Java 11 + Kotlin 2.2 混编、双空间 MVVM + `StateFlow`、Jetpack Room + DataStore、`RecyclerView` 差分列表与前台服务保活架构）
+
+静奢纸感 × 手绘蜡笔森林绘本风格的个人**学习 + 生活记账**双空间 Android 应用，完整保留 14 个自绘 `Canvas` 组件，无 Jetpack Compose 依赖，全量本地离线存储。
+
+---
+
+## v3.0.0 架构重构与更新说明（相对 v2.0.0-stable）
+
+1. **构建与 Kotlin 混编底座**：接入 AGP `9.1.1` 内置 Kotlin（`KGP 2.2.10`）、`KSP 2.3.4`、`Lifecycle 2.9.4` 与 `Coroutines 1.10.2`，零退化复用全部 14 个 Java 自绘 `Canvas` 视图。
+2. **巨类拆解与双空间 MVVM 统一**：移除 4,088 行 `StudyFragment.java` 与 970 行 `ProfileFragment.java`，拆解为职责单一的子 Fragment 与弹窗/视图控制器（单文件均 `< 500` 行）；新增 `StudySharedViewModel`、`LifeSharedViewModel` 与 `ExchangeViewModel`（`StateFlow` 驱动），淘汰裸线程池并统一为生命周期感知协程 IO（含 SAF 备份导入/导出异步防中断保护）。
+3. **Room + Preferences DataStore 存储升级与无损迁移**：新增 `AppDatabase`（12 张规范化 SQLite 表，自动导出 `app/schemas/`）与 `AppPreferences` DataStore；内置 `LegacySharedPrefsMigrator` 幂等迁移器，升级前自动冷备原始 JSON 至 `filesDir/migration_backup_v1/` 再单事务无损迁入全部 12 份旧版 `SharedPreferences`，完全兼容旧版 `.pkmbackup.json` 导入导出。
+4. **长列表 `RecyclerView + ListAdapter + DiffUtil` 性能优化**：学习待办草稿本（`StudyTodoListAdapter` + 独立驻留底部快记栏）、学习记录搜索抽屉（`StudyRecordListAdapter`）、借钱按日流水（`BorrowingListAdapter`）及 24 币种汇率速览/搜索弹窗（`ExchangeMultiRateAdapter` / `ExchangePickerAdapter`）全部升级为差分回收列表。
+5. **专注前台服务保活与 `WorkManager` 提醒兜底**：新增 `FocusTimerService`（`FOREGROUND_SERVICE_SPECIAL_USE`）保障锁屏/切后台精准计时与通知栏暂停/继续/结束；接入 `WorkManager 2.10.5`（`ReminderRescheduleWorker` 每 6 小时自动兜底重排学习与待办截止提醒）。
+6. **Release R8 混淆、资源压缩与签名工程化**：开启 `isMinifyEnabled = true` 与 `isShrinkResources = true`（安装包体积由 `28.3 MB` 缩减至 `19.9 MB`，降幅约 30%），通过 `res/raw/keep.xml` 与 `proguard-rules.pro` 保护 `norm_type_*` 动态分类图标及 Room/WorkManager 反射入口，支持 `local.properties` / 环境变量配置正式签名。
 
 ---
 
@@ -108,7 +121,7 @@ PKMAPP/
       │     ├─ color/ & values/               # 色彩 Token、尺寸、样式与主题定义
       │     └─ anim/ & xml/                   # 转场动画与备份规则
       ├─ schemas/                             # Room 自动导出的数据库版本 Schema JSON
-      ├─ test/                                # 36 个 JVM 本地单元测试文件（118 条用例，无需设备）
+      ├─ test/                                # 38 个 JVM 本地单元测试文件（123 条用例，无需设备）
       └─ androidTest/                         # 7 个真机/模拟器 UI 与集成测试
 ```
 
@@ -142,4 +155,21 @@ PKMAPP/
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Release 混淆打包与签名
+
+Release 构建已启用 R8 代码混淆压缩（`isMinifyEnabled = true`）与资源压缩（`isShrinkResources = true`）。在项目根目录 `local.properties`（或环境变量 `PKM_STORE_FILE`、`PKM_STORE_PASSWORD`、`PKM_KEY_ALIAS`、`PKM_KEY_PASSWORD`）中配置个人正式签名（切勿提交 `.jks` / `.keystore` 入库）：
+
+```properties
+release.storeFile=path/to/your-release.jks
+release.storePassword=...
+release.keyAlias=...
+release.keyPassword=...
+```
+
+随后执行正式包构建（本地未放正式 keystore 时，可附加 `-PuseDebugSigningForRelease=true` 供模拟器冒烟验证）：
+
+```powershell
+.\gradlew.bat assembleRelease
 ```

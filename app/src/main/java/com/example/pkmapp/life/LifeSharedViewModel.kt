@@ -79,6 +79,7 @@ interface LifeDataSource {
     fun getCategories(type: TransactionType): List<String>
     fun addCustomCategory(type: TransactionType, name: String): Boolean
     fun deleteCategory(type: TransactionType, name: String): Boolean
+    fun clearCategories() {}
 
     fun getNickname(): String
     fun setNickname(nickname: String)
@@ -149,6 +150,8 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     override fun deleteCategory(type: TransactionType, name: String): Boolean =
         categoryStore.deleteCategory(type, name)
 
+    override fun clearCategories() = categoryStore.clear()
+
     override fun getNickname(): String =
         appPreferences.current.nickname
 
@@ -166,13 +169,6 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     override fun clearProfileAndAvatar() {
         appPreferences.clearProfileIdentity()
         AvatarStore.clear(appContext)
-    }
-
-    companion object {
-        const val PREFS_PROFILE = "forest_profile"
-        const val KEY_CHECKED_DATES = "checked_dates"
-        const val KEY_NICKNAME = "nickname"
-        const val DEFAULT_NICKNAME = "森林守护员"
     }
 }
 
@@ -358,6 +354,7 @@ class LifeSharedViewModel(
         dataSource.clearSavingsGoals()
         dataSource.clearBorrowings()
         dataSource.clearAssets()
+        dataSource.clearCategories()
         dataSource.clearProfileAndAvatar()
         dataSource.repository.resetToInitialState()
         refresh()

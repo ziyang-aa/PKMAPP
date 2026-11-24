@@ -29,7 +29,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.pkmapp.MainActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.example.pkmapp.R
 import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.forest.CrayonCard
@@ -292,69 +297,75 @@ abstract class BaseStudyFragment : Fragment() {
 
     private fun exportStudy(uri: Uri?) {
         if (uri == null || !isAdded) return
-        try {
-            ctx().contentResolver.openOutputStream(uri, "wt").use { out ->
-                if (out == null) throw IOException()
-                out.write(store.exportBackup().toByteArray(StandardCharsets.UTF_8))
+        val appContext = requireContext().applicationContext
+        val snapshotStore = store
+        lifecycleScope.launch {
+            val exported = withContext(Dispatchers.IO + NonCancellable) {
+                runCatching {
+                    val payload = snapshotStore.exportBackup().toByteArray(StandardCharsets.UTF_8)
+                    appContext.contentResolver.openOutputStream(uri, "wt").use { out ->
+                        if (out == null) throw IOException()
+                        out.write(payload)
+                    }
+                }
             }
-        } catch (_: IOException) {
-            toast("学习备份导出失败，请检查文件位置和存储空间")
-            return
-        } catch (_: IllegalArgumentException) {
-            toast("学习备份导出失败，请检查文件位置和存储空间")
-            return
-        } catch (_: IllegalStateException) {
-            toast("学习备份导出失败，请检查文件位置和存储空间")
-            return
-        } catch (_: SecurityException) {
-            toast("学习备份导出失败，请检查文件位置和存储空间")
-            return
+            if (!isAdded) return@launch
+            if (exported.isSuccess) {
+                toast("已导出学习备份")
+            } else {
+                toast("学习备份导出失败，请检查文件位置和存储空间")
+            }
         }
-        toast("已导出学习备份")
     }
 
     private fun importStudy(uri: Uri?) {
         if (uri == null || !isAdded) return
-        val backup: StudyNotebook = try {
-            ctx().contentResolver.openInputStream(uri).use { input ->
-                if (input == null) throw IOException()
-                val bytes = ByteArrayOutputStream()
-                val chunk = ByteArray(8192)
-                while (true) {
-                    val length = input.read(chunk)
-                    if (length == -1) break
-                    if (bytes.size() + length > 32 * 1024 * 1024) {
-                        throw IllegalArgumentException("学习备份超过 32 MB，无法读取")
+        val appContext = requireContext().applicationContext
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    appContext.contentResolver.openInputStream(uri).use { input ->
+                        if (input == null) throw IOException()
+                        val bytes = ByteArrayOutputStream()
+                        val chunk = ByteArray(8192)
+                        while (true) {
+                            val length = input.read(chunk)
+                            if (length == -1) break
+                            if (bytes.size() + length > 32 * 1024 * 1024) {
+                                throw IllegalArgumentException("学习备份超过 32 MB，无法读取")
+                            }
+                            bytes.write(chunk, 0, length)
+                        }
+                        StudyNotebook.fromJson(String(bytes.toByteArray(), StandardCharsets.UTF_8))
                     }
-                    bytes.write(chunk, 0, length)
                 }
-                StudyNotebook.fromJson(String(bytes.toByteArray(), StandardCharsets.UTF_8))
             }
-        } catch (e: IllegalArgumentException) {
-            toast(e.message)
-            return
-        } catch (_: IOException) {
-            toast("无法读取这个学习备份")
-            return
-        } catch (_: SecurityException) {
-            toast("无法读取这个学习备份")
-            return
+            if (!isAdded || body == null) return@launch
+            val backup = result.getOrElse { error ->
+                val msg = if (error is IllegalArgumentException && !error.message.isNullOrEmpty()) {
+                    error.message
+                } else {
+                    "无法读取这个学习备份"
+                }
+                toast(msg)
+                return@launch
+            }
+            val sheet = newSheet()
+            val pane = sheetPane(
+                "恢复学习备份",
+                "恢复将合并学习记录，请选择保留哪份计划设置和林地。",
+                R.drawable.ic_study_trail
+            )
+            StudySheet.addHairline(pane.body, 0, 14)
+            val stats = row(ctx())
+            stat(stats, "备份中的计划", "${backup.plans().size} 个", 1f)
+            stat(stats, "备份中的记录", "${backup.records().size} 条", 1f)
+            pane.body.addView(stats)
+            StudySheet.addHairline(pane.body, 14, 0)
+            pane.primary("保留本机设置和林地") { restoreLearning(sheet, backup, false) }
+            pane.secondary("使用备份设置和林地") { restoreLearning(sheet, backup, true) }
+            sheet.push(pane)
         }
-        val sheet = newSheet()
-        val pane = sheetPane(
-            "恢复学习备份",
-            "恢复将合并学习记录，请选择保留哪份计划设置和林地。",
-            R.drawable.ic_study_trail
-        )
-        StudySheet.addHairline(pane.body, 0, 14)
-        val stats = row(ctx())
-        stat(stats, "备份中的计划", "${backup.plans().size} 个", 1f)
-        stat(stats, "备份中的记录", "${backup.records().size} 条", 1f)
-        pane.body.addView(stats)
-        StudySheet.addHairline(pane.body, 14, 0)
-        pane.primary("保留本机设置和林地") { restoreLearning(sheet, backup, false) }
-        pane.secondary("使用备份设置和林地") { restoreLearning(sheet, backup, true) }
-        sheet.push(pane)
     }
 
     private fun restoreLearning(dialog: StudySheet, backup: StudyNotebook, preferBackup: Boolean) {

@@ -118,6 +118,7 @@ class StudyFocusFragment : BaseStudyFragment() {
                 StudyAgendaDialogs.showAgendaSheet(this)
             }
         }
+        handler.removeCallbacks(tick)
         handler.post(tick)
     }
 

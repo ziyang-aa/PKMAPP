@@ -189,12 +189,12 @@ class ExchangeViewModel(
         _uiState.value = buildUiState()
 
         val targetBase = baseCurrency
-        val targetQuote = quoteCurrency
         val allCodes = CURRENCIES.map { it.code }.toTypedArray()
 
         loadJob = viewModelScope.launch {
             when (val batch = gateway.fetchBatch(targetBase, allCodes)) {
                 is BatchFetchOutcome.Success -> {
+                    if (targetBase != baseCurrency) return@launch
                     ratesByQuote.clear()
                     ratesByQuote.putAll(batch.snapshots)
                     statusText = if (batch.fromCache) {
@@ -205,8 +205,10 @@ class ExchangeViewModel(
                     errorText = null
                 }
                 is BatchFetchOutcome.Failure -> {
-                    when (val single = gateway.fetchSingle(targetBase, targetQuote)) {
+                    val currentQuote = quoteCurrency
+                    when (val single = gateway.fetchSingle(targetBase, currentQuote)) {
                         is SingleFetchOutcome.Success -> {
+                            if (targetBase != baseCurrency) return@launch
                             ratesByQuote.clear()
                             ratesByQuote.putAll(batch.cachedSnapshots)
                             ratesByQuote[single.snapshot.quoteCurrency] = single.snapshot
@@ -214,12 +216,14 @@ class ExchangeViewModel(
                             errorText = null
                         }
                         is SingleFetchOutcome.Failure -> {
+                            if (targetBase != baseCurrency) return@launch
                             ratesByQuote.clear()
                             ratesByQuote.putAll(batch.cachedSnapshots)
                             if (single.cachedSnapshot != null) {
                                 ratesByQuote[single.cachedSnapshot.quoteCurrency] = single.cachedSnapshot
                             }
-                            val hasAny = ratesByQuote.containsKey(targetQuote) || targetBase == targetQuote
+                            val activeQuote = quoteCurrency
+                            val hasAny = ratesByQuote.containsKey(activeQuote) || targetBase == activeQuote
                             statusText = if (hasAny) "离线模式 · 使用最近一次同步" else "暂未获取到汇率"
                             errorText = if (hasAny) {
                                 "网络暂不可用，已自动展示上次同步的参考汇率"

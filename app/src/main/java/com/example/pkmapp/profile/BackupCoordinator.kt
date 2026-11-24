@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -133,7 +134,7 @@ internal class BackupCoordinator(
     private fun runImport(snapshot: BackupSnapshot, mode: BackupManager.ImportMode) {
         val appContext = fragment.requireContext().applicationContext
         fragment.viewLifecycleOwner.lifecycleScope.launch {
-            val imported = withContext(Dispatchers.IO) {
+            val imported = withContext(Dispatchers.IO + NonCancellable) {
                 runCatching {
                     BackupManager(appContext).importSnapshot(snapshot, mode)
                 }

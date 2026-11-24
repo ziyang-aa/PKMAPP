@@ -79,3 +79,15 @@
 | `StudyStatsFragment` 学习记录清单迁移位置 | 列出 `StudyStatsFragment`（历史学习记录清单） | 学习足迹主屏的 `R.id.study_records_container` 为有限门科目的占比汇总表，真正承载无界历史学习记录的弹窗 `StudyStatsDialogs.showRecordsSheet` 原先使用 `ListView + ArrayAdapter`；将其替换为 `RecyclerView + StudyRecordListAdapter + DiffUtil` | 精准优化长记录清单在 300+ 条目与实时搜索筛选下的视图回收与差分刷新，同时保持主屏科目汇总卡片与既有 UI 测试契约不变 |
 | `FocusTimerService` 前台服务与通知契约 | 开始专注时启动 `ForegroundService`（`FOREGROUND_SERVICE_SPECIAL_USE`），UI 回到前台同步 | 在 `StudyNotifications.refreshTimer` 中先同步发送 `TIMER_ID = 8101` 通知并随即调用 `FocusTimerService.sync` 绑定 `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` 前台服务（会话结束或无通知权限时自动降级/停止，并捕获后台启动受限异常） | 既让进行中的计时在锁屏/切后台时由前台服务保活，又保留 `StudyWorkflowUiTest` 切到桌面后立即检查 `NotificationManager.getActiveNotifications()` 动作按钮（`暂停` / `继续` / `结束`）零竞态通过 |
 | `WorkManager` 提醒兜底调度 | 接入 `WorkManager` 定期兜底重排 `TodoNotifications` 与 `StudyNotifications` | 引入 `androidx.work:work-runtime-ktx:2.10.5`，新增 `ReminderRescheduleWorker`（每 6 小时执行 `PkmStorageBootstrap.ensureMigrated` + `StudyNotifications.rescheduleAll` + `TodoNotifications.rescheduleAll`），并在 `MainActivity.onCreate` 与开机/时间变更广播接收器中以 `ExistingPeriodicWorkPolicy.KEEP` 幂等入队 | 应对 OEM 后台查杀、Doze 休眠与系统时间/时区变更导致的闹钟丢失，且不重复重置周期调度计时 |
+
+---
+
+## Phase 6.1：正式发布工程化 —— R8 混淆、资源压缩与安全签名（2026-11-24）
+
+### 方案与结构偏离
+
+| 调整项 | 计划原文 | 实际做法 | 理由 |
+| --- | --- | --- | --- |
+| 动态反射图标 `norm_type_*` 压缩保护 | 完善 `app/proguard-rules.pro`（保留 Room Entity/DAO、动态反射图标、JSON 序列化字段） | 除在 `proguard-rules.pro` 保留 `CategoryIconResolver` 外，同步新增 `app/src/main/res/raw/keep.xml`（`tools:keep="@drawable/norm_type_*,@drawable/savings_seedling_*,@drawable/savings_tree_*"`）并配套 JVM 契约测试 `CategoryIconKeepContractTest.kt` | AGP 9.1.1 在 `isShrinkResources = true` 时按 `keep.xml` 与编译期引用裁切未显式 `R.drawable.*` 引用的资源；单独靠 ProGuard 无法阻止资源收缩误删动态 `getIdentifier` 图片 |
+| 无 keystore 环境下的本地 Release R8 验证 | 配置基于 `local.properties` / 环境变量的稳定签名 keystore（严禁入库） | 优先读取 `local.properties`（`release.storeFile` / `release.storePassword` / `release.keyAlias` / `release.keyPassword`）及环境变量（`PKM_STORE_*`）；仅当显式传入 `-PuseDebugSigningForRelease=true` 且未配置正式 keystore 时才临时回退 `debug` 签名供本地 R8 实机冒烟 | 既保证默认正式构建绝不混入调试签名、keystore 永不入库，又支持在未放置个人正式 keystore 的开发机上完成真机/模拟器 Release R8 包实测 |
+| Release 打包期 Lint 调度 | 默认随 `assembleRelease` 执行 `lintVitalAnalyzeRelease` | 在 `app/build.gradle.kts` 设置 `lint { checkReleaseBuilds = false }`（仍可随时单独执行 `lintDebug`） | 避免在离线或高延迟网络环境下因首次拉取百兆级 `releaseLintChecksClasspath` 阻塞 Release R8 出包 |

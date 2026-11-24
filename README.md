@@ -74,6 +74,7 @@ PKMAPP/
       │  │  │  ├─ StudyGardenFragment.kt      # 我的小林地（成长花园）子页控制器
       │  │  │  ├─ StudyFocusTimerCard / StudyFocusDialogs / StudyAgendaDialogs # 专注卡片与日程/目标弹窗
       │  │  │  ├─ StudyTodoDialogs / StudyTodoRows / StudyStatsDialogs         # 待办与足迹弹窗及列表行构建器
+│  │  │  ├─ StudyTodoListAdapter / StudyRecordListAdapter / FocusTimerService # 差分列表适配器与前台计时服务
       │  │  │  ├─ StudySheet.java             # 多层级返回栈瓷白底部弹窗框架
       │  │  │  ├─ StudyPlanDialogs.java       # 学习计划与科目书架管理弹窗
       │  │  │  ├─ StudyWorkDialogs.java       # 学习记录补记、回顾与计划事项表单

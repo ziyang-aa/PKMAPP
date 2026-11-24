@@ -2,22 +2,17 @@ package com.example.pkmapp.study
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ListView
-import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.pkmapp.R
 import com.example.pkmapp.forest.ForestUi
 import com.example.pkmapp.forest.ForestUi.DEEP
-import com.example.pkmapp.forest.ForestUi.LINE
 import com.example.pkmapp.forest.ForestUi.MUTED
 import com.example.pkmapp.forest.ForestUi.button
-import com.example.pkmapp.forest.ForestUi.column
 import com.example.pkmapp.forest.ForestUi.dp
 import com.example.pkmapp.forest.ForestUi.heading
 import com.example.pkmapp.forest.ForestUi.rounded
@@ -309,47 +304,51 @@ internal object StudyStatsDialogs {
         val empty = fragment.note("没有符合条件的学习记录").apply { visibility = View.GONE }
         ForestUi.add(pane.above, empty, 6)
 
-        val dateFmt = SimpleDateFormat("yyyy/MM/dd · HH:mm", Locale.CHINA)
-        val adapter = object : ArrayAdapter<StudyNotebook.Record>(ctx, 0, ArrayList(initialRecords)) {
-            override fun getView(position: Int, recycled: View?, parent: ViewGroup): View {
-                val cell = (recycled as? HistoryRow) ?: HistoryRow(parent.context)
-                val record = getItem(position)!!
-                var timestamp = dateFmt.format(Date(record.completedAt))
-                if (planId == null) timestamp += " · ${fragment.store.notebook().plan(record.planId).title}"
-                cell.bind(record, timestamp + recordOrigin(record))
-                return cell
-            }
+        var selection: StudySubject? = initialSubject
+        lateinit var recordAdapter: StudyRecordListAdapter
+        lateinit var entries: RecyclerView
+        lateinit var updateList: () -> Unit
+
+        updateList = {
+            val query = StudyWorkDialogs.value(search)
+            val filtered = StudyRecordListAdapter.buildItems(
+                source = source(),
+                selection = selection,
+                query = query,
+                planTitleLookup = if (planId == null) { id -> fragment.store.notebook().plan(id).title } else null
+            )
+            recordAdapter.submitList(filtered)
+            count.text = "${filtered.size} 次"
+            empty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         }
-        val entries = ListView(ctx).apply {
-            divider = ColorDrawable(LINE)
-            dividerHeight = 1
-            selector = rounded(ctx, 0x2291aa78, 0, 10)
-            this.adapter = adapter
+
+        recordAdapter = StudyRecordListAdapter { record ->
+            recordDetail(fragment, sheet, record, updateList, true)
+        }
+        entries = RecyclerView(ctx).apply {
+            layoutManager = LinearLayoutManager(ctx)
+            adapter = recordAdapter
+            itemAnimator = null
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            addItemDecoration(
+                StudyRecordListAdapter.HairlineItemDecoration(ctx.resources.displayMetrics.density)
+            )
         }
         val maxRowsHeight = fragment.dp(ctx.resources.configuration.screenHeightDp * 0.52f)
         pane.listBody(entries, min(maxRowsHeight, fragment.dp(68) * min(all.size, 10)))
 
-        var selection: StudySubject? = initialSubject
-        val updateList = {
-            val query = StudyWorkDialogs.value(search).lowercase(Locale.ROOT)
-            val filtered = recordsForSubject(source(), selection).toMutableList()
-            if (query.isNotEmpty()) {
-                filtered.removeIf { !it.note.lowercase(Locale.ROOT).contains(query) }
-            }
-            adapter.setNotifyOnChange(false)
-            adapter.clear()
-            adapter.addAll(filtered)
-            adapter.notifyDataSetChanged()
-            count.text = "${adapter.count} 次"
-            empty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        }
+        val initialItems = StudyRecordListAdapter.buildItems(
+            source = all,
+            selection = initialSubject,
+            query = "",
+            planTitleLookup = if (planId == null) { id -> fragment.store.notebook().plan(id).title } else null
+        )
+        recordAdapter.submitList(initialItems)
+
         search.addTextChangedListener(StudyTodoDialogs.simpleWatcher {
             updateList()
-            entries.setSelection(0)
+            entries.scrollToPosition(0)
         })
-        entries.setOnItemClickListener { _, _, position, _ ->
-            adapter.getItem(position)?.let { recordDetail(fragment, sheet, it, updateList, true) }
-        }
         filter.setOnClickListener {
             val recorded = LinkedHashMap<StudySubject, String>()
             for (record in source()) {
@@ -376,7 +375,7 @@ internal object StudyStatsDialogs {
                         updateList()
                         filter.text = "$label ▾"
                         sheet.pop()
-                        entries.setSelection(0)
+                        entries.scrollToPosition(0)
                     },
                     4
                 )
@@ -403,35 +402,5 @@ internal object StudyStatsDialogs {
         }
         row.addView(dot, params)
         return dot
-    }
-
-    private class HistoryRow(context: Context) : LinearLayout(context) {
-        private val dot: View
-        private val subject: TextView
-        private val date: TextView
-        private val duration: TextView
-
-        init {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            minimumHeight = dp(context, 59f)
-            setPadding(dp(context, 2f), dp(context, 9f), dp(context, 2f), dp(context, 9f))
-            dot = addSubjectDot(this, 0)
-            val copy = column(context)
-            subject = text(context, "", 13, DEEP)
-            date = text(context, "", 11, MUTED)
-            copy.addView(subject)
-            ForestUi.add(copy, date, 5)
-            addView(copy, LayoutParams(0, -2, 1f))
-            duration = text(context, "", 12, DEEP).apply { gravity = Gravity.END }
-            addView(duration, LayoutParams(-2, -2).apply { marginStart = dp(context, 8f) })
-        }
-
-        fun bind(record: StudyNotebook.Record, timestamp: String) {
-            dot.background = rounded(context, record.subject.color, 0, 5)
-            subject.text = record.subject.title
-            date.text = timestamp
-            duration.text = StudyFormat.duration(record.durationMillis)
-        }
     }
 }

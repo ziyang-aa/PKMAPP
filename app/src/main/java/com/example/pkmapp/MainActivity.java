@@ -63,6 +63,7 @@ public final class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         InMemoryLedgerRepository.initialize(this);
+        com.example.pkmapp.core.work.ReminderRescheduleWorker.enqueuePeriodic(this);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         studyBackdrop = new StudyBackdrop(this);
         binding.bottomNavigation.setBackdropContent(binding.fragmentContainer);

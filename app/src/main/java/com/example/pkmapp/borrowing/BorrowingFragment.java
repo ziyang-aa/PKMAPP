@@ -23,6 +23,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
@@ -52,7 +54,8 @@ public final class BorrowingFragment extends Fragment {
     private LifeSharedViewModel viewModel;
     private int filterTab = 0; // 0: 全部, 1: 我借出去, 2: 我借进来
     private ForestSegmentedControl filterBar;
-    private LinearLayout recordList;
+    private RecyclerView recordList;
+    private BorrowingListAdapter recordAdapter;
     private View emptyState;
     private TextView lendTotal;
     private TextView lendCount;
@@ -91,6 +94,11 @@ public final class BorrowingFragment extends Fragment {
         borrowCount = view.findViewById(R.id.borrowing_borrow_count);
         netSummary = view.findViewById(R.id.borrowing_net_summary);
         recordList = view.findViewById(R.id.borrowing_record_list);
+        recordList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        recordList.setItemAnimator(null);
+        recordList.setNestedScrollingEnabled(false);
+        recordAdapter = new BorrowingListAdapter();
+        recordList.setAdapter(recordAdapter);
         emptyState = view.findViewById(R.id.borrowing_empty_state);
 
         lendTotal.setFontFeatureSettings("tnum");
@@ -191,59 +199,8 @@ public final class BorrowingFragment extends Fragment {
             filtered.add(rec);
         }
 
-        recordList.removeAllViews();
-        Context ctx = requireContext();
-        int groupIdx = 0;
-        for (BorrowingDateGroup group : BorrowingDateGroup.from(filtered)) {
-            TextView dateLabel = text(ctx, group.getLabel(), 12, WOOD);
-            dateLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            dateLabel.setPadding(dp(ctx, 2), dp(ctx, groupIdx == 0 ? 12 : 18), dp(ctx, 2), dp(ctx, 6));
-            recordList.addView(dateLabel, new LinearLayout.LayoutParams(-1, -2));
-            groupIdx++;
-
-            int rowIdx = 0;
-            for (BorrowingRecord record : group.getRecords()) {
-                if (rowIdx++ > 0) {
-                    View hairline = new View(ctx);
-                    hairline.setBackgroundColor(0x165c4938);
-                    recordList.addView(hairline, new LinearLayout.LayoutParams(-1,
-                            Math.max(1, Math.round(0.75f * getResources().getDisplayMetrics().density))));
-                }
-                boolean isLend = record.getDirection() == BorrowingDirection.LEND;
-                LinearLayout rowView = row(ctx);
-                rowView.setMinimumHeight(dp(ctx, 60));
-                rowView.setPadding(dp(ctx, 2), dp(ctx, 10), dp(ctx, 2), dp(ctx, 10));
-
-                TextView avatar = text(ctx, BorrowingRecordPresentation.initials(record.getPerson()),
-                        13, isLend ? 0xff9e4c37 : DEEP);
-                avatar.setGravity(Gravity.CENTER);
-                avatar.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-                avatar.setBackground(rounded(ctx, isLend ? 0xfff8ede6 : 0xffeef4ea, 0, 999));
-                rowView.addView(avatar, new LinearLayout.LayoutParams(dp(ctx, 38), dp(ctx, 38)));
-
-                LinearLayout copy = column(ctx);
-                TextView person = text(ctx,
-                        BorrowingRecordPresentation.counterpartyLabel(record.getDirection(), record.getPerson()),
-                        15, 0xff243624);
-                person.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-                copy.addView(person);
-                String noteCopy = BorrowingRecordPresentation.directionLabel(record.getDirection())
-                        + (record.getNote().isEmpty() ? "" : " · " + record.getNote());
-                ForestUi.add(copy, text(ctx, noteCopy, 12, MUTED), 3);
-                LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(0, -2, 1);
-                copyLp.setMarginStart(dp(ctx, 12));
-                rowView.addView(copy, copyLp);
-
-                TextView amt = text(ctx,
-                        BorrowingRecordPresentation.amountLabel(
-                                record.getDirection(), record.getAmountInCents()),
-                        16, isLend ? 0xff9e4c37 : DEEP);
-                amt.setTypeface(Typeface.create("serif", Typeface.BOLD));
-                amt.setFontFeatureSettings("tnum");
-                rowView.addView(amt);
-
-                recordList.addView(rowView, new LinearLayout.LayoutParams(-1, -2));
-            }
+        if (recordAdapter != null) {
+            recordAdapter.submitList(BorrowingListAdapter.buildItems(filtered));
         }
         emptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
     }
@@ -495,6 +452,7 @@ public final class BorrowingFragment extends Fragment {
         }
         filterBar = null;
         recordList = null;
+        recordAdapter = null;
         emptyState = null;
         lendTotal = null;
         lendCount = null;

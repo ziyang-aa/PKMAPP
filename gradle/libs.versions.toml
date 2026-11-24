@@ -1,4 +1,4 @@
-# Kotlin 由 AGP 9 内置提供（KGP 2.2.10），不单独声明 kotlin-android 插件；Phase 4 启用 ksp + Room + DataStore。
+# Kotlin 由 AGP 9 内置提供（KGP 2.2.10），不单独声明 kotlin-android 插件；Phase 4/5 启用 ksp + Room + DataStore + WorkManager。
 [versions]
 agp = "9.1.1"
 junit = "4.13.2"
@@ -16,6 +16,7 @@ activityKtx = "1.10.1"
 ksp = "2.3.4"
 room = "2.8.4"
 datastore = "1.1.7"
+work = "2.10.5"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -39,6 +40,7 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

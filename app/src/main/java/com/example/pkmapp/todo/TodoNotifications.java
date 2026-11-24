@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.core.work.ReminderRescheduleWorker;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,14 @@ public final class TodoNotifications extends BroadcastReceiver {
             schedule(context, store, 0, false);
         } catch (SecurityException | IllegalStateException error) {
             Log.w("TodoNotifications", "Notification scheduling failed", error);
+        }
+    }
+
+    public static void rescheduleAll(Context context) {
+        try {
+            schedule(context, TodoStore.get(context), 0, true);
+        } catch (SecurityException | IllegalStateException error) {
+            Log.w("TodoNotifications", "Notification reschedule failed", error);
         }
     }
 
@@ -150,6 +159,7 @@ public final class TodoNotifications extends BroadcastReceiver {
                 schedule(context, store, trigger, false);
             } else {
                 schedule(context, store, 0, true);
+                ReminderRescheduleWorker.enqueuePeriodic(context);
             }
         } catch (IllegalArgumentException | IllegalStateException | SecurityException error) {
             Log.w("TodoNotifications", "Could not process todo notification", error);

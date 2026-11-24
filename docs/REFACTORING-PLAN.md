@@ -286,6 +286,8 @@ app/src/main/java/com/example/pkmapp/
 - 插入 500 条模拟账单 + 500 条待办 + 300 条学习记录，滑动帧率流畅无明显掉帧；
 - 开启专注计时后退到后台锁屏 3 分钟再亮屏，计时精准连续且通知栏操作同步无误。
 
+**执行状态**：已完成（2026-11-24），将 `StudyTodoFragment`（`StudyTodoListAdapter` + `NotebookRuleDecoration` + 持久化底部快记条）、`StudyStatsDialogs.showRecordsSheet`（`StudyRecordListAdapter`）、`BorrowingFragment`（`BorrowingListAdapter`）与 `ExchangeFragment`（`ExchangeMultiRateAdapter` / `ExchangePickerAdapter`）4 条长列表全部迁移为 `RecyclerView + ListAdapter + DiffUtil`；新增 `FocusTimerService.kt`（`FOREGROUND_SERVICE_SPECIAL_USE`，保留 `TIMER_ID = 8101` 与通知栏操作契约）与 `ReminderRescheduleWorker.kt`（`WorkManager 2.10.5` 每 6 小时自动兜底重排学习与待办闹钟），并补充 `Phase5ListModelsTest.kt`（详见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)）。
+
 ---
 
 ### Phase 6：正式发布工程化与未来扩展能力（按需推进）

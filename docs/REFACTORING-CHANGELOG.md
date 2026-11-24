@@ -66,3 +66,16 @@
 | `StudyNotebook` 与 Room 表映射方式 | 将 `forest_study_v1` 拆入 `study_*` 表 | 在保持 922 行 `StudyNotebook.java` 纯领域校验逻辑零修改的前提下，提供同包 `StudyNotebookSqlBridge.kt` 在 6 张规范化 SQL 表与 `StudyNotebook` 间做双向无损拆解/重组，并在 `StudyStore` 写入 Room 后同步维护 `forest_study_v1` 过渡期影子镜像 | 既让 SQLite 表完全结构化可查询、自动触发 `StudyNotebook` 完整性校验，又完整保留了 `StudyPlanFlowTest` 与 `StudyNavigationTest` 对 `forest_study_v1`（含 `notebook_before_plans`）的测试契约及降级安全兜底 |
 | 迁移触发时机 | 在 `Application` / 数据库首次打开时检查并执行 | 通过 `PkmStorageBootstrap.ensureInitialized(context)` 在 `AppDatabase.getInstance` / `AppPreferences.getInstance` 首次访问时懒触发幂等迁移 | 仪表测试（如 `StudyPlanFlowTest`）会在进程启动后、`MainActivity` 拉起前向 `SharedPreferences` 写入旧版测试夹具；懒触发迁移确保测试夹具与真实用户旧档都能在首次读取前精准迁入 Room + DataStore |
 | `BackupManager` 导入资产顺序兼容 | `ledgers` 表直接承载 `initialAssetsCents` 与 `liabilitiesCents` | `LedgerDao.saveStartingValues` 对尚未入表的账本先写入 `sortOrder = -1` 资产占位行，待 `saveLedgerAndTransactionState` 执行时自动合并真实账本名与排序 | `BackupManager.apply()` 先调用 `assetStore.saveStartingValues` 再调用 `repository.replaceState`；占位合并机制无需额外拆表即可保证 JSON 备份覆盖/合并导入时资产与负债分毫不差 |
+
+---
+
+## Phase 5：长列表性能优化与真机后台保活（2026-11-24）
+
+### 方案与结构偏离
+
+| 调整项 | 计划原文 | 实际做法 | 理由 |
+| --- | --- | --- | --- |
+| `StudyTodoFragment` 列表与 `ForestNotebookPad` 兼容 | 将待办列表替换为 `RecyclerView + ListAdapter + DiffUtil` | 在保留 `ForestNotebookPad.java` 与 `ForestTodoRow.java` 零修改的前提下，在草稿纸内部放置 `RecyclerView`（`StudyTodoListAdapter` + `NotebookRuleDecoration` 仅绘制末项之前的横线）+ 独立的底部静态 `QuickAddController`（`EditText` 不参与条目回收） | 既避免改写 14 个自绘 `Canvas` 组件并保留末行与空白草稿纸横线无缝衔接，又确保刷新待办列表时底部快记输入框不会失去焦点或打断输入法 |
+| `StudyStatsFragment` 学习记录清单迁移位置 | 列出 `StudyStatsFragment`（历史学习记录清单） | 学习足迹主屏的 `R.id.study_records_container` 为有限门科目的占比汇总表，真正承载无界历史学习记录的弹窗 `StudyStatsDialogs.showRecordsSheet` 原先使用 `ListView + ArrayAdapter`；将其替换为 `RecyclerView + StudyRecordListAdapter + DiffUtil` | 精准优化长记录清单在 300+ 条目与实时搜索筛选下的视图回收与差分刷新，同时保持主屏科目汇总卡片与既有 UI 测试契约不变 |
+| `FocusTimerService` 前台服务与通知契约 | 开始专注时启动 `ForegroundService`（`FOREGROUND_SERVICE_SPECIAL_USE`），UI 回到前台同步 | 在 `StudyNotifications.refreshTimer` 中先同步发送 `TIMER_ID = 8101` 通知并随即调用 `FocusTimerService.sync` 绑定 `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` 前台服务（会话结束或无通知权限时自动降级/停止，并捕获后台启动受限异常） | 既让进行中的计时在锁屏/切后台时由前台服务保活，又保留 `StudyWorkflowUiTest` 切到桌面后立即检查 `NotificationManager.getActiveNotifications()` 动作按钮（`暂停` / `继续` / `结束`）零竞态通过 |
+| `WorkManager` 提醒兜底调度 | 接入 `WorkManager` 定期兜底重排 `TodoNotifications` 与 `StudyNotifications` | 引入 `androidx.work:work-runtime-ktx:2.10.5`，新增 `ReminderRescheduleWorker`（每 6 小时执行 `PkmStorageBootstrap.ensureMigrated` + `StudyNotifications.rescheduleAll` + `TodoNotifications.rescheduleAll`），并在 `MainActivity.onCreate` 与开机/时间变更广播接收器中以 `ExistingPeriodicWorkPolicy.KEEP` 幂等入队 | 应对 OEM 后台查杀、Doze 休眠与系统时间/时区变更导致的闹钟丢失，且不重复重置周期调度计时 |

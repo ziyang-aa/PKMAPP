@@ -24,8 +24,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
@@ -51,7 +52,8 @@ public final class ExchangeFragment extends Fragment {
     private TextView caption;
     private TextView error;
     private LinearLayout quickAmountsRow;
-    private LinearLayout multiList;
+    private RecyclerView multiList;
+    private ExchangeMultiRateAdapter multiAdapter;
     private BottomSheetDialog activeSheet;
     private boolean updatingInputFromState;
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
@@ -87,6 +89,13 @@ public final class ExchangeFragment extends Fragment {
         error = view.findViewById(R.id.exchange_error);
         quickAmountsRow = view.findViewById(R.id.exchange_quick_amounts);
         multiList = view.findViewById(R.id.exchange_multi_list);
+        multiList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        multiList.setItemAnimator(null);
+        multiList.setNestedScrollingEnabled(false);
+        multiList.addItemDecoration(new ExchangeHairlineDecoration(
+                getResources().getDisplayMetrics().density, 0x165c4938));
+        multiAdapter = new ExchangeMultiRateAdapter(code -> viewModel.selectQuoteCurrency(code));
+        multiList.setAdapter(multiAdapter);
 
         amountInput.setFontFeatureSettings("tnum");
         result.setFontFeatureSettings("tnum");
@@ -197,46 +206,8 @@ public final class ExchangeFragment extends Fragment {
     }
 
     private void renderMultiCurrencyList(ExchangeUiState state) {
-        if (multiList == null || !isAdded()) return;
-        multiList.removeAllViews();
-        int rendered = 0;
-        for (MultiCurrencyItem rowModel : state.multiItems) {
-            if (rendered > 0) {
-                View line = new View(requireContext());
-                line.setBackgroundColor(0x165c4938);
-                multiList.addView(line, new LinearLayout.LayoutParams(-1,
-                        Math.max(1, Math.round(0.75f * getResources().getDisplayMetrics().density))));
-            }
-            LinearLayout item = row(requireContext());
-            item.setMinimumHeight(dp(requireContext(), 54));
-            item.setPadding(dp(requireContext(), 4), dp(requireContext(), 10),
-                    dp(requireContext(), 4), dp(requireContext(), 10));
-            boolean isCurrentQuote = rowModel.isCurrentQuote;
-            item.setBackground(ripple(requireContext(),
-                    rounded(requireContext(), isCurrentQuote ? 0x16456444 : Color.TRANSPARENT, 0, 12), false));
-
-            LinearLayout left = column(requireContext());
-            TextView codeTv = text(requireContext(), rowModel.code + " · " + rowModel.name, 14,
-                    isCurrentQuote ? DEEP : 0xff243624);
-            codeTv.setTypeface(Typeface.create("sans-serif-medium", isCurrentQuote ? Typeface.BOLD : Typeface.NORMAL));
-            left.addView(codeTv);
-            if (rowModel.unitRateText != null) {
-                TextView sub = text(requireContext(), rowModel.unitRateText, 11, MUTED);
-                sub.setFontFeatureSettings("tnum");
-                ForestUi.add(left, sub, 3);
-            }
-            item.addView(left, new LinearLayout.LayoutParams(0, -2, 1));
-
-            TextView valTv = text(requireContext(), rowModel.convertedText, 16, isCurrentQuote ? DEEP : 0xff243624);
-            valTv.setTypeface(Typeface.create("serif", Typeface.BOLD));
-            valTv.setFontFeatureSettings("tnum");
-            item.addView(valTv);
-
-            item.setOnClickListener(v -> viewModel.selectQuoteCurrency(rowModel.code));
-            ForestMotion.bind(item);
-            multiList.addView(item, new LinearLayout.LayoutParams(-1, -2));
-            rendered++;
-        }
+        if (multiAdapter == null || !isAdded()) return;
+        multiAdapter.submitList(state.multiItems);
     }
 
     private void copyResultToClipboard() {
@@ -298,68 +269,39 @@ public final class ExchangeFragment extends Fragment {
         topRule.setBackgroundColor(0x1a5c4938);
         root.addView(topRule, new LinearLayout.LayoutParams(-1, Math.max(1, dp(ctx, 1))));
 
-        NestedScrollView listScroll = new NestedScrollView(ctx);
-        LinearLayout list = column(ctx);
-        listScroll.addView(list, new ViewGroup.LayoutParams(-1, -2));
+        TextView emptyView = text(ctx, "没有找到匹配的币种", 13, MUTED);
+        emptyView.setPadding(dp(ctx, 4), dp(ctx, 20), dp(ctx, 4), dp(ctx, 20));
+        emptyView.setVisibility(View.GONE);
+        root.addView(emptyView, new LinearLayout.LayoutParams(-1, -2));
+
+        ExchangePickerAdapter pickerAdapter = new ExchangePickerAdapter(code -> {
+            sheet.dismiss();
+            if (selectingBase) {
+                viewModel.selectBaseCurrency(code);
+            } else {
+                viewModel.selectQuoteCurrency(code);
+            }
+        });
+        RecyclerView recycler = new RecyclerView(ctx);
+        recycler.setLayoutManager(new LinearLayoutManager(ctx));
+        recycler.setItemAnimator(null);
+        recycler.addItemDecoration(new ExchangeHairlineDecoration(
+                getResources().getDisplayMetrics().density, 0x145c4938));
+        recycler.setAdapter(pickerAdapter);
         int maxH = Math.round(getResources().getDisplayMetrics().heightPixels * 0.56f);
-        root.addView(listScroll, new LinearLayout.LayoutParams(-1, maxH));
+        root.addView(recycler, new LinearLayout.LayoutParams(-1, maxH));
 
         ExchangeUiState state = viewModel.getUiState().getValue();
         String currentSelected = selectingBase ? state.baseInfo.code : state.quoteInfo.code;
         Runnable populate = () -> {
-            list.removeAllViews();
-            String q = search.getText().toString().trim().toLowerCase(Locale.ROOT);
-            int idx = 0;
-            for (CurrencyInfo info : ExchangeViewModel.CURRENCIES) {
-                if (!q.isEmpty() && !info.code.toLowerCase(Locale.ROOT).contains(q)
-                        && !info.name.toLowerCase(Locale.ROOT).contains(q)) {
-                    continue;
-                }
-                if (idx++ > 0) {
-                    View line = new View(ctx);
-                    line.setBackgroundColor(0x145c4938);
-                    list.addView(line, new LinearLayout.LayoutParams(-1,
-                            Math.max(1, Math.round(0.75f * getResources().getDisplayMetrics().density))));
-                }
-                boolean selected = info.code.equals(currentSelected);
-                LinearLayout rowView = row(ctx);
-                rowView.setMinimumHeight(dp(ctx, 54));
-                rowView.setPadding(dp(ctx, 6), dp(ctx, 10), dp(ctx, 6), dp(ctx, 10));
-                rowView.setBackground(ripple(ctx,
-                        rounded(ctx, selected ? 0xffeef4ea : Color.TRANSPARENT, 0, 12), false));
-
-                TextView sym = text(ctx, info.symbol, 14, selected ? DEEP : WOOD);
-                sym.setGravity(Gravity.CENTER);
-                sym.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-                rowView.addView(sym, new LinearLayout.LayoutParams(dp(ctx, 42), -2));
-
-                LinearLayout copy = column(ctx);
-                TextView nameTv = text(ctx, info.code + "  " + info.name, 15, 0xff243624);
-                nameTv.setTypeface(Typeface.create("sans-serif-medium", selected ? Typeface.BOLD : Typeface.NORMAL));
-                copy.addView(nameTv);
-                rowView.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
-
-                if (selected) {
-                    TextView check = text(ctx, "✓", 15, DEEP);
-                    check.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-                    rowView.addView(check);
-                }
-                rowView.setOnClickListener(v -> {
-                    sheet.dismiss();
-                    if (selectingBase) {
-                        viewModel.selectBaseCurrency(info.code);
-                    } else {
-                        viewModel.selectQuoteCurrency(info.code);
-                    }
-                });
-                ForestMotion.bind(rowView);
-                list.addView(rowView, new LinearLayout.LayoutParams(-1, -2));
-            }
-            if (idx == 0) {
-                TextView empty = text(ctx, "没有找到匹配的币种", 13, MUTED);
-                empty.setPadding(dp(ctx, 4), dp(ctx, 20), dp(ctx, 4), dp(ctx, 20));
-                list.addView(empty);
-            }
+            java.util.List<ExchangePickerItem> items = ExchangeCurrencyListBuilder.filterCurrencies(
+                    ExchangeViewModel.CURRENCIES,
+                    search.getText().toString(),
+                    currentSelected
+            );
+            pickerAdapter.submitList(items);
+            emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+            recycler.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         };
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -389,6 +331,7 @@ public final class ExchangeFragment extends Fragment {
         error = null;
         quickAmountsRow = null;
         multiList = null;
+        multiAdapter = null;
         super.onDestroyView();
     }
 }

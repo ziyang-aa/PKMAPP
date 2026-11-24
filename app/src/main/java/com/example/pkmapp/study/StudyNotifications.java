@@ -1,6 +1,7 @@
 package com.example.pkmapp.study;
 
 import android.app.AlarmManager;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -15,6 +16,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.core.work.ReminderRescheduleWorker;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +31,7 @@ public final class StudyNotifications extends BroadcastReceiver {
     private static final String DUE = "com.example.pkmapp.study.DUE";
     private static final String TIMER_CHANNEL = "study_timer";
     private static final String DEADLINE_CHANNEL = "study_deadlines";
-    private static final int TIMER_ID = 8101;
+    static final int TIMER_ID = 8101;
     private static final int DEADLINE_ID = 8102;
     private static final int FLAGS = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
 
@@ -46,12 +48,11 @@ public final class StudyNotifications extends BroadcastReceiver {
         }
     }
 
-    private static void refreshTimer(Context context, StudyStore store) {
+    static Notification buildTimerNotification(Context context, StudyStore store) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         StudyNotebook notebook = store.notebook();
-        if (!notebook.hasSession() || !permitted(context)) {
-            manager.cancel(TIMER_ID);
-            return;
+        if (manager == null || !notebook.hasSession() || !permitted(context)) {
+            return null;
         }
         channel(manager, TIMER_CHANNEL, "学习计时", NotificationManager.IMPORTANCE_LOW);
         String id = notebook.sessionId();
@@ -68,7 +69,29 @@ public final class StudyNotifications extends BroadcastReceiver {
             .addAction(0, running ? "暂停" : "继续", PendingIntent.getBroadcast(context, 0, control, FLAGS))
             .addAction(0, "结束", activity(context, FINISH_TIMER, id));
         if (!running) builder.setContentText("已专注 " + StudyFormat.duration(elapsed));
-        manager.notify(TIMER_ID, builder.build());
+        return builder.build();
+    }
+
+    private static void refreshTimer(Context context, StudyStore store) {
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        Notification notification = buildTimerNotification(context, store);
+        if (notification == null) {
+            if (manager != null) manager.cancel(TIMER_ID);
+            FocusTimerService.sync(context, store);
+            return;
+        }
+        if (manager != null) manager.notify(TIMER_ID, notification);
+        FocusTimerService.sync(context, store);
+    }
+
+    public static void rescheduleAll(Context context) {
+        try {
+            StudyStore store = StudyStore.get(context);
+            refreshTimer(context, store);
+            scheduleDeadline(context, store.notebook(), 0, true);
+        } catch (SecurityException | IllegalStateException error) {
+            Log.w("StudyNotifications", "Notification reschedule failed", error);
+        }
     }
 
     private static Uri identity(String id) {
@@ -215,6 +238,7 @@ public final class StudyNotifications extends BroadcastReceiver {
             } else {
                 refreshTimer(context, store);
                 scheduleDeadline(context, notebook, 0, true);
+                ReminderRescheduleWorker.enqueuePeriodic(context);
             }
         } catch (IllegalArgumentException | IllegalStateException | SecurityException error) {
             Log.w("StudyNotifications", "Could not apply study notification action", error);

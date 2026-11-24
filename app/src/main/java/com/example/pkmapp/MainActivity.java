@@ -32,7 +32,11 @@ import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.profile.ProfileFragment;
 import com.example.pkmapp.record.RecordFragment;
 import com.example.pkmapp.savings.SavingsFragment;
-import com.example.pkmapp.study.StudyFragment;
+import com.example.pkmapp.study.BaseStudyFragment;
+import com.example.pkmapp.study.StudyFocusFragment;
+import com.example.pkmapp.study.StudyGardenFragment;
+import com.example.pkmapp.study.StudyStatsFragment;
+import com.example.pkmapp.study.StudyTodoFragment;
 import com.example.pkmapp.study.StudyNotifications;
 import com.example.pkmapp.forest.FrostedNavigationBar;
 import com.example.pkmapp.forest.ForestUi;
@@ -75,7 +79,7 @@ public final class MainActivity extends AppCompatActivity {
                     public void onFragmentViewCreated(@NonNull FragmentManager manager,
                             @NonNull Fragment fragment, @NonNull View view, @Nullable Bundle state) {
                         if (view instanceof ViewGroup && !(fragment instanceof HomeFragment)
-                                && !(fragment instanceof StudyFragment)) {
+                                && !(fragment instanceof BaseStudyFragment)) {
                             configureLedgerInsets((ViewGroup) view);
                         }
                     }
@@ -125,13 +129,13 @@ public final class MainActivity extends AppCompatActivity {
         String action = intent.getAction();
         String id = intent.getStringExtra(StudyNotifications.SESSION);
         if (com.example.pkmapp.todo.TodoNotifications.OPEN_TODO.equals(action)) {
-            showDestination(AppDestination.STUDY_TODO, StudyFragment.newInstance(AppDestination.STUDY_TODO));
+            showDestination(AppDestination.STUDY_TODO, new StudyTodoFragment());
         } else if (StudyNotifications.OPEN_AGENDA.equals(action)) {
             StudyNotifications.selectAgendaPlan(this, id);
-            showDestination(AppDestination.STUDY_TODO, StudyFragment.newInstance(AppDestination.STUDY_TODO));
+            showDestination(AppDestination.STUDY_TODO, new StudyTodoFragment());
         } else if (StudyNotifications.OPEN_TIMER.equals(action) || StudyNotifications.FINISH_TIMER.equals(action)) {
             if (StudyNotifications.selectTimerPlan(this, id)) {
-                showDestination(AppDestination.STUDY_FOCUS, StudyFragment.fromNotification(action, id));
+                showDestination(AppDestination.STUDY_FOCUS, StudyFocusFragment.fromNotification(action, id));
             }
         } else {
             return;
@@ -198,10 +202,13 @@ public final class MainActivity extends AppCompatActivity {
             case BORROWING:
                 return new BorrowingFragment();
             case STUDY_FOCUS:
+                return new StudyFocusFragment();
             case STUDY_TODO:
+                return new StudyTodoFragment();
             case STUDY_STATS:
+                return new StudyStatsFragment();
             case STUDY_GARDEN:
-                return StudyFragment.newInstance(destination);
+                return new StudyGardenFragment();
             default:
                 throw new IllegalArgumentException("Unknown destination: " + destination);
         }

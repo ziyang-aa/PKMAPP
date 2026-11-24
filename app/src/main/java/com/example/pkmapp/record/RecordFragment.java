@@ -26,11 +26,10 @@ import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
 import com.example.pkmapp.borrowing.BorrowingDirection;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
-import com.example.pkmapp.data.AssetStore;
 import com.example.pkmapp.data.Transaction;
 import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentRecordBinding;
+import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.google.android.material.button.MaterialButton;
 import com.example.pkmapp.forest.ForestDialogBuilder;
@@ -53,7 +52,7 @@ public final class RecordFragment extends Fragment {
     private TransactionType type = TransactionType.EXPENSE;
     private String category;
     private View selectedCategoryView;
-    private CategoryStore categoryStore;
+    private LifeSharedViewModel viewModel;
     private boolean editMode;
     private String editingTransactionId;
     private long editingAmountInCents;
@@ -97,7 +96,7 @@ public final class RecordFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent,
             @Nullable Bundle state) {
         binding = FragmentRecordBinding.inflate(inflater, parent, false);
-        categoryStore = new CategoryStore(requireContext());
+        viewModel = LifeSharedViewModel.get(requireActivity());
         return binding.getRoot();
     }
 
@@ -164,7 +163,7 @@ public final class RecordFragment extends Fragment {
         selectedCategoryView = null;
         binding.recordEntryCard.setVisibility(View.GONE);
         binding.recordCategoryGroup.removeAllViews();
-        List<String> labels = new ArrayList<>(categoryStore.getCategories(type));
+        List<String> labels = new ArrayList<>(viewModel.getCategories(type));
         if (editMode && initialCategory != null && !labels.contains(initialCategory)) {
             labels.add(initialCategory);
         }
@@ -235,7 +234,7 @@ public final class RecordFragment extends Fragment {
                     String value = input.getText().toString().trim();
                     if (value.isEmpty()) {
                         Toast.makeText(requireContext(), "请输入分类名称", Toast.LENGTH_SHORT).show();
-                    } else if (!categoryStore.addCustomCategory(type, value)) {
+                    } else if (!viewModel.addCustomCategory(type, value)) {
                         Toast.makeText(requireContext(), "分类已存在，请换一个名称", Toast.LENGTH_SHORT).show();
                     } else {
                         category = value.trim();
@@ -396,21 +395,20 @@ public final class RecordFragment extends Fragment {
                     String.valueOf(binding.recordAmountInput.getText()), calculator.getExpression());
             String note = String.valueOf(binding.recordNoteInput.getText());
             if (editMode) {
-                InMemoryLedgerRepository.getInstance().updateTransaction(editingTransactionId, type,
+                viewModel.updateTransaction(editingTransactionId, type,
                         cents, category, note, date.timeInMillis());
                 Toast.makeText(requireContext(), "账单已更新", Toast.LENGTH_SHORT).show();
                 ((MainActivity) requireActivity()).showDestination(AppDestination.DETAILS);
                 return;
             }
-            Transaction transaction = InMemoryLedgerRepository.getInstance().addTransaction(type, cents,
+            Transaction transaction = viewModel.addTransaction(type, cents,
                     category, note, date.timeInMillis());
             BorrowingDirection borrowingDirection = BorrowingCategoryLink.directionFor(type, category);
             if (borrowingDirection == null) {
                 showSaveSuccessDialog();
             } else {
                 if (borrowingDirection == BorrowingDirection.BORROW) {
-                    new AssetStore(requireContext()).addLiability(
-                            InMemoryLedgerRepository.getInstance().getCurrentLedger().getId(), cents);
+                    viewModel.addLiabilityForCurrentLedger(cents);
                 }
                 showBorrowingPrompt(transaction, borrowingDirection);
             }

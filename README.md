@@ -1,6 +1,6 @@
 # 芽叶记（PKMAPP）
 
-静奢纸感 × 手绘蜡笔森林绘本风格的个人**学习 + 生活记账**双空间 Android 应用，采用纯 **Java + XML / 原生自定义 View** 开发（无 Kotlin / Jetpack Compose 依赖，全量本地离线存储）。
+静奢纸感 × 手绘蜡笔森林绘本风格的个人**学习 + 生活记账**双空间 Android 应用，以 **Java + XML / 原生自定义 View** 为主，已开启 **Kotlin 混编基础设施**（AGP 9 内置 Kotlin、Lifecycle、Coroutines），无 Jetpack Compose 依赖，全量本地离线存储。
 
 ---
 
@@ -35,6 +35,7 @@ PKMAPP/
 ├─ DESIGN.md                                  # 芽叶记视觉与交互设计规范（静奢纸感体系）
 ├─ docs/
 │  ├─ REFACTORING-PLAN.md                     # 长期维护与渐进式重构执行计划（Agent 可执行版）
+│  ├─ REFACTORING-CHANGELOG.md                # 重构执行变动记录（相对计划的偏离与理由）
 │  └─ WORKLOG-2026-11-22.md                   # 阶段性改版工作日志
 ├─ build.gradle.kts                           # 根工程 Gradle 配置
 ├─ settings.gradle.kts                        # 模块与仓库配置
@@ -64,8 +65,15 @@ PKMAPP/
       │  │  │  ├─ CrayonCard.java             # 暖瓷纸感卡片背景
       │  │  │  ├─ StudyBackdrop.java          # 森林纸纹与落叶背景
       │  │  │  └─ ForestButton / ForestSurface / ForestMotion / ForestBitmaps / ForestDialogBuilder
-      │  │  ├─ study/                         # 学习小屋核心业务与自绘视图
-      │  │  │  ├─ StudyFragment.java          # 专注 / 待办 / 学习足迹 / 小林地四页主控制器
+      │  │  ├─ study/                         # 学习小屋核心业务、MVVM 状态与自绘视图
+      │  │  │  ├─ BaseStudyFragment.kt        # 学习小屋四页公共基类（三图层通栏、顶栏、弹窗与备份协调）
+      │  │  │  ├─ StudySharedViewModel.kt     # 学习与待办共享 ViewModel（StateFlow 状态快照与跨页筛选协调）
+      │  │  │  ├─ StudyFocusFragment.kt       # 专注（森林自习室）子页控制器（含原地防闪刷计时同步）
+      │  │  │  ├─ StudyTodoFragment.kt        # 待办（独立草稿本）子页控制器
+      │  │  │  ├─ StudyStatsFragment.kt       # 学习足迹（统计与热力图）子页控制器
+      │  │  │  ├─ StudyGardenFragment.kt      # 我的小林地（成长花园）子页控制器
+      │  │  │  ├─ StudyFocusTimerCard / StudyFocusDialogs / StudyAgendaDialogs # 专注卡片与日程/目标弹窗
+      │  │  │  ├─ StudyTodoDialogs / StudyTodoRows / StudyStatsDialogs         # 待办与足迹弹窗及列表行构建器
       │  │  │  ├─ StudySheet.java             # 多层级返回栈瓷白底部弹窗框架
       │  │  │  ├─ StudyPlanDialogs.java       # 学习计划与科目书架管理弹窗
       │  │  │  ├─ StudyWorkDialogs.java       # 学习记录补记、回顾与计划事项表单
@@ -78,14 +86,15 @@ PKMAPP/
       │  │  ├─ todo/                          # 独立待办数据层与截止提醒通知
       │  │  │  ├─ TodoStore.java              # 独立待办持久化与排序
       │  │  │  └─ TodoNotifications.java      # 截止前提醒闹钟与测试通知
+      │  │  ├─ life/                          # 生活小屋共享 MVVM 状态层（LifeSharedViewModel、LifeSnapshot）
       │  │  ├─ data/                          # 生活记账核心数据模型与本地持久化（Ledger、Transaction、AssetStore）
       │  │  ├─ details/                       # 明细页与账本列表适配器
       │  │  ├─ record/                        # 记一笔页面、分类图标解析（CategoryIconResolver）与计算器
       │  │  ├─ charts/                        # 收支趋势折线图与分类排行
       │  │  ├─ savings/                       # 攒钱目标页面与存储
       │  │  ├─ borrowing/                     # 借入/借出统计、自定义日历与账本联动
-      │  │  ├─ exchange/                      # 实时汇率拉取、缓存与换算
-      │  │  ├─ profile/                       # 森林档案、头像裁剪与每日签到
+      │  │  ├─ exchange/                      # 实时汇率拉取、缓存与换算（ExchangeViewModel、ExchangeRateService）
+      │  │  ├─ profile/                       # 森林档案（ProfileFragment.kt 及头像裁剪/备份/账本分类/签到控制器）
       │  │  └─ backup/                        # 账单 JSON 导入导出与去重合并
       │  └─ res/
       │     ├─ layout/                        # 25 个 XML 页面与列表项布局
@@ -94,7 +103,7 @@ PKMAPP/
       │     ├─ mipmap-*/                      # 应用桌面图标
       │     ├─ color/ & values/               # 色彩 Token、尺寸、样式与主题定义
       │     └─ anim/ & xml/                   # 转场动画与备份规则
-      ├─ test/                                # 33 个 JVM 本地单元测试（无需设备）
+      ├─ test/                                # 35 个 JVM 本地单元测试文件（116 条用例，无需设备）
       └─ androidTest/                         # 7 个真机/模拟器 UI 与集成测试
 ```
 

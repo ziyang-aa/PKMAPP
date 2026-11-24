@@ -16,9 +16,8 @@ import androidx.fragment.app.Fragment;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
-import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentSavingsBinding;
+import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 
@@ -29,7 +28,8 @@ import com.example.pkmapp.forest.ForestDialogBuilder;
 
 public final class SavingsFragment extends Fragment {
     private FragmentSavingsBinding binding;
-    private SavingsGoalStore goalStore;
+    private LifeSharedViewModel viewModel;
+    private List<SavingsGoal> renderedGoals;
 
     @Nullable
     @Override
@@ -41,18 +41,21 @@ public final class SavingsFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        goalStore = new SavingsGoalStore(requireContext());
+        viewModel = LifeSharedViewModel.get(requireActivity());
         binding.pageBackButton.setOnClickListener(v ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
         binding.savingsAddGoalButton.setOnClickListener(v -> addNewGoalCard());
-        renderGoals();
+        viewModel.observe(getViewLifecycleOwner(), snapshot -> renderGoalsIfChanged(snapshot.getSavingsGoals()));
     }
 
-    private void renderGoals() {
-        if (binding == null || goalStore == null) {
+    private void renderGoalsIfChanged(List<SavingsGoal> goals) {
+        if (binding == null) {
             return;
         }
-        List<SavingsGoal> goals = goalStore.getGoals();
+        if (renderedGoals != null && sameGoals(renderedGoals, goals)) {
+            return;
+        }
+        renderedGoals = goals;
         binding.savingsGoalCount.setText(goals.size() + " 个目标");
         binding.savingsGoalList.removeAllViews();
         if (goals.isEmpty()) {
@@ -63,6 +66,21 @@ public final class SavingsFragment extends Fragment {
             }
         }
         binding.savingsAddGoalButton.setVisibility(goals.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    private static boolean sameGoals(List<SavingsGoal> a, List<SavingsGoal> b) {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            SavingsGoal left = a.get(i);
+            SavingsGoal right = b.get(i);
+            if (!left.getId().equals(right.getId())
+                    || !left.getName().equals(right.getName())
+                    || left.getTargetCents() != right.getTargetCents()
+                    || left.getSavedCents() != right.getSavedCents()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void addNewGoalCard() {
@@ -160,14 +178,14 @@ public final class SavingsFragment extends Fragment {
         }
         try {
             long targetCents = MoneyParser.parseYuanToCents(targetInput.getText().toString());
+            renderedGoals = null;
             if (goal == null) {
-                goalStore.createGoal(name, targetCents);
+                viewModel.createSavingsGoal(name, targetCents);
                 Toast.makeText(requireContext(), "目标已加入森林", Toast.LENGTH_SHORT).show();
             } else {
-                goalStore.updateGoal(goal.getId(), name, targetCents);
+                viewModel.updateSavingsGoal(goal.getId(), name, targetCents);
                 Toast.makeText(requireContext(), "目标已更新", Toast.LENGTH_SHORT).show();
             }
-            renderGoals();
         } catch (IllegalArgumentException exception) {
             targetInput.setError(exception.getMessage());
             message.setText(exception.getMessage());
@@ -181,13 +199,11 @@ public final class SavingsFragment extends Fragment {
         }
         try {
             long amountCents = MoneyParser.parseYuanToCents(depositInput.getText().toString());
-            SavingsGoal updated = goalStore.deposit(goal.getId(), amountCents);
-            InMemoryLedgerRepository.getInstance().addTransaction(TransactionType.INCOME, amountCents,
-                    "攒钱 · " + updated.getName(), "为「" + updated.getName() + "」存入",
+            renderedGoals = null;
+            SavingsGoal updated = viewModel.depositSavingsGoal(goal.getId(), amountCents,
                     System.currentTimeMillis());
             Toast.makeText(requireContext(), updated.isComplete()
                     ? "目标完成，森林又长大了一点" : "已存入目标", Toast.LENGTH_SHORT).show();
-            renderGoals();
         } catch (IllegalArgumentException exception) {
             depositInput.setError(exception.getMessage());
             message.setText(exception.getMessage());
@@ -200,8 +216,8 @@ public final class SavingsFragment extends Fragment {
                 .setMessage("目标卡会删除，但已存入的记录会保留在资产、明细和图表中。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("删除目标", (dialog, which) -> {
-                    if (goalStore.deleteGoal(goal.getId())) {
-                        renderGoals();
+                    renderedGoals = null;
+                    if (viewModel.deleteSavingsGoal(goal.getId())) {
                         Toast.makeText(requireContext(), "目标已删除", Toast.LENGTH_SHORT).show();
                     }
                 })
@@ -219,7 +235,7 @@ public final class SavingsFragment extends Fragment {
     @Override
     public void onDestroyView() {
         binding = null;
-        goalStore = null;
+        renderedGoals = null;
         super.onDestroyView();
     }
 }

@@ -1,6 +1,6 @@
 # 芽叶记（PKMAPP）长期演进与重构总计划（Agent 可执行版）
 
-> **文档定位**：本计划是一份面向 AI Coding Agent 与开发者的**可直接执行的分阶段重构蓝图**。执行重构前，请先通读根目录 [AGENTS.md](../AGENTS.md)、[DESIGN.md](../DESIGN.md) 与 [README.md](../README.md)，再严格按本计划的 Phase 0 → Phase 6 顺序推进。每完成一个 Phase 都必须通过全部编译、单测与实机验收门禁，严禁跳步或推倒重写。
+> **文档定位**：本计划是一份面向 AI Coding Agent 与开发者的**可直接执行的分阶段重构蓝图**。执行重构前，请先通读根目录 [AGENTS.md](../AGENTS.md)、[DESIGN.md](../DESIGN.md) 与 [README.md](../README.md)，再严格按本计划的 Phase 0 → Phase 6 顺序推进。每完成一个 Phase 都必须通过全部编译、单测与实机验收门禁，严禁跳步或推倒重写。执行中的偏离与理由见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)。
 
 ---
 
@@ -34,7 +34,7 @@
 ### 1.1 构建与工程基线
 - **构建工具**：AGP `9.1.1`，Gradle Wrapper，Version Catalog (`gradle/libs.versions.toml`)
 - **Android SDK**：`compileSdk 36`（minor 1），`minSdk 24`，`targetSdk 36`
-- **当前语言与编译**：纯 Java 11（`viewBinding = true`，尚未开启 Kotlin 插件）
+- **当前语言与编译**：Java 11 为主（`viewBinding = true`）；Phase 1 起通过 AGP 9 内置 Kotlin（KGP 2.2.10）支持 Java/Kotlin 混编。
 - **当前运行依赖（极精简，共 4 个）**：`appcompat:1.6.1`、`material:1.10.0`、`fragment:1.8.9`、`recyclerview:1.4.0`
 - **源码体量**：`95` 个 Java 文件，共 `21,077` 行代码；`31` 个 JVM 单元测试文件；`7` 个 Espresso 仪表测试文件
 - **启动入口**：`.SplashActivity`（exported），`.MainActivity`（非 exported，单 Activity + Fragment 容器）
@@ -162,15 +162,17 @@ app/src/main/java/com/example/pkmapp/
 
 **具体任务**：
 1. 在 `libs.versions.toml` 中引入与 AGP `9.1.1` 匹配的：
-   - `kotlin` Android 插件（及后续 Phase 4 使用的 `ksp` 插件）
+   - Kotlin 由 AGP 9 内置提供，不再单独声明或应用 `org.jetbrains.kotlin.android` 插件；`ksp` 插件仅在 catalog 中占位供后续 Phase 4 使用（当前不应用）
    - `androidx.lifecycle:lifecycle-viewmodel-ktx`、`lifecycle-runtime-ktx`、`lifecycle-livedata-ktx`
    - `org.jetbrains.kotlinx:kotlinx-coroutines-android`、`kotlinx-coroutines-test`（testImplementation）
    - `androidx.fragment:fragment-ktx`、`androidx.activity:activity-ktx`
-2. 在 `app/build.gradle.kts` 中配置 `kotlinOptions { jvmTarget = "11" }`，与现有 `JavaVersion.VERSION_11` 完全对齐。
+2. 在 `app/build.gradle.kts` 中通过 `kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_11) } }` 配置字节码目标版本（取代旧式 `kotlinOptions`），与现有 `JavaVersion.VERSION_11` 完全对齐。
 3. 编写 1 个极简 Kotlin 单元测试（例如校验 `AppDestination` 或 `StudyPlan.Partner.parse` 互调），确认 Kotlin 测试与 Java 主代码 100% 互通。
 
 **验收标准**：
 - 既有 95 个 Java 文件零修改；全部 31+ 个单测与 `compileDebugAndroidTestSources` 全绿；Debug APK 可正常安装启动。
+
+**执行状态**：已完成（2026-11-23），新增 `AppDestinationKotlinInteropTest.kt`。
 
 ---
 
@@ -200,6 +202,8 @@ app/src/main/java/com/example/pkmapp/
 - `StudyBackdropTest`、`StudyNavigationTest`、`StudyPlanFlowTest`、`StudyWorkflowUiTest` 编译且逻辑契约全部满足；
 - 实机验证 4 个子页切换、暂停/继续零闪屏、待办勾选/日期筛选、计划切换与伙伴联动完全正常。
 
+**执行状态**：已完成（2026-11-24），`StudyFragment.java`（4,088 行）已完全移除并拆解为 `BaseStudyFragment.kt`、`StudySharedViewModel.kt`、4 个独立子页 Fragment（均 < 500 行）及配套弹窗/视图构建器，新增 `StudySharedViewModelTest.kt`（详见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)）。
+
 ---
 
 ### Phase 3：拆解 `ProfileFragment` 与生活小屋统一 MVVM（预估 1.5–2 天）
@@ -220,6 +224,8 @@ app/src/main/java/com/example/pkmapp/
 **验收标准**：
 - 记一笔 / 删除一笔 / 记一笔借钱后，明细、图表、我的总资产、首页今日速览自动同步更新；
 - 全部生活小屋相关 JVM 单元测试全绿。
+
+**执行状态**：已完成（2026-11-24），新增 `LifeSharedViewModel.kt` 与 `ExchangeViewModel.kt`，将 970 行 `ProfileFragment.java` 拆解为 138 行 `ProfileFragment.kt` 及 4 个职责组件（`AvatarCropSheetController.kt`、`BackupCoordinator.kt`、`AssetAndLedgerDialogs.kt`、`ProfileIdentityDialogs.kt`），生活小屋全部 7 个页面与 `HomeFragment` 今日速览已统一收敛至响应式 MVVM，新增 `LifeSharedViewModelTest.kt` 与 `ExchangeViewModelTest.kt`（详见 [REFACTORING-CHANGELOG.md](REFACTORING-CHANGELOG.md)）。
 
 ---
 

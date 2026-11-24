@@ -21,25 +21,24 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.data.Ledger;
-import com.example.pkmapp.data.LedgerDataListener;
 import com.example.pkmapp.data.MonthlyTotals;
 import com.example.pkmapp.databinding.FragmentDetailsBinding;
+import com.example.pkmapp.life.LifeSharedViewModel;
+import com.example.pkmapp.life.LifeSnapshot;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 public final class DetailsFragment extends Fragment {
-    private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
-    private final LedgerDataListener listener = this::render;
+    private LifeSharedViewModel viewModel;
     private FragmentDetailsBinding binding;
     private TransactionListAdapter transactionAdapter;
+    private BottomSheetDialog activeSheet;
     private final Calendar selectedMonth = Calendar.getInstance();
 
     @Nullable
@@ -71,31 +70,25 @@ public final class DetailsFragment extends Fragment {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        repository.addListener(listener);
-        render();
-    }
-
-    @Override
-    public void onPause() {
-        repository.removeListener(listener);
-        super.onPause();
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        viewModel = LifeSharedViewModel.get(requireActivity());
+        viewModel.observe(getViewLifecycleOwner(), this::renderSnapshot);
     }
 
     private void showLedgerChooser() {
-        List<Ledger> ledgers = repository.getLedgers();
+        LifeSnapshot snapshot = viewModel.getCurrentSnapshot();
+        List<Ledger> ledgers = snapshot.getLedgers();
         final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         View root = LayoutInflater.from(requireContext()).inflate(
                 R.layout.dialog_details_ledger_picker, null);
         LinearLayout options = root.findViewById(R.id.details_ledger_options);
-        String currentLedgerId = repository.getCurrentLedger().getId();
+        String currentLedgerId = snapshot.getCurrentLedger().getId();
         for (Ledger ledger : ledgers) {
             boolean selected = ledger.getId().equals(currentLedgerId);
             TextView option = pickerOption(ledger.getName() + (selected ? "  · 当前" : ""), selected);
             option.setContentDescription("切换到" + ledger.getName());
             option.setOnClickListener(view -> {
-                repository.switchLedger(ledger.getId());
+                viewModel.switchLedger(ledger.getId());
                 dialog.dismiss();
             });
             options.addView(option);
@@ -161,20 +154,26 @@ public final class DetailsFragment extends Fragment {
                 nameInput.setError("请输入账本名称");
                 return;
             }
-            Ledger ledger = repository.createLedger(name);
-            repository.switchLedger(ledger.getId());
+            viewModel.createAndSwitchLedger(name);
             dialog.dismiss();
         });
         showPaperSheet(dialog, root);
     }
 
     private void render() {
+        if (viewModel != null) {
+            renderSnapshot(viewModel.getCurrentSnapshot());
+        }
+    }
+
+    private void renderSnapshot(LifeSnapshot snapshot) {
         if (binding == null || !isAdded()) {
             return;
         }
-        MonthlyTotals totals = repository.getCurrentMonthTotals(selectedMonth.getTimeInMillis());
-        binding.detailsLedgerSwitchButton.setText(repository.getCurrentLedger().getName() + "  ▾");
-        binding.detailsLedgerName.setText("当前账本 · " + repository.getCurrentLedger().getName());
+        MonthlyTotals totals = viewModel.monthTotalsFor(selectedMonth.getTimeInMillis());
+        String ledgerName = snapshot.getCurrentLedger().getName();
+        binding.detailsLedgerSwitchButton.setText(ledgerName + "  ▾");
+        binding.detailsLedgerName.setText("当前账本 · " + ledgerName);
         binding.detailsIncome.setText(flowText("↑ 收入", totals.getIncomeInCents(),
                 R.color.forest_green), TextView.BufferType.SPANNABLE);
         binding.detailsExpense.setText(flowText("↓ 支出", totals.getExpenseInCents(),
@@ -184,7 +183,8 @@ public final class DetailsFragment extends Fragment {
 
         binding.detailsMonthPickerButton.setText(DetailsPickerLabels.monthButtonText(
                 selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH)));
-        List<com.example.pkmapp.data.Transaction> transactions = transactionsForSelectedMonth();
+        List<com.example.pkmapp.data.Transaction> transactions = viewModel.transactionsForMonth(
+                selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH));
         binding.detailsEmptyState.setVisibility(transactions.isEmpty() ? View.VISIBLE : View.GONE);
         binding.detailsTransactionList.setVisibility(transactions.isEmpty() ? View.GONE : View.VISIBLE);
         transactionAdapter.submit(DetailsListItem.fromTransactions(transactions,
@@ -256,7 +256,7 @@ public final class DetailsFragment extends Fragment {
 
         cancel.setOnClickListener(view -> dialog.dismiss());
         delete.setOnClickListener(view -> {
-            repository.deleteTransaction(transaction.getId());
+            viewModel.deleteTransaction(transaction.getId());
             dialog.dismiss();
         });
         showPaperSheet(dialog, root);
@@ -344,6 +344,13 @@ public final class DetailsFragment extends Fragment {
     }
 
     private void showPaperSheet(BottomSheetDialog dialog, View root) {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+        }
+        activeSheet = dialog;
+        dialog.setOnDismissListener(d -> {
+            if (activeSheet == dialog) activeSheet = null;
+        });
         dialog.setContentView(root);
         dialog.setOnShowListener(ignored -> {
             FrameLayout bottomSheet = dialog.findViewById(
@@ -362,21 +369,12 @@ public final class DetailsFragment extends Fragment {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private List<com.example.pkmapp.data.Transaction> transactionsForSelectedMonth() {
-        List<com.example.pkmapp.data.Transaction> filtered = new ArrayList<>();
-        for (com.example.pkmapp.data.Transaction transaction : repository.getTransactionsForCurrentLedger()) {
-            Calendar date = Calendar.getInstance();
-            date.setTimeInMillis(transaction.getOccurredAtMillis());
-            if (date.get(Calendar.YEAR) == selectedMonth.get(Calendar.YEAR)
-                    && date.get(Calendar.MONTH) == selectedMonth.get(Calendar.MONTH)) {
-                filtered.add(transaction);
-            }
-        }
-        return filtered;
-    }
-
     @Override
     public void onDestroyView() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+            activeSheet = null;
+        }
         binding = null;
         transactionAdapter = null;
         super.onDestroyView();

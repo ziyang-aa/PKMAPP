@@ -25,17 +25,17 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.forest.ForestDialogBuilder;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSceneView;
 import com.example.pkmapp.forest.ForestUi;
+import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 import com.example.pkmapp.study.StudyFormat;
 import com.example.pkmapp.study.StudyNotebook;
+import com.example.pkmapp.study.StudySharedViewModel;
 import com.example.pkmapp.study.StudyStore;
-import com.example.pkmapp.todo.TodoStore;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import java.util.ArrayList;
@@ -52,6 +52,8 @@ public final class HomeFragment extends Fragment {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final List<ObjectAnimator> breathing = new ArrayList<>();
     private StudyStore store;
+    private LifeSharedViewModel lifeViewModel;
+    private StudySharedViewModel studyViewModel;
     private TextView resume;
     private TextView summaryFocusValue;
     private TextView summaryTodoValue;
@@ -245,6 +247,15 @@ public final class HomeFragment extends Fragment {
         return scroll;
     }
 
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        lifeViewModel = LifeSharedViewModel.get(requireActivity());
+        studyViewModel = StudySharedViewModel.get(requireActivity());
+        studyViewModel.syncFromStores(requireContext());
+        lifeViewModel.observe(getViewLifecycleOwner(), snapshot -> refreshOverview());
+        studyViewModel.observeOverview(getViewLifecycleOwner(), this::refreshOverview);
+    }
+
     private void addTodayOverview(LinearLayout parent) {
         LinearLayout card = column(requireContext());
         card.setPadding(
@@ -369,12 +380,12 @@ public final class HomeFragment extends Fragment {
         }
         summaryFocusValue.setText(focusMillis > 0L ? StudyFormat.duration(focusMillis) : "0分钟");
 
-        int pendingCount = TodoStore.get(requireContext()).pending().size();
+        int pendingCount = studyViewModel == null
+            ? 0 : studyViewModel.getTodoState().getValue().getPendingCount();
         summaryTodoValue.setText(pendingCount + " 项");
 
-        long monthExpense = InMemoryLedgerRepository.getInstance()
-            .getCurrentMonthTotals(now)
-            .getExpenseInCents();
+        long monthExpense = lifeViewModel == null
+            ? 0L : lifeViewModel.getCurrentSnapshot().getCurrentMonthTotals().getExpenseInCents();
         summaryExpenseValue.setText(MoneyParser.formatCents(monthExpense));
 
         if (rememberSwitch != null) {
@@ -484,6 +495,12 @@ public final class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        if (studyViewModel != null) {
+            studyViewModel.syncFromStores(requireContext());
+        }
+        if (lifeViewModel != null) {
+            lifeViewModel.refresh();
+        }
         refreshOverview();
         handler.post(tick);
         if (

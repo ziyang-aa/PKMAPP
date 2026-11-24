@@ -22,10 +22,11 @@ import android.graphics.drawable.ColorDrawable;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.data.Transaction;
 import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentChartsBinding;
+import com.example.pkmapp.life.LifeSharedViewModel;
+import com.example.pkmapp.life.LifeSnapshot;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.CategoryIconResolver;
 import com.example.pkmapp.record.MoneyParser;
@@ -41,6 +42,7 @@ public final class ChartsFragment extends Fragment {
     private static final String STATE_SELECTED_CHART_PERIOD = "selected_chart_period";
     private static final String STATE_SELECTED_CHART_TYPE = "selected_chart_type";
 
+    private LifeSharedViewModel viewModel;
     private FragmentChartsBinding binding;
     private TransactionType type = TransactionType.EXPENSE;
     private ChartDataCalculator.Period period = ChartDataCalculator.Period.MONTH;
@@ -102,18 +104,27 @@ public final class ChartsFragment extends Fragment {
         binding.chartPeriodPrevious.setOnClickListener(v -> shiftSelectedWeek(-1));
         binding.chartPeriodNext.setOnClickListener(v -> shiftSelectedWeek(1));
         binding.chartPeriodSelector.setOnClickListener(v -> togglePeriodSelector());
-        render();
+        viewModel = LifeSharedViewModel.get(requireActivity());
+        viewModel.observe(getViewLifecycleOwner(), this::renderSnapshot);
     }
 
     private void render() {
+        if (viewModel != null) {
+            renderSnapshot(viewModel.getCurrentSnapshot());
+        }
+    }
+
+    private void renderSnapshot(LifeSnapshot snapshot) {
+        if (binding == null || !isAdded()) {
+            return;
+        }
         boolean expense = type == TransactionType.EXPENSE;
         styleSegmentButton(binding.chartExpenseButton, expense);
         styleSegmentButton(binding.chartIncomeButton, !expense);
         styleSegmentButton(binding.chartWeekButton, period == ChartDataCalculator.Period.WEEK);
         styleSegmentButton(binding.chartMonthButton, period == ChartDataCalculator.Period.MONTH);
         styleSegmentButton(binding.chartYearButton, period == ChartDataCalculator.Period.YEAR);
-        InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
-        List<Transaction> transactions = repository.getTransactionsForCurrentLedger();
+        List<Transaction> transactions = snapshot.getTransactions();
         Calendar reference = (Calendar) selectedDate.clone();
         long[] points = ChartDataCalculator.bucketTotals(transactions, type, reference, period);
         int[] pointCounts = ChartDataCalculator.bucketCounts(transactions, type, reference, period);

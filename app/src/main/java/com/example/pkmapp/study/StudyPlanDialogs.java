@@ -350,7 +350,7 @@ final class StudyPlanDialogs {
             LinearLayout row = partnerOptionRow(
                 "学习伙伴",
                 partner.title + " · " + partner.subtitle,
-                StudyFragment.partnerDrawable(partner),
+                StudyUi.partnerDrawable(partner),
                 "›",
                 false,
                 this::partners
@@ -367,7 +367,7 @@ final class StudyPlanDialogs {
                 LinearLayout option = partnerOptionRow(
                     choice.title,
                     choice.subtitle,
-                    StudyFragment.partnerDrawable(choice),
+                    StudyUi.partnerDrawable(choice),
                     current ? "✓" : null,
                     current,
                     () -> {

@@ -26,11 +26,11 @@ import androidx.fragment.app.Fragment;
 
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
-import com.example.pkmapp.data.InMemoryLedgerRepository;
 import com.example.pkmapp.forest.ForestCalendarView;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSegmentedControl;
 import com.example.pkmapp.forest.ForestUi;
+import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
 import com.example.pkmapp.record.RecordDateState;
@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 public final class BorrowingFragment extends Fragment {
     public static final String ARG_DIRECTION = "borrowing_direction";
@@ -50,8 +49,7 @@ public final class BorrowingFragment extends Fragment {
     public static final String ARG_OCCURRED_AT = "borrowing_occurred_at";
     public static final String ARG_SOURCE_TRANSACTION = "borrowing_source_transaction";
 
-    private final InMemoryLedgerRepository repository = InMemoryLedgerRepository.getInstance();
-    private BorrowingRecordStore store;
+    private LifeSharedViewModel viewModel;
     private int filterTab = 0; // 0: 全部, 1: 我借出去, 2: 我借进来
     private ForestSegmentedControl filterBar;
     private LinearLayout recordList;
@@ -61,6 +59,7 @@ public final class BorrowingFragment extends Fragment {
     private TextView borrowTotal;
     private TextView borrowCount;
     private TextView netSummary;
+    private BottomSheetDialog activeSheet;
 
     public static BorrowingFragment newComposer(BorrowingDirection direction, long amountCents,
             long occurredAtMillis, @Nullable String sourceTransactionId) {
@@ -85,7 +84,7 @@ public final class BorrowingFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        store = new BorrowingRecordStore(requireContext());
+        viewModel = LifeSharedViewModel.get(requireActivity());
         lendTotal = view.findViewById(R.id.borrowing_lend_total);
         lendCount = view.findViewById(R.id.borrowing_lend_count);
         borrowTotal = view.findViewById(R.id.borrowing_borrow_total);
@@ -123,7 +122,7 @@ public final class BorrowingFragment extends Fragment {
         );
         filterHost.addView(filterBar, new LinearLayout.LayoutParams(-1, -2));
 
-        renderRecords();
+        viewModel.observe(getViewLifecycleOwner(), snapshot -> renderRecords(snapshot.getBorrowingRecords()));
         openComposerIfRequested();
     }
 
@@ -151,8 +150,13 @@ public final class BorrowingFragment extends Fragment {
     }
 
     private void renderRecords() {
-        if (store == null || recordList == null || !isAdded()) return;
-        List<BorrowingRecord> all = store.getRecordsForLedger(repository.getCurrentLedger().getId());
+        if (viewModel != null) {
+            renderRecords(viewModel.getCurrentSnapshot().getBorrowingRecords());
+        }
+    }
+
+    private void renderRecords(List<BorrowingRecord> all) {
+        if (recordList == null || !isAdded()) return;
         BorrowingSummary lend = BorrowingSummary.from(all, BorrowingDirection.LEND);
         BorrowingSummary borrow = BorrowingSummary.from(all, BorrowingDirection.BORROW);
         lendTotal.setText(MoneyParser.formatCents(lend.getTotalInCents()));
@@ -247,7 +251,12 @@ public final class BorrowingFragment extends Fragment {
     private void showComposerSheet(BorrowingDirection initialDirection, long initialAmountCents,
             long initialOccurredAt, @Nullable String initialSourceTxId) {
         Context ctx = requireContext();
+        if (activeSheet != null) activeSheet.dismiss();
         BottomSheetDialog sheet = new BottomSheetDialog(ctx, R.style.ThemeOverlay_PkmAPP_StudySheet);
+        activeSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (activeSheet == sheet) activeSheet = null;
+        });
         sheet.getBehavior().setSkipCollapsed(true);
         sheet.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
 
@@ -352,9 +361,7 @@ public final class BorrowingFragment extends Fragment {
                     personInput.requestFocus();
                     return;
                 }
-                BorrowingRecord record = new BorrowingRecord(
-                        UUID.randomUUID().toString(),
-                        repository.getCurrentLedger().getId(),
+                viewModel.addBorrowingRecord(
                         chosenDir[0],
                         amountCents,
                         chosenDate[0].timeInMillis(),
@@ -362,18 +369,7 @@ public final class BorrowingFragment extends Fragment {
                         noteInput.getText().toString(),
                         initialSourceTxId
                 );
-                store.add(record);
-                if (BorrowingTransactionSync.shouldCreateMainTransaction(initialSourceTxId)) {
-                    repository.addTransaction(
-                            BorrowingTransactionSync.transactionType(chosenDir[0]),
-                            amountCents,
-                            BorrowingTransactionSync.category(chosenDir[0]),
-                            BorrowingTransactionSync.note(chosenDir[0], person, noteInput.getText().toString()),
-                            chosenDate[0].timeInMillis()
-                    );
-                }
                 sheet.dismiss();
-                renderRecords();
                 Toast.makeText(ctx, "已记录这笔往来", Toast.LENGTH_SHORT).show();
             } catch (IllegalArgumentException e) {
                 amountInput.setError(e.getMessage());
@@ -493,6 +489,10 @@ public final class BorrowingFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+            activeSheet = null;
+        }
         filterBar = null;
         recordList = null;
         emptyState = null;

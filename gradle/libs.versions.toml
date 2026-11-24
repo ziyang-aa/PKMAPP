@@ -1,3 +1,4 @@
+# Kotlin 由 AGP 9 内置提供（KGP 2.2.10），不单独声明 kotlin-android 插件；ksp 先占位给 Phase 4，当前不应用。
 [versions]
 agp = "9.1.1"
 junit = "4.13.2"
@@ -9,6 +10,10 @@ material = "1.10.0"
 fragment = "1.8.9"
 recyclerview = "1.4.0"
 json = "20240303"
+lifecycle = "2.9.4"
+coroutines = "1.10.2"
+activityKtx = "1.10.1"
+ksp = "2.3.4"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -20,6 +25,14 @@ material = { group = "com.google.android.material", name = "material", version.r
 fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 json = { group = "org.json", name = "json", version.ref = "json" }
+fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }
+activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

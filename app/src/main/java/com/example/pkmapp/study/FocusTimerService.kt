@@ -1,17 +1,45 @@
 package com.example.pkmapp.study
 
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 
-/** Foreground service keeping active focus timer notifications reliable across background kills. */
+/** Foreground service keeping active focus timer notifications live on the lock screen & status bar. */
 class FocusTimerService : Service() {
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val periodicRefresh = object : Runnable {
+        override fun run() {
+            val appContext = applicationContext
+            val store = StudyStore.get(appContext)
+            val notebook = store.notebook()
+            if (!notebook.hasSession() || !StudyNotifications.permitted(appContext)) {
+                stopGracefully()
+                return
+            }
+            val notification = StudyNotifications.buildTimerNotification(appContext, store)
+            if (notification != null) {
+                val manager = appContext.getSystemService(NotificationManager::class.java)
+                try {
+                    manager?.notify(StudyNotifications.TIMER_ID, notification)
+                } catch (error: SecurityException) {
+                    Log.w(TAG, "Notification refresh skipped", error)
+                }
+            }
+            if (notebook.running()) {
+                handler.postDelayed(this, REFRESH_INTERVAL_MS)
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -40,16 +68,27 @@ class FocusTimerService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        handler.removeCallbacks(periodicRefresh)
+        if (store.notebook().running()) {
+            handler.postDelayed(periodicRefresh, REFRESH_INTERVAL_MS)
+        }
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        handler.removeCallbacks(periodicRefresh)
+        super.onDestroy()
+    }
+
     private fun stopGracefully() {
+        handler.removeCallbacks(periodicRefresh)
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     companion object {
         private const val TAG = "FocusTimerService"
+        private const val REFRESH_INTERVAL_MS = 30_000L
         private const val ACTION_SYNC = "com.example.pkmapp.study.FOCUS_SERVICE_SYNC"
         private const val ACTION_STOP = "com.example.pkmapp.study.FOCUS_SERVICE_STOP"
 

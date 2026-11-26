@@ -12,9 +12,12 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultCaller
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import com.example.pkmapp.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -25,19 +28,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-internal class AvatarCropSheetController(
-    private val fragment: Fragment,
+class AvatarCropSheetController(
+    caller: ActivityResultCaller,
+    private val contextProvider: () -> Context,
+    private val scopeProvider: () -> LifecycleCoroutineScope,
+    private val isHostAlive: () -> Boolean,
     private val onAvatarUpdated: (Bitmap) -> Unit
 ) {
+    constructor(
+        fragment: Fragment,
+        onAvatarUpdated: (Bitmap) -> Unit
+    ) : this(
+        caller = fragment,
+        contextProvider = { fragment.requireContext() },
+        scopeProvider = { fragment.viewLifecycleOwner.lifecycleScope },
+        isHostAlive = { fragment.isAdded && fragment.view != null },
+        onAvatarUpdated = onAvatarUpdated
+    )
+
+    constructor(
+        activity: AppCompatActivity,
+        onAvatarUpdated: (Bitmap) -> Unit
+    ) : this(
+        caller = activity,
+        contextProvider = { activity },
+        scopeProvider = { activity.lifecycleScope },
+        isHostAlive = { !activity.isFinishing && !activity.isDestroyed },
+        onAvatarUpdated = onAvatarUpdated
+    )
+
     private var activeSheet: BottomSheetDialog? = null
 
     private val avatarPicker: ActivityResultLauncher<String> =
-        fragment.registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        caller.registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             handleAvatarPicked(uri)
         }
 
     fun showAvatarPreview() {
-        val context = fragment.requireContext()
+        val context = contextProvider()
         val dialog = BottomSheetDialog(context)
         val root = LayoutInflater.from(context).inflate(R.layout.dialog_avatar_preview, null)
         val preview = root.findViewById<ImageView>(R.id.profile_avatar_preview_image)
@@ -58,9 +86,9 @@ internal class AvatarCropSheetController(
     }
 
     private fun handleAvatarPicked(uri: Uri?) {
-        if (uri == null || !fragment.isAdded) return
-        val appContext = fragment.requireContext().applicationContext
-        fragment.viewLifecycleOwner.lifecycleScope.launch {
+        if (uri == null || !isHostAlive()) return
+        val appContext = contextProvider().applicationContext
+        scopeProvider().launch {
             var errorMessage: String? = null
             val decoded = withContext(Dispatchers.IO) {
                 try {
@@ -73,10 +101,10 @@ internal class AvatarCropSheetController(
                     null
                 }
             }
-            if (!fragment.isAdded || fragment.view == null) return@launch
+            if (!isHostAlive()) return@launch
             if (decoded == null) {
                 val toastText = if (errorMessage == null) "这张图片暂时无法使用" else "图片读取失败"
-                Toast.makeText(fragment.requireContext(), toastText, Toast.LENGTH_SHORT).show()
+                Toast.makeText(contextProvider(), toastText, Toast.LENGTH_SHORT).show()
             } else {
                 showAvatarCrop(decoded)
             }
@@ -84,7 +112,7 @@ internal class AvatarCropSheetController(
     }
 
     private fun showAvatarCrop(bitmap: Bitmap) {
-        val context = fragment.requireContext()
+        val context = contextProvider()
         val dialog = BottomSheetDialog(context)
         val root = LayoutInflater.from(context).inflate(R.layout.dialog_avatar_crop, null)
         val cropStage = root.findViewById<FrameLayout>(R.id.avatar_crop_stage)
@@ -105,11 +133,11 @@ internal class AvatarCropSheetController(
         }
         root.findViewById<View>(R.id.profile_avatar_dialog_save).setOnClickListener {
             val cropped = cropView.croppedBitmap
-            fragment.viewLifecycleOwner.lifecycleScope.launch {
+            scopeProvider().launch {
                 val saved = withContext(Dispatchers.IO) {
                     AvatarStore.save(context.applicationContext, cropped)
                 }
-                if (!fragment.isAdded || fragment.view == null) return@launch
+                if (!isHostAlive()) return@launch
                 if (saved) {
                     onAvatarUpdated(cropped)
                     dialog.dismiss()

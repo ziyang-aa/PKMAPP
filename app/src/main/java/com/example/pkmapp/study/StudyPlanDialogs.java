@@ -286,6 +286,7 @@ final class StudyPlanDialogs {
         private final StudyPlan original;
         private final List<StudySubject> shelf = new ArrayList<>();
         private StudyPlan.Partner partner;
+        private StudySheet.Pane formPane;
         private LinearLayout shelfView, partnerView;
         private TextView shelfCount;
 
@@ -299,6 +300,7 @@ final class StudyPlanDialogs {
         void show() {
             StudySheet.Pane pane = pane(original == null ? "新建" + kind.title + "计划" : "编辑计划",
                 null, glyph(kind));
+            this.formPane = pane;
             EditText name = field(pane.body, "计划名称", "例如 408 一轮", original == null ? "" : original.title, 40);
             EditText due = field(pane.body, "预计结束日（选填）", "YYYY-MM-DD", original == null ? "" : original.due, 10);
             partnerView = column(context);
@@ -490,8 +492,13 @@ final class StudyPlanDialogs {
                     if (old == null) shelf.add(book);
                     else shelf.set(index, book);
                     showShelf();
-                    sheet.pop();
-                    if (old != null) sheet.pop();
+                    if (formPane != null) {
+                        sheet.popTo(formPane);
+                        formPane.scrollToBottom();
+                    } else {
+                        sheet.pop();
+                        if (old != null) sheet.pop();
+                    }
                 } catch (IllegalArgumentException e) {
                     due.requestFocus();
                     due.setError(e.getMessage());
@@ -525,17 +532,20 @@ final class StudyPlanDialogs {
             add(pane.above, searchBox, 0);
 
             LinearLayout tabs = row(context);
-            tabs.setBackground(rounded(context, 0xffebe7da, 0xffdcd8c8, 13));
-            tabs.setPadding(dp(context, 4), dp(context, 4), dp(context, 4), dp(context, 4));
-            TextView graduate = StudySheet.link(context, "考研模板", DEEP, () -> {});
-            TextView finals = StudySheet.link(context, "期末课程", DEEP, () -> {});
-            for (int i = 0; i < 2; i++) {
-                TextView tab = i == 0 ? graduate : finals;
-                tab.setMinimumHeight(dp(context, 38));
-                LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1);
-                if (i == 1) tabParams.setMarginStart(dp(context, 4));
-                tabs.addView(tab, tabParams);
-            }
+            tabs.setGravity(Gravity.BOTTOM);
+            android.graphics.drawable.GradientDrawable baseline = new android.graphics.drawable.GradientDrawable();
+            baseline.setColor(0x225c4938);
+            android.graphics.drawable.LayerDrawable tabBg = new android.graphics.drawable.LayerDrawable(
+                new android.graphics.drawable.Drawable[] { baseline }
+            );
+            tabBg.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+            tabBg.setLayerHeight(0, Math.max(1, dp(context, 1)));
+            tabs.setBackground(tabBg);
+
+            LinearLayout graduateTab = buildCatalogTab("考研模板");
+            LinearLayout finalsTab = buildCatalogTab("期末课程");
+            tabs.addView(graduateTab, new LinearLayout.LayoutParams(0, -2, 1));
+            tabs.addView(finalsTab, new LinearLayout.LayoutParams(0, -2, 1));
             add(pane.above, tabs, 10);
             TextView notice = text(context, "", 12, MUTED);
             add(pane.body, notice, 8);
@@ -547,8 +557,8 @@ final class StudyPlanDialogs {
                 String query = value(search).toLowerCase(Locale.ROOT);
                 clear.setVisibility(search.length() == 0 ? View.GONE : View.VISIBLE);
                 boolean graduateSelected = selected[0] == StudyPlan.Kind.GRADUATE;
-                tabState(graduate, query.isEmpty() && graduateSelected);
-                tabState(finals, query.isEmpty() && !graduateSelected);
+                tabState(graduateTab, query.isEmpty() && graduateSelected);
+                tabState(finalsTab, query.isEmpty() && !graduateSelected);
                 notice.setText(query.isEmpty() ? (graduateSelected
                     ? "2027 年院校示例 · 按本人报考目录调整"
                     : "按学科找专业") : "考研与期末搜索结果");
@@ -571,12 +581,12 @@ final class StudyPlanDialogs {
                         () -> subject(-1, value(search))), 7);
                 }
             };
-            graduate.setOnClickListener(v -> {
+            graduateTab.setOnClickListener(v -> {
                 selected[0] = StudyPlan.Kind.GRADUATE;
                 if (search.length() == 0) refresh.run();
                 else search.setText("");
             });
-            finals.setOnClickListener(v -> {
+            finalsTab.setOnClickListener(v -> {
                 selected[0] = StudyPlan.Kind.FINALS;
                 if (search.length() == 0) refresh.run();
                 else search.setText("");
@@ -657,16 +667,36 @@ final class StudyPlanDialogs {
             sheet.push(pane);
         }
 
-        private void tabState(TextView tab, boolean selected) {
+        private LinearLayout buildCatalogTab(String labelText) {
+            LinearLayout tab = column(context);
+            tab.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+            tab.setMinimumHeight(dp(context, 42));
+            tab.setClickable(true);
+            tab.setFocusable(true);
+            tab.setContentDescription(labelText);
+            tab.setBackground(ripple(context, rounded(context, Color.TRANSPARENT, 0, 8), false));
+
+            TextView label = text(context, labelText, 14, 0xff7e7668);
+            label.setPadding(dp(context, 8), dp(context, 8), dp(context, 8), dp(context, 8));
+            tab.addView(label, new LinearLayout.LayoutParams(-2, -2));
+
+            View indicator = new View(context);
+            indicator.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            int indicatorHeight = Math.max(3, Math.round(2.5f * context.getResources().getDisplayMetrics().density));
+            tab.addView(indicator, new LinearLayout.LayoutParams(dp(context, 34), indicatorHeight));
+            return tab;
+        }
+
+        private void tabState(LinearLayout tab, boolean selected) {
             tab.setSelected(selected);
-            tab.setTextColor(selected ? 0xff243624 : 0xff6b7568);
-            tab.setTypeface(Typeface.create(
+            TextView label = (TextView) tab.getChildAt(0);
+            View indicator = tab.getChildAt(1);
+            label.setTextColor(selected ? 0xff264a2d : 0xff827a6c);
+            label.setTypeface(Typeface.create(
                 selected ? "sans-serif-medium" : "sans-serif",
                 selected ? Typeface.BOLD : Typeface.NORMAL
             ));
-            tab.setBackground(ripple(context, rounded(context,
-                selected ? 0xfffffcf3 : Color.TRANSPARENT,
-                selected ? 0xffc6d4c0 : 0, 10), false));
+            indicator.setBackground(rounded(context, selected ? 0xff456444 : Color.TRANSPARENT, 0, 99));
         }
 
         private void chooseBooks(StudyCatalog.Group group, List<String> entries) {
@@ -714,7 +744,12 @@ final class StudyPlanDialogs {
                     shelf.add(StudyCatalog.book(fields[fields.length - 1], fields.length == 2 ? fields[0] : "", shelf.size()));
                 }
                 showShelf();
-                sheet.pop();
+                if (formPane != null) {
+                    sheet.popTo(formPane);
+                    formPane.scrollToBottom();
+                } else {
+                    sheet.pop();
+                }
             });
             Runnable update = () -> {
                 int added = 0;

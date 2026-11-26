@@ -1,5 +1,6 @@
 package com.example.pkmapp.study
 
+import com.example.pkmapp.core.database.AccountScope
 import com.example.pkmapp.core.database.StudyDatabaseSnapshot
 import com.example.pkmapp.core.database.StudyGardenStateEntity
 import com.example.pkmapp.core.database.StudyPlanEntity
@@ -13,7 +14,11 @@ import org.json.JSONObject
 object StudyNotebookSqlBridge {
 
     @JvmStatic
-    fun toSnapshot(notebook: StudyNotebook): StudyDatabaseSnapshot {
+    @JvmOverloads
+    fun toSnapshot(
+        notebook: StudyNotebook,
+        ownerId: String = AccountScope.GUEST_OWNER_ID
+    ): StudyDatabaseSnapshot {
         val root = JSONObject(notebook.toJson())
         val currentPlanId = root.optString("current", "")
 
@@ -130,7 +135,7 @@ object StudyNotebookSqlBridge {
         val active = root.optJSONObject("active")
         val rewardedDays = (root.optJSONArray("rewardedDays") ?: JSONArray()).toString()
         val garden = StudyGardenStateEntity(
-            singletonId = 1,
+            ownerId = ownerId,
             currentPlanId = currentPlanId,
             water = root.getInt("water"),
             carryMillis = root.optLong("waterProgress", 0L),

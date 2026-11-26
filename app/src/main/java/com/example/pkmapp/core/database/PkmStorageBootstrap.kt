@@ -73,38 +73,83 @@ object PkmStorageBootstrap {
                 }
 
                 override fun commitPayloadAtomically(payload: MigratedPayload) {
+                    val guest = AccountScope.GUEST_OWNER_ID
+                    val now = nowMillis()
+                    val checkedArray = org.json.JSONArray()
+                    for (date in payload.preferences.checkedDates) {
+                        checkedArray.put(date)
+                    }
                     database.runInTransaction {
                         if (payload.ledgers.isNotEmpty()) {
-                            database.ledgerDao().deleteAllLedgers()
+                            database.ledgerDao().deleteAllLedgers(guest)
                             database.ledgerDao().upsertAll(payload.ledgers)
                         }
                         if (payload.transactions.isNotEmpty()) {
-                            database.ledgerDao().deleteAllTransactions()
+                            database.ledgerDao().deleteAllTransactions(guest)
                             database.ledgerDao().insertTransactions(payload.transactions)
                         }
                         if (payload.borrowingRecords.isNotEmpty()) {
-                            database.borrowingDao().replaceAll(payload.borrowingRecords)
+                            database.borrowingDao().replaceAll(payload.borrowingRecords, guest)
                         }
                         if (payload.savingsGoals.isNotEmpty()) {
-                            database.savingsGoalDao().replaceAll(payload.savingsGoals)
+                            database.savingsGoalDao().replaceAll(payload.savingsGoals, guest)
                         }
                         if (payload.customCategories.isNotEmpty()) {
-                            database.categoryDao().clear()
+                            database.categoryDao().clear(guest)
                             database.categoryDao().insertAll(payload.customCategories)
                         }
                         if (payload.studySnapshot != null) {
-                            database.studyDao().replaceSnapshot(payload.studySnapshot)
+                            database.studyDao().replaceSnapshot(payload.studySnapshot, guest)
                         }
                         if (payload.todoItems.isNotEmpty()) {
-                            database.todoDao().replaceAll(payload.todoItems)
+                            database.todoDao().replaceAll(payload.todoItems, guest)
                         }
+                        database.localAccountDao().upsert(
+                            LocalAccountEntity(
+                                ownerId = guest,
+                                identifier = guest,
+                                nickname = payload.preferences.nickname,
+                                checkedDatesJson = checkedArray.toString(),
+                                isGuest = true,
+                                createdAt = now,
+                                updatedAt = now
+                            )
+                        )
                     }
                     appPreferences.writeMigratedBlocking(payload.preferences)
                 }
             }
 
             LegacySharedPrefsMigrator.migrateIfNeeded(env)
+            ensureGuestAccountSeeded(database, appPreferences)
             bootstrapped = true
+        }
+    }
+
+    private fun ensureGuestAccountSeeded(
+        database: AppDatabase,
+        appPreferences: AppPreferences
+    ) {
+        val guest = AccountScope.GUEST_OWNER_ID
+        val dao = database.localAccountDao()
+        if (dao.findByOwnerId(guest) == null) {
+            val prefs = appPreferences.current
+            val now = System.currentTimeMillis()
+            val checkedArray = org.json.JSONArray()
+            for (date in prefs.checkedDates) {
+                checkedArray.put(date)
+            }
+            dao.upsert(
+                LocalAccountEntity(
+                    ownerId = guest,
+                    identifier = guest,
+                    nickname = prefs.nickname,
+                    checkedDatesJson = checkedArray.toString(),
+                    isGuest = true,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
         }
     }
 

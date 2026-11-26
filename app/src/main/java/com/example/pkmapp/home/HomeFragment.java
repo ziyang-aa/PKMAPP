@@ -6,14 +6,20 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Outline;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -24,20 +30,24 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
+import com.example.pkmapp.core.account.AuthRepository;
+import com.example.pkmapp.core.database.LocalAccountEntity;
 import com.example.pkmapp.core.datastore.AppPreferences;
+import com.example.pkmapp.core.security.CryptoSessionStore;
+import com.example.pkmapp.core.sync.SyncRepository;
 import com.example.pkmapp.forest.ForestDialogBuilder;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSceneView;
 import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
+import com.example.pkmapp.profile.AvatarStore;
 import com.example.pkmapp.record.MoneyParser;
 import com.example.pkmapp.study.StudyFormat;
 import com.example.pkmapp.study.StudyNotebook;
 import com.example.pkmapp.study.StudySharedViewModel;
 import com.example.pkmapp.study.StudyStore;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.checkbox.MaterialCheckBox;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,7 +65,12 @@ public final class HomeFragment extends Fragment {
     private TextView summaryFocusValue;
     private TextView summaryTodoValue;
     private TextView summaryExpenseValue;
-    private MaterialCheckBox rememberSwitch;
+    private ImageView avatarImage;
+    private TextView avatarNickname;
+    private TextView avatarSubtitle;
+    private TextView syncBadge;
+    private LinearLayout guestPromptBanner;
+
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
@@ -118,7 +133,7 @@ public final class HomeFragment extends Fragment {
                 androidx.core.view.WindowInsetsCompat.Type.systemBars()
                     | androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             );
-            view.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 12));
+            view.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 16));
             return insets;
         });
         androidx.core.view.WindowInsetsCompat initialInsets =
@@ -130,30 +145,80 @@ public final class HomeFragment extends Fragment {
                 androidx.core.view.WindowInsetsCompat.Type.systemBars()
                     | androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             );
-            scroll.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 12));
+            scroll.setPadding(0, bars.top, 0, bars.bottom + dp(requireContext(), 16));
         }
         LinearLayout content = column(requireContext());
         scroll.addView(content);
 
+        // Scheme A Top Bar: Left Avatar Capsule (opens personal drawer) + Right Sync Pill
         LinearLayout header = row(requireContext());
         header.setPadding(
-            dp(requireContext(), 20),
+            dp(requireContext(), 18),
             dp(requireContext(), 10),
-            dp(requireContext(), 20),
+            dp(requireContext(), 18),
             dp(requireContext(), 8)
         );
-        ImageView leaf = new ImageView(requireContext());
-        leaf.setImageResource(R.drawable.ic_leaf);
-        leaf.setImageTintList(ColorStateList.valueOf(DEEP));
-        header.addView(
-            leaf,
-            new LinearLayout.LayoutParams(dp(requireContext(), 21), dp(requireContext(), 21))
+
+        LinearLayout avatarCapsule = row(requireContext());
+        avatarCapsule.setId(R.id.home_avatar_trigger);
+        avatarCapsule.setContentDescription("打开个人中心与账号侧边栏");
+        avatarCapsule.setClickable(true);
+        avatarCapsule.setFocusable(true);
+        avatarCapsule.setBackground(rounded(requireContext(), 0xEEFFFEFA, 0x265C4938, 999));
+        avatarCapsule.setPadding(
+            dp(requireContext(), 5),
+            dp(requireContext(), 4),
+            dp(requireContext(), 15),
+            dp(requireContext(), 4)
         );
-        TextView brand = heading(requireContext(), "芽叶记", 20);
-        brand.setPadding(dp(requireContext(), 7), 0, 0, 0);
-        header.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView badge = text(requireContext(), "学习 · 记账", 11, MUTED);
-        header.addView(badge);
+        avatarCapsule.setOnClickListener(v -> ((MainActivity) requireActivity()).openHomeDrawer());
+        ForestMotion.bind(avatarCapsule);
+
+        avatarImage = new ImageView(requireContext());
+        avatarImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        avatarImage.setClipToOutline(true);
+        avatarImage.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, Outline outline) {
+                outline.setOval(0, 0, view.getWidth(), view.getHeight());
+            }
+        });
+        avatarCapsule.addView(
+            avatarImage,
+            new LinearLayout.LayoutParams(dp(requireContext(), 32), dp(requireContext(), 32))
+        );
+
+        LinearLayout avatarMeta = column(requireContext());
+        avatarMeta.setPadding(dp(requireContext(), 8), 0, 0, 0);
+        avatarNickname = text(requireContext(), "森林守护员", 13, 0xff243624);
+        avatarNickname.setTypeface(null, Typeface.BOLD);
+        avatarNickname.setMaxLines(1);
+        avatarNickname.setEllipsize(TextUtils.TruncateAt.END);
+        avatarSubtitle = text(requireContext(), "游客 · 登录 ☰", 10, MUTED);
+        avatarSubtitle.setMaxLines(1);
+        avatarMeta.addView(avatarNickname);
+        avatarMeta.addView(avatarSubtitle);
+        avatarCapsule.addView(avatarMeta);
+
+        LinearLayout.LayoutParams capsuleLp = new LinearLayout.LayoutParams(-2, -2);
+        header.addView(avatarCapsule, capsuleLp);
+
+        header.addView(new View(requireContext()), new LinearLayout.LayoutParams(0, 1, 1));
+
+        syncBadge = text(requireContext(), "离线游客", 11, WOOD);
+        syncBadge.setId(R.id.home_sync_badge);
+        syncBadge.setBackground(rounded(requireContext(), 0xCCFFFEFA, 0x225C4938, 999));
+        syncBadge.setPadding(
+            dp(requireContext(), 11),
+            dp(requireContext(), 6),
+            dp(requireContext(), 11),
+            dp(requireContext(), 6)
+        );
+        syncBadge.setFontFeatureSettings("tnum");
+        syncBadge.setOnClickListener(v -> ((MainActivity) requireActivity()).showBackupAndSyncSheet());
+        ForestMotion.bind(syncBadge);
+        header.addView(syncBadge);
+
         content.addView(header);
 
         FrameLayout scene = new FrameLayout(requireContext());
@@ -235,7 +300,7 @@ public final class HomeFragment extends Fragment {
         content.addView(resume, resumeParams);
 
         addTodayOverview(content);
-        addRememberCottageToggle(content);
+        addGuestPromptBanner(content);
         ForestUi.spacer(content, 20);
         return scroll;
     }
@@ -247,6 +312,12 @@ public final class HomeFragment extends Fragment {
         studyViewModel.syncFromStores(requireContext());
         lifeViewModel.observe(getViewLifecycleOwner(), snapshot -> refreshOverview());
         studyViewModel.observeOverview(getViewLifecycleOwner(), this::refreshOverview);
+    }
+
+    public void refreshFromHost() {
+        store = StudyStore.get(requireContext());
+        refreshOverview();
+        updateResume();
     }
 
     private void addTodayOverview(LinearLayout parent) {
@@ -287,6 +358,46 @@ public final class HomeFragment extends Fragment {
         parent.addView(card, cardLp);
     }
 
+    private void addGuestPromptBanner(LinearLayout parent) {
+        guestPromptBanner = row(requireContext());
+        guestPromptBanner.setPadding(
+            dp(requireContext(), 14),
+            dp(requireContext(), 12),
+            dp(requireContext(), 14),
+            dp(requireContext(), 12)
+        );
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xB8FFFEFA);
+        bg.setCornerRadius(dp(requireContext(), 16));
+        bg.setStroke(dp(requireContext(), 1), 0x447B5C3B);
+        guestPromptBanner.setBackground(bg);
+        guestPromptBanner.setOnClickListener(v -> ((MainActivity) requireActivity()).showAuthSheet(false));
+        ForestMotion.bind(guestPromptBanner);
+
+        LinearLayout copy = column(requireContext());
+        TextView title = text(requireContext(), "当前为本机游客模式", 12, 0xff243624);
+        title.setTypeface(null, Typeface.BOLD);
+        TextView sub = text(requireContext(), "登录后支持多账号独立保存与同步", 11, MUTED);
+        copy.addView(title);
+        ForestUi.add(copy, sub, 2);
+        guestPromptBanner.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
+
+        TextView btn = text(requireContext(), "登录 / 注册", 12, DEEP);
+        btn.setTypeface(null, Typeface.BOLD);
+        btn.setBackground(rounded(requireContext(), 0xfffffefa, 0x44456444, 999));
+        btn.setPadding(dp(requireContext(), 12), dp(requireContext(), 6), dp(requireContext(), 12), dp(requireContext(), 6));
+        guestPromptBanner.addView(btn);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(
+            dp(requireContext(), 18),
+            dp(requireContext(), 12),
+            dp(requireContext(), 18),
+            0
+        );
+        parent.addView(guestPromptBanner, lp);
+    }
+
     private TextView addMetricColumn(
         LinearLayout parent,
         String label,
@@ -305,6 +416,7 @@ public final class HomeFragment extends Fragment {
         value.setTextColor(valueColor);
         value.setGravity(Gravity.CENTER);
         value.setSingleLine(true);
+        value.setFontFeatureSettings("tnum");
         col.addView(value);
 
         TextView caption = text(requireContext(), label, 10, MUTED);
@@ -323,42 +435,46 @@ public final class HomeFragment extends Fragment {
         parent.addView(divider, lp);
     }
 
-    private void addRememberCottageToggle(LinearLayout parent) {
-        boolean enabled = isRememberLastCottage(requireContext());
-        rememberSwitch = ForestUi.switchWithSubtitle(
-            requireContext(),
-            "记住上次进入的小屋",
-            rememberSubtitle(enabled)
-        );
-        rememberSwitch.setChecked(enabled);
-        rememberSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            setRememberLastCottage(requireContext(), isChecked);
-            ForestUi.updateSwitchSubtitle(
-                rememberSwitch,
-                rememberSubtitle(isChecked)
-            );
-        });
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(
-            dp(requireContext(), 18),
-            dp(requireContext(), 10),
-            dp(requireContext(), 18),
-            0
-        );
-        parent.addView(rememberSwitch, lp);
-    }
-
-    private String rememberSubtitle(boolean enabled) {
-        if (enabled) {
-            return "已开启 · 下次启动直达「" + lastCottageLabel(requireContext()) + "」";
-        }
-        return "已关闭 · 每次打开先经过森林门厅";
-    }
-
     private void refreshOverview() {
-        if (summaryFocusValue == null || summaryTodoValue == null || summaryExpenseValue == null) {
+        if (!isAdded() || summaryFocusValue == null || summaryTodoValue == null || summaryExpenseValue == null) {
             return;
         }
+        Context appCtx = requireContext().getApplicationContext();
+        LocalAccountEntity account = new AuthRepository(appCtx).currentAccount();
+        if (avatarImage != null) {
+            Bitmap bmp = AvatarStore.load(appCtx, account.getOwnerId());
+            if (bmp != null) {
+                avatarImage.setImageBitmap(bmp);
+            } else {
+                avatarImage.setImageResource(R.drawable.ic_launcher_character);
+            }
+        }
+        if (avatarNickname != null) {
+            String nick = lifeViewModel != null
+                ? lifeViewModel.getCurrentSnapshot().getNickname()
+                : account.getNickname();
+            avatarNickname.setText(nick);
+        }
+        if (avatarSubtitle != null) {
+            avatarSubtitle.setText(account.isGuest() ? "游客 · 登录 ☰" : "个人中心 ☰");
+        }
+        if (syncBadge != null) {
+            int pending = new SyncRepository(appCtx).pendingCount(account.getOwnerId());
+            String baseUrl = CryptoSessionStore.get(appCtx).currentServerBaseUrl();
+            if (account.isGuest()) {
+                syncBadge.setText("离线游客");
+            } else if (baseUrl.isEmpty()) {
+                syncBadge.setText("本地已登录");
+            } else if (pending > 0) {
+                syncBadge.setText("待同步 " + pending);
+            } else {
+                syncBadge.setText("云端已同步");
+            }
+        }
+        if (guestPromptBanner != null) {
+            guestPromptBanner.setVisibility(account.isGuest() ? View.VISIBLE : View.GONE);
+        }
+
         long now = System.currentTimeMillis();
         String todayKey = StudyNotebook.dayKey(now);
         StudyNotebook notebook = store.notebook();
@@ -380,17 +496,6 @@ public final class HomeFragment extends Fragment {
         long monthExpense = lifeViewModel == null
             ? 0L : lifeViewModel.getCurrentSnapshot().getCurrentMonthTotals().getExpenseInCents();
         summaryExpenseValue.setText(MoneyParser.formatCents(monthExpense));
-
-        if (rememberSwitch != null) {
-            boolean enabled = isRememberLastCottage(requireContext());
-            if (rememberSwitch.isChecked() != enabled) {
-                rememberSwitch.setChecked(enabled);
-            }
-            ForestUi.updateSwitchSubtitle(
-                rememberSwitch,
-                rememberSubtitle(enabled)
-            );
-        }
     }
 
     private View door(int id, String description, AppDestination destination) {
@@ -450,7 +555,7 @@ public final class HomeFragment extends Fragment {
         ForestUi.add(choice, caption, 6);
         TextView details = text(
             requireContext(),
-            study ? "专注计时 · 待办 · 学习足迹" : "日常账本 · 攒钱 · 生活工具",
+            study ? "专注计时 · 待办 · 学习足迹" : "日常账本 · 攒钱 · 小金库",
             9,
             MUTED
         );
@@ -488,6 +593,7 @@ public final class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        store = StudyStore.get(requireContext());
         if (studyViewModel != null) {
             studyViewModel.syncFromStores(requireContext());
         }
@@ -523,7 +629,11 @@ public final class HomeFragment extends Fragment {
         summaryFocusValue = null;
         summaryTodoValue = null;
         summaryExpenseValue = null;
-        rememberSwitch = null;
+        avatarImage = null;
+        avatarNickname = null;
+        avatarSubtitle = null;
+        syncBadge = null;
+        guestPromptBanner = null;
         super.onDestroyView();
     }
 }

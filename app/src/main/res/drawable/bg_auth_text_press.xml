@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <inset
+            android:insetTop="5dp"
+            android:insetBottom="5dp">
+            <shape android:shape="rectangle">
+                <solid android:color="#127B5C3B" />
+                <corners android:radius="10dp" />
+            </shape>
+        </inset>
+    </item>
+    <item android:drawable="@android:color/transparent" />
+</selector>

@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-internal class ProfileIdentityDialogs(
+class ProfileIdentityDialogs(
     private val contextProvider: () -> Context,
     private val viewModel: LifeSharedViewModel,
     private val onAvatarReset: () -> Unit

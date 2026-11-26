@@ -85,6 +85,10 @@ public final class ExchangeFragment extends Fragment {
         quoteName = view.findViewById(R.id.exchange_quote_name);
         result = view.findViewById(R.id.exchange_result);
         status = view.findViewById(R.id.exchange_status);
+        com.example.pkmapp.forest.ForestLoadingView exchangeLoading = view.findViewById(R.id.exchange_loading);
+        if (exchangeLoading != null) {
+            exchangeLoading.setMode(com.example.pkmapp.forest.ForestLoadingView.Mode.LEAF_ORBIT);
+        }
         caption = view.findViewById(R.id.exchange_rate_caption);
         error = view.findViewById(R.id.exchange_error);
         quickAmountsRow = view.findViewById(R.id.exchange_quick_amounts);
@@ -104,7 +108,7 @@ public final class ExchangeFragment extends Fragment {
         View backBtn = view.findViewById(R.id.exchange_back_button);
         backBtn.setBackground(ripple(requireContext(), rounded(requireContext(), 0x125c4938, 0, 999), false));
         backBtn.setOnClickListener(v ->
-                ((MainActivity) requireActivity()).showDestination(AppDestination.DETAILS));
+                ((MainActivity) requireActivity()).navigateBackFromLifeTool());
         ForestMotion.bind(backBtn);
 
         View refreshBtn = view.findViewById(R.id.exchange_refresh_button);
@@ -194,6 +198,12 @@ public final class ExchangeFragment extends Fragment {
         }
 
         status.setText(state.statusText);
+        View loadingView = getView() == null ? null : getView().findViewById(R.id.exchange_loading);
+        if (loadingView != null) {
+            boolean syncing = state.statusText != null
+                    && (state.statusText.contains("正在") || state.statusText.contains("同步中"));
+            loadingView.setVisibility(syncing ? View.VISIBLE : View.GONE);
+        }
         caption.setText(state.captionText);
         if (state.errorText == null) {
             error.setVisibility(View.GONE);

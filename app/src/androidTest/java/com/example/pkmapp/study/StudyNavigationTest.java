@@ -28,6 +28,12 @@ public final class StudyNavigationTest {
     public void learningAndLifeFlow_persistsTimerRecordsAndGarden() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         Assume.assumeTrue(context.getPackageName().endsWith(".studytest"));
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission(
+                context.getPackageName(),
+                android.Manifest.permission.POST_NOTIFICATIONS
+            );
+        }
         try (
             ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)
         ) {

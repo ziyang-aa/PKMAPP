@@ -2,9 +2,11 @@ package com.example.pkmapp.record;
 
 import android.content.Context;
 
+import com.example.pkmapp.core.database.AccountScope;
 import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.CategoryDao;
 import com.example.pkmapp.core.database.CustomCategoryEntity;
+import com.example.pkmapp.core.database.SyncStatus;
 import com.example.pkmapp.data.TransactionType;
 
 import java.util.ArrayList;
@@ -14,16 +16,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Room-backed category store for the record and profile management pages. */
+/** Room-backed category store scoped by active ownerId. */
 public final class CategoryStore {
+    private final Context appContext;
     private final CategoryDao categoryDao;
 
     public CategoryStore(Context context) {
-        categoryDao = AppDatabase.getInstance(context).categoryDao();
+        this.appContext = context.getApplicationContext();
+        this.categoryDao = AppDatabase.getInstance(appContext).categoryDao();
+    }
+
+    private String ownerId() {
+        return AccountScope.currentOwnerId(appContext);
     }
 
     public synchronized List<String> getCategories(TransactionType type) {
-        List<CustomCategoryEntity> rows = categoryDao.getByType(type.name());
+        List<CustomCategoryEntity> rows = categoryDao.getByType(type.name(), ownerId());
         Set<String> deletedDefaults = new HashSet<>();
         List<String> customAdded = new ArrayList<>();
         for (CustomCategoryEntity row : rows) {
@@ -52,11 +60,12 @@ public final class CategoryStore {
         if (normalized.isEmpty() || "自定义".equals(normalized)) {
             return false;
         }
+        String owner = ownerId();
         List<String> defaults = defaultCategories(type);
-        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized);
+        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized, owner);
         if (defaults.contains(normalized)) {
             if (existing != null && existing.isDeletedDefault()) {
-                categoryDao.deleteByTypeAndName(type.name(), normalized);
+                categoryDao.deleteByTypeAndName(type.name(), normalized, owner);
                 return true;
             }
             return false;
@@ -64,8 +73,19 @@ public final class CategoryStore {
         if (existing != null) {
             return false;
         }
-        int nextSort = categoryDao.maxSortOrder(type.name()) + 1;
-        categoryDao.upsert(new CustomCategoryEntity(0L, type.name(), normalized, false, nextSort));
+        int nextSort = categoryDao.maxSortOrder(type.name(), owner) + 1;
+        categoryDao.upsert(new CustomCategoryEntity(
+                0L,
+                type.name(),
+                normalized,
+                false,
+                nextSort,
+                owner,
+                System.currentTimeMillis(),
+                0L,
+                SyncStatus.PENDING_PUSH,
+                AccountScope.newRequestId()
+        ));
         return true;
     }
 
@@ -74,9 +94,10 @@ public final class CategoryStore {
         if (normalized.isEmpty() || "自定义".equals(normalized)) {
             return false;
         }
-        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized);
+        String owner = ownerId();
+        CustomCategoryEntity existing = categoryDao.find(type.name(), normalized, owner);
         if (existing != null && !existing.isDeletedDefault()) {
-            return categoryDao.deleteByTypeAndName(type.name(), normalized) > 0;
+            return categoryDao.deleteByTypeAndName(type.name(), normalized, owner) > 0;
         }
         if (!defaultCategories(type).contains(normalized)) {
             return false;
@@ -84,8 +105,19 @@ public final class CategoryStore {
         if (existing != null && existing.isDeletedDefault()) {
             return false;
         }
-        int nextSort = categoryDao.maxSortOrder(type.name()) + 1;
-        categoryDao.upsert(new CustomCategoryEntity(0L, type.name(), normalized, true, nextSort));
+        int nextSort = categoryDao.maxSortOrder(type.name(), owner) + 1;
+        categoryDao.upsert(new CustomCategoryEntity(
+                0L,
+                type.name(),
+                normalized,
+                true,
+                nextSort,
+                owner,
+                System.currentTimeMillis(),
+                0L,
+                SyncStatus.PENDING_PUSH,
+                AccountScope.newRequestId()
+        ));
         return true;
     }
 
@@ -95,7 +127,7 @@ public final class CategoryStore {
     }
 
     public synchronized void clear() {
-        categoryDao.clear();
+        categoryDao.clear(ownerId());
     }
 
     public static List<String> defaultCategories(TransactionType type) {

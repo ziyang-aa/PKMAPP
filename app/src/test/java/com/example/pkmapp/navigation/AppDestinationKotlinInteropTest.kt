@@ -14,9 +14,8 @@ class AppDestinationKotlinInteropTest {
             listOf(
                 AppDestination.DETAILS,
                 AppDestination.CHARTS,
-                AppDestination.RECORD,
                 AppDestination.SAVINGS,
-                AppDestination.PROFILE
+                AppDestination.VAULT
             ),
             AppDestination.bottomBarDestinations()
         )

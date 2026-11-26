@@ -25,6 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.widget.NestedScrollView;
 import com.example.pkmapp.R;
@@ -64,6 +65,7 @@ final class StudySheet extends BottomSheetDialog {
         getOnBackPressedDispatcher().addCallback(back);
         Window window = getWindow();
         if (window != null) {
+            WindowCompat.setDecorFitsSystemWindows(window, false);
             window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
             window.setDimAmount(.34f);
@@ -74,7 +76,8 @@ final class StudySheet extends BottomSheetDialog {
         behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
         ViewCompat.setOnApplyWindowInsetsListener(host, (view, insets) -> {
             int nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
-            bottomInset = insets.isVisible(WindowInsetsCompat.Type.ime()) ? 0 : nav;
+            int ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            bottomInset = Math.max(nav, ime);
             updatePadding();
             return insets;
         });
@@ -101,6 +104,19 @@ final class StudySheet extends BottomSheetDialog {
         }
         hideKeyboard();
         panes.pop();
+        display(-1);
+    }
+
+    void popTo(Pane target) {
+        if (target == null || !panes.contains(target)) {
+            pop();
+            return;
+        }
+        if (panes.peek() == target) return;
+        hideKeyboard();
+        while (panes.size() > 1 && panes.peek() != target) {
+            panes.pop();
+        }
         display(-1);
     }
 
@@ -261,6 +277,10 @@ final class StudySheet extends BottomSheetDialog {
                 if (footer.getChildCount() > 0) lp.topMargin = dp(context, 6);
                 footer.addView(actionsRow, lp);
             }
+        }
+
+        void scrollToBottom() {
+            scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
         }
 
         private void syncActionMargins() {

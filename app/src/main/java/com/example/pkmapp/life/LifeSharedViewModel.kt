@@ -14,7 +14,11 @@ import com.example.pkmapp.borrowing.BorrowingDirection
 import com.example.pkmapp.borrowing.BorrowingRecord
 import com.example.pkmapp.borrowing.BorrowingRecordStore
 import com.example.pkmapp.borrowing.BorrowingTransactionSync
+import com.example.pkmapp.core.database.AccountScope
+import com.example.pkmapp.core.database.AppDatabase
+import com.example.pkmapp.core.database.LocalAccountEntity
 import com.example.pkmapp.core.datastore.AppPreferences
+import com.example.pkmapp.core.datastore.AppPreferencesSnapshot
 import com.example.pkmapp.data.AssetSnapshot
 import com.example.pkmapp.data.AssetStore
 import com.example.pkmapp.data.InMemoryLedgerRepository
@@ -92,6 +96,7 @@ interface LifeDataSource {
 internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     private val appContext = context.applicationContext
     private val appPreferences = AppPreferences.getInstance(appContext)
+    private val localAccountDao = AppDatabase.getInstance(appContext).localAccountDao()
     private val assetStore = AssetStore(appContext)
     private val borrowingStore = BorrowingRecordStore(appContext)
     private val savingsStore = SavingsGoalStore(appContext)
@@ -100,6 +105,9 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     override val repository: InMemoryLedgerRepository = InMemoryLedgerRepository.getInstance().also {
         InMemoryLedgerRepository.initialize(appContext)
     }
+
+    private fun activeAccount(): LocalAccountEntity? =
+        localAccountDao.findByOwnerId(AccountScope.currentOwnerId(appContext))
 
     override fun getAssetSnapshot(ledgerId: String, netFlowCents: Long): AssetSnapshot =
         assetStore.getSnapshot(ledgerId, netFlowCents)
@@ -152,23 +160,49 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
 
     override fun clearCategories() = categoryStore.clear()
 
-    override fun getNickname(): String =
-        appPreferences.current.nickname
+    override fun getNickname(): String {
+        val account = activeAccount()
+        return account?.nickname?.takeIf { it.isNotBlank() } ?: AppPreferencesSnapshot.DEFAULT_NICKNAME
+    }
 
     override fun setNickname(nickname: String) {
+        val ownerId = AccountScope.currentOwnerId(appContext)
+        localAccountDao.updateNickname(ownerId, nickname, System.currentTimeMillis())
         appPreferences.setNickname(nickname)
     }
 
-    override fun getCheckedDates(): Set<String> =
-        HashSet(appPreferences.current.checkedDates)
+    override fun getCheckedDates(): Set<String> {
+        val account = activeAccount() ?: return HashSet(appPreferences.current.checkedDates)
+        return try {
+            val arr = org.json.JSONArray(account.checkedDatesJson.ifBlank { "[]" })
+            val out = HashSet<String>(arr.length())
+            for (i in 0 until arr.length()) {
+                val date = arr.optString(i, "").trim()
+                if (date.isNotEmpty()) out.add(date)
+            }
+            out
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
 
     override fun saveCheckedDates(dates: Set<String>) {
+        val ownerId = AccountScope.currentOwnerId(appContext)
+        val arr = org.json.JSONArray()
+        for (date in dates.sorted()) {
+            arr.put(date)
+        }
+        localAccountDao.updateCheckedDates(ownerId, arr.toString(), System.currentTimeMillis())
         appPreferences.setCheckedDates(dates)
     }
 
     override fun clearProfileAndAvatar() {
+        val ownerId = AccountScope.currentOwnerId(appContext)
+        val now = System.currentTimeMillis()
+        localAccountDao.updateNickname(ownerId, AppPreferencesSnapshot.DEFAULT_NICKNAME, now)
+        localAccountDao.updateCheckedDates(ownerId, "[]", now)
         appPreferences.clearProfileIdentity()
-        AvatarStore.clear(appContext)
+        AvatarStore.clear(appContext, ownerId)
     }
 }
 
@@ -192,6 +226,11 @@ class LifeSharedViewModel(
 
     fun refresh() {
         _snapshot.value = buildSnapshot()
+    }
+
+    fun reloadForAccountSwitch() {
+        dataSource.repository.reloadFromPersistence()
+        refresh()
     }
 
     fun observe(owner: LifecycleOwner, observer: Consumer<LifeSnapshot>) {

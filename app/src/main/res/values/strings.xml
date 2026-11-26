@@ -1,8 +1,9 @@
 <resources>
-    <string name="app_name">芽叶记</string>
+    <string name="app_name">小松果</string>
     <string name="nav_details">明细</string>
     <string name="nav_charts">图表</string>
-    <string name="nav_record">记账</string>
+    <string name="nav_record">记一笔</string>
     <string name="nav_savings">攒钱</string>
+    <string name="nav_vault">小金库</string>
     <string name="nav_profile">我的</string>
 </resources>

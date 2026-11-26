@@ -281,6 +281,9 @@ class StudyFocusFragment : BaseStudyFragment() {
                 syncKeepScreenOn()
                 keepScreenOn
             },
+            onSelectGoalMinutes = { minutes ->
+                updateSessionGoalInPlace(minutes)
+            },
             onStartOrPause = {
                 perform {
                     val now = SystemClock.elapsedRealtime()
@@ -291,8 +294,14 @@ class StudyFocusFragment : BaseStudyFragment() {
                         return@perform
                     }
                     if (!store.notebook().hasSession()) {
-                        store.start()
-                        render()
+                        ensureNotificationBeforeStart {
+                            perform {
+                                if (!store.notebook().hasSession()) {
+                                    store.start()
+                                    render()
+                                }
+                            }
+                        }
                     } else {
                         if (store.notebook().running()) store.pause() else store.resume()
                         syncRunningStateInPlace(store.notebook().running())
@@ -320,16 +329,35 @@ class StudyFocusFragment : BaseStudyFragment() {
     }
 
     internal fun startTask(id: String) {
-        store.start(id, "")
-        activeSheet?.dismiss()
-        render()
-        scroll?.post {
-            val scrollView = scroll ?: return@post
-            val selector = subjectSelector ?: return@post
-            val bounds = Rect()
-            selector.getDrawingRect(bounds)
-            scrollView.offsetDescendantRectToMyCoords(selector, bounds)
-            scrollView.scrollTo(0, max(0, bounds.top - scrollView.paddingTop - dp(14)))
+        ensureNotificationBeforeStart {
+            perform {
+                store.start(id, "")
+                activeSheet?.dismiss()
+                render()
+                scroll?.post {
+                    val scrollView = scroll ?: return@post
+                    val selector = subjectSelector ?: return@post
+                    val bounds = Rect()
+                    selector.getDrawingRect(bounds)
+                    scrollView.offsetDescendantRectToMyCoords(selector, bounds)
+                    scrollView.scrollTo(0, max(0, bounds.top - scrollView.paddingTop - dp(14)))
+                }
+            }
+        }
+    }
+
+    internal fun updateSessionGoalInPlace(minutes: Int, alreadySaved: Boolean = false) {
+        perform {
+            if (!alreadySaved) {
+                store.update { book -> book.setSessionGoal(minutes); null }
+            }
+            val holder = timerHolder
+            if (holder != null && !store.notebook().currentHasSession()) {
+                holder.syncSessionGoal(minutes)
+                updateTimer()
+            } else {
+                render()
+            }
         }
     }
 
@@ -411,9 +439,7 @@ class StudyFocusFragment : BaseStudyFragment() {
         statusPulseAnimator?.cancel()
         statusPulseAnimator = null
         if (holder != null) {
-            holder.focusStatusPill.background = rounded(
-                ctx(), if (running) 0xffeef3e8.toInt() else 0xfff5efe3.toInt(), 0, 999
-            )
+            holder.focusStatusPill.background = null
             holder.focusStatusDot.alpha = 1f
             holder.focusStatusDot.background = rounded(
                 ctx(), if (running) 0xff456444.toInt() else 0xffb8894f.toInt(), 0, 99
@@ -430,6 +456,9 @@ class StudyFocusFragment : BaseStudyFragment() {
             holder.focusStatusLabel.setTextColor(if (running) 0xff315e3a.toInt() else 0xff7b5c3b.toInt())
             holder.activeStatusText?.text = if (running) "静心计时中 · 随时可暂停" else "已暂停 · 暂停时长不计入"
             holder.startPauseButton.text = if (running) "暂停一下" else "继续学习"
+            holder.startPauseButton.setIconResource(
+                if (running) R.drawable.ic_study_pause else R.drawable.ic_study_play
+            )
         }
         syncKeepScreenOn()
         updateTimer()

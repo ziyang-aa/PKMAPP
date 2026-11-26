@@ -2,15 +2,15 @@ package com.example.pkmapp.forest;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.graphics.BitmapShader;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
-import android.graphics.RectF;
-import android.graphics.Shader;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.InsetDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.os.Build;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,14 +25,17 @@ import androidx.appcompat.app.AlertDialog;
 import com.example.pkmapp.R;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-/** Paper dialogs with the prototype's leaf heading, framed fields and full-width actions. */
+/**
+ * Clean, zero-nested-box editorial alert dialog aligned with Material Design 3 & shadcn/ui
+ * hierarchy: single warm-porcelain surface, open typography, and uncluttered action buttons.
+ */
 public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
 
     private CharSequence title;
 
     public ForestDialogBuilder(Context context) {
         super(context, R.style.ThemeOverlay_PkmAPP_ForestDialog);
-        setBackground(new Paper(context));
+        setBackground(buildDialogSurface(context));
         setBackgroundInsetStart(0);
         setBackgroundInsetEnd(0);
         setBackgroundInsetTop(0);
@@ -67,7 +70,8 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
     private boolean isDangerTitle() {
         if (title == null) return false;
         String text = title.toString();
-        return text.contains("删除") || text.contains("清空") || text.contains("覆盖") || text.contains("放弃");
+        return text.contains("删除") || text.contains("清空") || text.contains("覆盖") || text.contains("放弃")
+            || text.contains("移除");
     }
 
     @Override
@@ -77,44 +81,42 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
         if (title != null) {
             boolean danger = isDangerTitle();
             LinearLayout heading = ForestUi.column(context);
-            heading.setPadding(dp(22), dp(18), dp(18), dp(8));
+            heading.setPadding(dp(24), dp(22), dp(16), dp(6));
+
             LinearLayout top = ForestUi.row(context);
+            top.setGravity(Gravity.CENTER_VERTICAL);
+
             ImageView leaf = new ImageView(context);
             leaf.setImageResource(R.drawable.ic_leaf);
-            leaf.setImageTintList(ColorStateList.valueOf(danger ? 0xff8d4836 : ForestUi.DEEP));
-            leaf.setPadding(dp(8), dp(8), dp(8), dp(8));
-            leaf.setBackground(ForestUi.rounded(
-                context,
-                danger ? 0xfff6e7e2 : 0xffe8eedb,
-                danger ? 0xffe2c5bc : 0xffced8bc,
-                11
-            ));
-            top.addView(leaf, new LinearLayout.LayoutParams(dp(36), dp(36)));
-            TextView label = ForestUi.heading(context, title.toString(), 20);
-            label.setTextColor(0xff283f2c);
+            leaf.setImageTintList(ColorStateList.valueOf(danger ? 0xff9e4c37 : ForestUi.DEEP));
+            leaf.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(20), dp(20));
+            iconLp.rightMargin = dp(10);
+            top.addView(leaf, iconLp);
+
+            TextView label = ForestUi.heading(context, title.toString(), 19);
+            label.setTextColor(0xff243624);
+            label.setTypeface(Typeface.create("serif", Typeface.BOLD));
             LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1);
-            titleParams.leftMargin = dp(11);
-            titleParams.rightMargin = dp(8);
+            titleParams.rightMargin = dp(6);
             top.addView(label, titleParams);
-            TextView close = ForestUi.text(context, "×", 18, ForestUi.MUTED);
+
+            TextView close = ForestUi.text(context, "×", 20, 0xff8e8475);
             close.setGravity(Gravity.CENTER);
             close.setContentDescription("关闭弹窗");
-            close.setBackground(ForestUi.ripple(
-                context,
-                ForestUi.rounded(context, 0xfff4f1e4, 0xffe1dece, 11),
-                false
-            ));
+            close.setBackground(buildGhostPressBackground(dp(18)));
             close.setOnClickListener(v -> reference[0].cancel());
             ForestMotion.bind(close);
-            top.addView(close, new LinearLayout.LayoutParams(dp(34), dp(34)));
+            top.addView(close, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
             heading.addView(top);
             super.setCustomTitle(heading);
         }
+
         AlertDialog dialog = super.create();
         reference[0] = dialog;
         Window window = dialog.getWindow();
         if (window != null) {
-            // A layout observer preserves callers' OnShowListener and input validation handlers.
             View decor = window.getDecorView();
             decor.getViewTreeObserver().addOnGlobalLayoutListener(
                 new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -133,33 +135,32 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
         Window window = dialog.getWindow();
         if (window == null) return;
         int width = Math.min(
-            getContext().getResources().getDisplayMetrics().widthPixels - dp(32),
-            dp(380)
+            getContext().getResources().getDisplayMetrics().widthPixels - dp(40),
+            dp(360)
         );
         window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
-        window.setDimAmount(.34f);
+        window.setDimAmount(.38f);
+
         boolean danger = isDangerTitle();
         TextView message = dialog.findViewById(android.R.id.message);
         if (message != null) {
-            message.setTextColor(danger ? 0xff774133 : 0xff5c5547);
-            message.setTextSize(13);
-            message.setLineSpacing(dp(4), 1);
-            message.setPadding(dp(14), dp(12), dp(14), dp(12));
-            message.setBackground(ForestUi.rounded(
-                getContext(),
-                danger ? 0xfffaf0ec : 0xfff5f2e6,
-                danger ? 0xffe6cdc5 : 0xffdcd8c5,
-                13
-            ));
+            message.setTextColor(danger ? 0xff7a4234 : 0xff62594b);
+            message.setTextSize(14);
+            message.setLineSpacing(dp(5), 1);
+            message.setBackground(null);
+            message.setPadding(dp(24), dp(8), dp(24), dp(10));
             if (message.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) message.getLayoutParams();
-                lp.leftMargin = dp(22);
-                lp.rightMargin = dp(22);
-                lp.topMargin = dp(4);
+                lp.leftMargin = 0;
+                lp.rightMargin = 0;
+                lp.topMargin = 0;
+                lp.bottomMargin = 0;
                 message.setLayoutParams(lp);
             }
         }
+
         styleInputs(window.getDecorView());
+
         Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         Button negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         Button neutral = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
@@ -169,12 +170,20 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
         if (!(oldPanel.getParent() instanceof ViewGroup)) return;
         ViewGroup parent = (ViewGroup) oldPanel.getParent();
         int index = parent.indexOfChild(oldPanel);
+
         LinearLayout actions = ForestUi.column(getContext());
-        actions.setPadding(dp(22), dp(10), dp(22), dp(18));
+        actions.setPadding(dp(24), dp(14), dp(24), dp(22));
 
         boolean hasPositive = positive != null && positive.getVisibility() != View.GONE;
         boolean hasNegative = negative != null && negative.getVisibility() != View.GONE;
         boolean hasNeutral = neutral != null && neutral.getVisibility() != View.GONE;
+
+        boolean stackTwoButtons = false;
+        if (hasPositive && hasNegative && !hasNeutral) {
+            int posLen = positive.getText() != null ? positive.getText().length() : 0;
+            int negLen = negative.getText() != null ? negative.getText().length() : 0;
+            stackTwoButtons = posLen > 6 || negLen > 6 || (posLen + negLen) > 11;
+        }
 
         for (Button button : new Button[] { positive, negative, neutral }) {
             if (button == null || button.getVisibility() == View.GONE) continue;
@@ -182,59 +191,73 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
             boolean primary = button == positive;
             boolean destructivePrimary = primary && danger;
             button.setAllCaps(false);
-            button.setTextSize(13);
-            button.setTypeface(Typeface.create(primary ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
+            button.setMaxLines(1);
+            button.setEllipsize(TextUtils.TruncateAt.END);
+            button.setTextSize(14);
+            button.setLetterSpacing(0.02f);
+            button.setTypeface(Typeface.create(
+                primary ? "sans-serif-medium" : "sans-serif",
+                primary ? Typeface.BOLD : Typeface.NORMAL
+            ));
             button.setTextColor(
-                primary ? ForestUi.LIGHT : button == neutral ? ForestUi.DEEP : 0xff5c5547
+                primary ? 0xfffffdf8 : button == neutral ? ForestUi.DEEP : 0xff6e6557
             );
             button.setBackgroundTintList(null);
-            button.setBackground(
-                ForestUi.ripple(
-                    getContext(),
-                    new ForestSurface(
-                        getContext(),
-                        primary ? ForestSurface.Kind.PRIMARY : ForestSurface.Kind.SECONDARY,
-                        destructivePrimary ? 0xff944a37 : primary ? 0xff456444 : ForestUi.LIGHT,
-                        destructivePrimary ? 0xff753626 : primary ? 0xff345439 : 0xffd5d6bf,
-                        12
-                    ),
-                    primary
-                )
-            );
-            button.setPadding(dp(12), dp(8), dp(12), dp(8));
-            button.setMinHeight(dp(46));
+            button.setStateListAnimator(null);
+
+            if (primary) {
+                button.setBackground(buildPrimaryPill(destructivePrimary));
+                button.setElevation(dp(2));
+                if (Build.VERSION.SDK_INT >= 28) {
+                    button.setOutlineSpotShadowColor(destructivePrimary ? 0x448d4836 : 0x44385738);
+                }
+            } else if (stackTwoButtons && button == negative) {
+                button.setBackground(buildGhostPressBackground(dp(22)));
+            } else {
+                button.setBackground(buildSecondarySoftPill());
+            }
+
+            button.setPadding(dp(16), dp(10), dp(16), dp(10));
+            button.setMinHeight(dp(44));
             button.setMinimumWidth(0);
             button.setMinWidth(0);
             ForestMotion.bind(button);
         }
 
         if (hasPositive && hasNegative && !hasNeutral) {
-            LinearLayout tray = ForestUi.row(getContext());
-            tray.setBackground(ForestUi.rounded(getContext(), 0xfff2efe3, 0xffdcd8c4, 15));
-            tray.setPadding(dp(5), dp(5), dp(5), dp(5));
-            tray.addView(negative, new LinearLayout.LayoutParams(0, -2, 1f));
-            LinearLayout.LayoutParams posParams = new LinearLayout.LayoutParams(0, -2, 1.32f);
-            posParams.leftMargin = dp(8);
-            tray.addView(positive, posParams);
-            actions.addView(tray, new LinearLayout.LayoutParams(-1, -2));
+            if (stackTwoButtons) {
+                actions.addView(positive, new LinearLayout.LayoutParams(-1, dp(46)));
+                LinearLayout.LayoutParams negParams = new LinearLayout.LayoutParams(-1, dp(42));
+                negParams.topMargin = dp(8);
+                actions.addView(negative, negParams);
+            } else {
+                LinearLayout row = ForestUi.row(getContext());
+                row.addView(negative, new LinearLayout.LayoutParams(0, dp(44), 1f));
+                LinearLayout.LayoutParams posParams = new LinearLayout.LayoutParams(0, dp(44), 1.15f);
+                posParams.leftMargin = dp(10);
+                row.addView(positive, posParams);
+                actions.addView(row, new LinearLayout.LayoutParams(-1, -2));
+            }
         } else if (hasPositive && hasNegative && hasNeutral) {
             LinearLayout topRow = ForestUi.row(getContext());
-            topRow.addView(neutral, new LinearLayout.LayoutParams(0, -2, 1f));
-            LinearLayout.LayoutParams posParams = new LinearLayout.LayoutParams(0, -2, 1.15f);
-            posParams.leftMargin = dp(8);
+            topRow.addView(neutral, new LinearLayout.LayoutParams(0, dp(44), 1f));
+            LinearLayout.LayoutParams posParams = new LinearLayout.LayoutParams(0, dp(44), 1.15f);
+            posParams.leftMargin = dp(10);
             topRow.addView(positive, posParams);
             actions.addView(topRow, new LinearLayout.LayoutParams(-1, -2));
-            LinearLayout.LayoutParams negParams = new LinearLayout.LayoutParams(-1, -2);
+            LinearLayout.LayoutParams negParams = new LinearLayout.LayoutParams(-1, dp(42));
             negParams.topMargin = dp(8);
+            negative.setBackground(buildGhostPressBackground(dp(22)));
             actions.addView(negative, negParams);
         } else {
-            for (Button button : new Button[] { negative, neutral, positive }) {
+            for (Button button : new Button[] { positive, neutral, negative }) {
                 if (button == null || button.getVisibility() == View.GONE) continue;
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(46));
                 if (actions.getChildCount() > 0) params.topMargin = dp(8);
                 actions.addView(button, params);
             }
         }
+
         parent.removeView(oldPanel);
         parent.addView(actions, index, new ViewGroup.LayoutParams(-1, -2));
     }
@@ -242,76 +265,116 @@ public final class ForestDialogBuilder extends MaterialAlertDialogBuilder {
     private void styleInputs(View view) {
         if (view instanceof EditText) {
             EditText input = (EditText) view;
-            input.setTextSize(14);
-            input.setTextColor(ForestUi.DEEP);
-            input.setHintTextColor(ForestUi.MUTED);
+            input.setTextSize(15);
+            input.setTextColor(0xff243624);
+            input.setHintTextColor(0xff9a9080);
             input.setBackgroundTintList(null);
-            input.setBackground(
-                new ForestSurface(
-                    getContext(),
-                    ForestSurface.Kind.FIELD,
-                    0xfff5f4e8,
-                    0xffcdd2bc,
-                    10
-                )
-            );
-            input.setPadding(dp(12), dp(12), dp(12), dp(12));
-            input.setMinimumHeight(dp(46));
+            input.setBackground(buildUnderlineInputBackground());
+            input.setPadding(dp(2), dp(10), dp(2), dp(10));
+            input.setMinimumHeight(dp(44));
         } else if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) styleInputs(group.getChildAt(i));
         }
     }
 
-    private int dp(float value) {
-        return ForestUi.dp(getContext(), value);
+    private Drawable buildDialogSurface(Context context) {
+        GradientDrawable surface = new GradientDrawable();
+        surface.setShape(GradientDrawable.RECTANGLE);
+        surface.setColor(0xfffffefa);
+        surface.setCornerRadius(ForestUi.dp(context, 26));
+        surface.setStroke(Math.max(1, ForestUi.dp(context, 0.75f)), 0x1a5c4938);
+        return surface;
     }
 
-    private static final class Paper extends Drawable {
+    private Drawable buildPrimaryPill(boolean danger) {
+        float radius = dp(23);
+        int topColor = danger ? 0xffad553f : 0xff52764f;
+        int bottomColor = danger ? 0xff91412e : 0xff3b5b3a;
+        int pressTop = danger ? 0xff91412e : 0xff3f5e3e;
+        int pressBottom = danger ? 0xff7b3424 : 0xff2f4a2e;
 
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Shader texture;
-        private final float radius, stroke;
+        GradientDrawable normalBase = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { topColor, bottomColor }
+        );
+        normalBase.setCornerRadius(radius);
 
-        Paper(Context context) {
-            texture = new BitmapShader(
-                ForestBitmaps.get(context, R.drawable.forest_paper_clean),
-                Shader.TileMode.REPEAT,
-                Shader.TileMode.REPEAT
-            );
-            radius = ForestUi.dp(context, 22);
-            stroke = ForestUi.dp(context, 1);
-        }
+        GradientDrawable highlight = new GradientDrawable();
+        highlight.setCornerRadius(radius - dp(1));
+        highlight.setColor(Color.TRANSPARENT);
+        highlight.setStroke(Math.max(1, dp(0.75f)), 0x2effffff);
 
-        @Override
-        public void draw(Canvas canvas) {
-            RectF bounds = new RectF(getBounds());
-            paint.setStyle(Paint.Style.FILL);
-            paint.setShader(texture);
-            canvas.drawRoundRect(bounds, radius, radius, paint);
-            paint.setShader(null);
-            paint.setColor(0xd9fffcf3);
-            canvas.drawRoundRect(bounds, radius, radius, paint);
-            bounds.inset(stroke / 2, stroke / 2);
-            paint.setColor(0xffc9cfb2);
-            paint.setStrokeWidth(stroke);
-            paint.setStyle(Paint.Style.STROKE);
-            canvas.drawRoundRect(bounds, radius, radius, paint);
-        }
+        LayerDrawable normal = new LayerDrawable(new Drawable[] {
+            normalBase,
+            new InsetDrawable(highlight, dp(1))
+        });
 
-        @Override
-        public void setAlpha(int alpha) {
-            paint.setAlpha(alpha);
-        }
+        GradientDrawable pressed = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] { pressTop, pressBottom }
+        );
+        pressed.setCornerRadius(radius);
 
-        @Override
-        public void setColorFilter(ColorFilter filter) {
-            paint.setColorFilter(filter);
-        }
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[] { android.R.attr.state_pressed }, pressed);
+        states.addState(new int[] {}, normal);
+        return states;
+    }
 
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSLUCENT;
-        }
+    private Drawable buildSecondarySoftPill() {
+        float radius = dp(22);
+        GradientDrawable normal = new GradientDrawable();
+        normal.setShape(GradientDrawable.RECTANGLE);
+        normal.setColor(0xfff3efe6);
+        normal.setCornerRadius(radius);
+
+        GradientDrawable pressed = new GradientDrawable();
+        pressed.setShape(GradientDrawable.RECTANGLE);
+        pressed.setColor(0xffe9e3d6);
+        pressed.setCornerRadius(radius);
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[] { android.R.attr.state_pressed }, pressed);
+        states.addState(new int[] {}, normal);
+        return states;
+    }
+
+    private Drawable buildGhostPressBackground(float radius) {
+        GradientDrawable pressed = new GradientDrawable();
+        pressed.setShape(GradientDrawable.RECTANGLE);
+        pressed.setColor(0x127b5c3b);
+        pressed.setCornerRadius(radius);
+
+        GradientDrawable normal = new GradientDrawable();
+        normal.setColor(Color.TRANSPARENT);
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[] { android.R.attr.state_pressed }, pressed);
+        states.addState(new int[] {}, normal);
+        return states;
+    }
+
+    private Drawable buildUnderlineInputBackground() {
+        GradientDrawable normalLine = new GradientDrawable();
+        normalLine.setColor(0x335c4938);
+        LayerDrawable normal = new LayerDrawable(new Drawable[] { normalLine });
+        normal.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        normal.setLayerHeight(0, Math.max(1, dp(1)));
+
+        GradientDrawable focusLine = new GradientDrawable();
+        focusLine.setColor(0xff456444);
+        LayerDrawable focused = new LayerDrawable(new Drawable[] { focusLine });
+        focused.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        focused.setLayerHeight(0, Math.max(2, dp(1.8f)));
+
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[] { android.R.attr.state_focused }, focused);
+        states.addState(new int[] {}, normal);
+        return states;
+    }
+
+    private int dp(float value) {
+        return ForestUi.dp(getContext(), value);
     }
 }

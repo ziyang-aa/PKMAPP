@@ -2,8 +2,6 @@ package com.example.pkmapp.data;
 
 import android.content.Context;
 
-import com.example.pkmapp.core.database.AppDatabase;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -52,7 +50,28 @@ public final class InMemoryLedgerRepository {
     }
 
     public static void initialize(Context context) {
-        INSTANCE.attachPersistence(new RoomLedgerPersistence(AppDatabase.getInstance(context)));
+        INSTANCE.attachPersistence(new RoomLedgerPersistence(context.getApplicationContext()));
+    }
+
+    public void reloadFromPersistence() {
+        LedgerPersistence storage;
+        synchronized (this) {
+            storage = persistence;
+            if (storage == null) {
+                return;
+            }
+            ledgers.clear();
+            transactions.clear();
+            Ledger defaultLedger = new Ledger(nextId(), "生活账本");
+            ledgers.put(defaultLedger.getId(), defaultLedger);
+            currentLedgerId = defaultLedger.getId();
+            LedgerCodec.State restored = storage.load();
+            if (restored != null && !restored.getLedgers().isEmpty()) {
+                restore(restored);
+            }
+        }
+        persist();
+        notifyListeners();
     }
 
     static InMemoryLedgerRepository createForTest() {

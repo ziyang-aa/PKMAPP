@@ -2,6 +2,7 @@
     <item type="id" name="home_enter_study"/><item type="id" name="home_enter_life"/>
     <item type="id" name="home_door_study"/><item type="id" name="home_door_life"/>
     <item type="id" name="home_resume_study"/>
+    <item type="id" name="home_avatar_trigger"/><item type="id" name="home_sync_badge"/>
     <item type="id" name="nav_study_focus"/><item type="id" name="nav_study_todo"/><item type="id" name="nav_study_stats"/><item type="id" name="nav_study_garden"/>
     <item type="id" name="study_bottom_navigation"/>
     <item type="id" name="study_start_pause_button"/><item type="id" name="study_finish_button"/>
@@ -13,4 +14,5 @@
     <item type="id" name="study_water_button"/><item type="id" name="study_wallet"/>
     <item type="id" name="study_date_today"/><item type="id" name="study_date_week"/><item type="id" name="study_date_month"/>
     <item type="id" name="study_chart_ring"/><item type="id" name="study_chart_bars"/><item type="id" name="study_chart_trend"/>
+    <item type="id" name="title_vault"/><item type="id" name="title_feedback"/>
 </resources>

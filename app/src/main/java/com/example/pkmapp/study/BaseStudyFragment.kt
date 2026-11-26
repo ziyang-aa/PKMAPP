@@ -38,6 +38,7 @@ import kotlinx.coroutines.withContext
 import com.example.pkmapp.R
 import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.forest.CrayonCard
+import com.example.pkmapp.forest.ForestDialogBuilder
 import com.example.pkmapp.forest.ForestMotion
 import com.example.pkmapp.forest.ForestUi
 import com.example.pkmapp.forest.ForestUi.DEEP
@@ -79,13 +80,20 @@ abstract class BaseStudyFragment : Fragment() {
         this::importStudy
     )
 
+    private var pendingAfterNotificationPermission: (() -> Unit)? = null
+
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        val pending = pendingAfterNotificationPermission
+        pendingAfterNotificationPermission = null
         if (this::store.isInitialized && isAdded) {
+            if (pending != null) {
+                pending.invoke()
+            }
             StudyNotifications.refresh(ctx(), store)
             render()
-            if (!granted) toast("可以在系统设置里开启学习通知")
+            if (!granted) toast("已开始专注，后续可随时在系统设置开启锁屏计时通知")
         }
     }
 
@@ -271,7 +279,7 @@ abstract class BaseStudyFragment : Fragment() {
             ) {
                 sheet.dismiss()
                 exportPicker.launch(
-                    "芽叶记-学习备份-${StudyNotebook.dayKey(System.currentTimeMillis())}.json"
+                    "小松果-学习备份-${StudyNotebook.dayKey(System.currentTimeMillis())}.json"
                 )
             },
             0
@@ -375,6 +383,40 @@ abstract class BaseStudyFragment : Fragment() {
             render()
             toast("学习备份已恢复，新增 $added 条记录")
         }
+    }
+
+    internal fun ensureNotificationBeforeStart(onProceed: () -> Unit) {
+        if (!isAdded) return
+        if (StudyNotifications.permitted(ctx())) {
+            onProceed()
+            return
+        }
+        val appPrefs = AppPreferences.getInstance(ctx())
+        if (appPrefs.current.askedNotifications) {
+            onProceed()
+            return
+        }
+        ForestDialogBuilder(ctx())
+            .setTitle("开启专注计时通知？")
+            .setMessage("学习期间会在消息栏和锁屏实时显示已专注时长，锁屏无需解锁也能随时查看。")
+            .setPositiveButton("开启并开始") { _, _ ->
+                appPrefs.setAskedNotifications(true)
+                if (Build.VERSION.SDK_INT >= 33) {
+                    pendingAfterNotificationPermission = onProceed
+                    notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    onProceed()
+                    startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, ctx().packageName)
+                    )
+                }
+            }
+            .setNegativeButton("直接开始") { _, _ ->
+                appPrefs.setAskedNotifications(true)
+                onProceed()
+            }
+            .show()
     }
 
     internal fun allowStudyNotifications() {

@@ -5,9 +5,13 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "study_plans")
+@Entity(
+    tableName = "study_plans",
+    primaryKeys = ["ownerId", "id"],
+    indices = [Index(value = ["ownerId", "sortOrder"])]
+)
 data class StudyPlanEntity(
-    @PrimaryKey val id: String,
+    val id: String,
     val title: String,
     val kind: String,
     val due: String,
@@ -21,21 +25,26 @@ data class StudyPlanEntity(
     val remindDeadlines: Boolean,
     val remindTime: String,
     val isCurrent: Boolean,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val updatedAt: Long = 0L,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
 @Entity(
     tableName = "study_subjects",
-    primaryKeys = ["planId", "id"],
+    primaryKeys = ["ownerId", "planId", "id"],
     foreignKeys = [
         ForeignKey(
             entity = StudyPlanEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["planId"],
+            parentColumns = ["ownerId", "id"],
+            childColumns = ["ownerId", "planId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["planId"])]
+    indices = [Index(value = ["ownerId", "planId"])]
 )
 data class StudySubjectEntity(
     val id: String,
@@ -45,15 +54,24 @@ data class StudySubjectEntity(
     val due: String,
     val assessment: String,
     val color: Int,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val updatedAt: Long = 0L,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
 @Entity(
     tableName = "study_records",
-    indices = [Index(value = ["planId", "completedAt"])]
+    primaryKeys = ["ownerId", "id"],
+    indices = [
+        Index(value = ["planId", "completedAt"]),
+        Index(value = ["ownerId", "syncStatus"])
+    ]
 )
 data class StudyRecordEntity(
-    @PrimaryKey val id: String,
+    val id: String,
     val planId: String,
     val subjectId: String,
     val subjectTitleSnapshot: String,
@@ -69,15 +87,24 @@ data class StudyRecordEntity(
     val editedAt: Long,
     val adjusted: Boolean,
     val taskId: String,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val updatedAt: Long = 0L,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
 @Entity(
     tableName = "study_tasks",
-    indices = [Index(value = ["planId", "doneAt"])]
+    primaryKeys = ["ownerId", "id"],
+    indices = [
+        Index(value = ["planId", "doneAt"]),
+        Index(value = ["ownerId", "syncStatus"])
+    ]
 )
 data class StudyTaskEntity(
-    @PrimaryKey val id: String,
+    val id: String,
     val planId: String,
     val subjectId: String,
     val title: String,
@@ -89,21 +116,33 @@ data class StudyTaskEntity(
     val doneAt: Long,
     val updatedAt: Long,
     val isNext: Boolean,
-    val priority: Long
+    val priority: Long,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
-@Entity(tableName = "study_reviews")
+@Entity(
+    tableName = "study_reviews",
+    primaryKeys = ["ownerId", "recordId"],
+    indices = [Index(value = ["ownerId", "syncStatus"])]
+)
 data class StudyReviewEntity(
-    @PrimaryKey val recordId: String,
+    val recordId: String,
     val prompt: String,
     val day: String,
     val completedAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
 @Entity(tableName = "study_garden_state")
 data class StudyGardenStateEntity(
-    @PrimaryKey val singletonId: Int = 1,
+    @PrimaryKey val ownerId: String = AccountScope.GUEST_OWNER_ID,
     val currentPlanId: String,
     val water: Int,
     val carryMillis: Long,
@@ -121,15 +160,22 @@ data class StudyGardenStateEntity(
     val activeWall: Long,
     val activeElapsed: Long,
     val activeBoot: Int,
-    val activeRunning: Boolean
+    val activeRunning: Boolean,
+    val updatedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )
 
 @Entity(
     tableName = "todo_items",
-    indices = [Index(value = ["completedAt", "dueDate"])]
+    primaryKeys = ["ownerId", "id"],
+    indices = [
+        Index(value = ["completedAt", "dueDate"]),
+        Index(value = ["ownerId", "syncStatus"])
+    ]
 )
 data class TodoItemEntity(
-    @PrimaryKey val id: String,
+    val id: String,
     val title: String,
     val note: String,
     val dueDate: String,
@@ -138,5 +184,10 @@ data class TodoItemEntity(
     val remindBeforeMinutes: Int,
     val createdAt: Long,
     val completedAt: Long,
-    val sortOrder: Int
+    val sortOrder: Int,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val updatedAt: Long = 0L,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
 )

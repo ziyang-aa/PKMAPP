@@ -18,6 +18,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PkmAPP">
         <activity android:name=".MainActivity" />
+        <activity
+            android:name=".account.AuthActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <service
             android:name=".study.FocusTimerService"
             android:exported="false"

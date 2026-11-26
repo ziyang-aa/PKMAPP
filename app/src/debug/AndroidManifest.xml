@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug build allows local HTTP (e.g. http://10.0.2.2:8080) to connect to local Spring Boot -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

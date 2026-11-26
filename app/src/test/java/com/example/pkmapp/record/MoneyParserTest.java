@@ -36,4 +36,11 @@ public final class MoneyParserTest {
     public void formatCents_groupsThousandsForReadableLedgerAmounts() {
         assertEquals("¥6,416.40", MoneyParser.formatCents(641_640L));
     }
+
+    @Test
+    public void formatCents_placesMinusBeforeCurrencySymbolAndNeverNegativeZero() {
+        assertEquals("¥0.00", MoneyParser.formatCents(0L));
+        assertEquals("-¥12.58", MoneyParser.formatCents(-1_258L));
+        assertEquals("-¥6,416.40", MoneyParser.formatCents(-641_640L));
+    }
 }

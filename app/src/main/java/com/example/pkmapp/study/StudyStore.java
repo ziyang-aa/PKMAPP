@@ -5,12 +5,13 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.provider.Settings;
 
+import com.example.pkmapp.core.database.AccountScope;
 import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.PkmStorageBootstrap;
 import com.example.pkmapp.core.database.StudyDao;
 import com.example.pkmapp.core.database.StudyDatabaseSnapshot;
 
-/** Room-backed learning store with a cold-standby shadow mirror in SharedPreferences. */
+/** Room-backed learning store scoped by ownerId with per-owner shadow mirror in SharedPreferences. */
 public final class StudyStore {
 
     private static StudyStore instance;
@@ -18,6 +19,7 @@ public final class StudyStore {
     private final StudyDao studyDao;
     private final Context context;
     private StudyNotebook notebook;
+    private String currentOwnerId;
     private boolean recoveryWarning;
 
     private StudyStore(Context context) {
@@ -26,8 +28,19 @@ public final class StudyStore {
         this.shadowPreferences = this.context.getSharedPreferences(
                 "forest_study_v1", Context.MODE_PRIVATE);
         this.recoveryWarning = PkmStorageBootstrap.takeStudyRecoveryWarning();
+        this.currentOwnerId = AccountScope.currentOwnerId(this.context);
+        loadForOwner(this.currentOwnerId);
+    }
 
-        StudyDatabaseSnapshot loadedSnapshot = studyDao.loadSnapshot();
+    private static String shadowKeyForOwner(String ownerId) {
+        if (ownerId == null || ownerId.isEmpty() || AccountScope.GUEST_OWNER_ID.equals(ownerId)) {
+            return "notebook";
+        }
+        return "notebook_" + ownerId;
+    }
+
+    private void loadForOwner(String ownerId) {
+        StudyDatabaseSnapshot loadedSnapshot = studyDao.loadSnapshot(ownerId);
         StudyNotebook restored = null;
         try {
             restored = StudyNotebookSqlBridge.fromSnapshot(loadedSnapshot);
@@ -36,16 +49,46 @@ public final class StudyStore {
         }
         if (restored == null) {
             notebook = new StudyNotebook();
-            studyDao.replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(notebook));
-            shadowPreferences.edit().putString("notebook", notebook.toJson()).commit();
+            studyDao.replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(notebook, ownerId), ownerId);
+            shadowPreferences.edit().putString(shadowKeyForOwner(ownerId), notebook.toJson()).commit();
         } else {
             notebook = restored;
         }
     }
 
     public static synchronized StudyStore get(Context context) {
-        if (instance == null) instance = new StudyStore(context);
+        if (instance == null) {
+            instance = new StudyStore(context);
+        } else {
+            instance.ensureCurrentOwner();
+        }
         return instance;
+    }
+
+    private synchronized void ensureCurrentOwner() {
+        String activeOwner = AccountScope.currentOwnerId(context);
+        if (!activeOwner.equals(currentOwnerId)) {
+            reloadForCurrentAccount();
+        }
+    }
+
+    public synchronized void reloadForCurrentAccount() {
+        if (notebook != null && notebook.running()) {
+            try {
+                notebook.pause(System.currentTimeMillis(), SystemClock.elapsedRealtime(), boot());
+                studyDao.replaceSnapshot(
+                        StudyNotebookSqlBridge.toSnapshot(notebook, currentOwnerId),
+                        currentOwnerId
+                );
+                shadowPreferences.edit()
+                        .putString(shadowKeyForOwner(currentOwnerId), notebook.toJson())
+                        .commit();
+            } catch (RuntimeException ignored) {
+            }
+        }
+        currentOwnerId = AccountScope.currentOwnerId(context);
+        loadForOwner(currentOwnerId);
+        StudyNotifications.refresh(context, this);
     }
 
     public StudyNotebook notebook() {
@@ -71,12 +114,16 @@ public final class StudyStore {
     }
 
     public synchronized <T> T update(Action<T> action) {
+        ensureCurrentOwner();
         String previous = notebook.toJson();
         T result;
         try {
             result = action.run(notebook);
-            studyDao.replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(notebook));
-            if (!shadowPreferences.edit().putString("notebook", notebook.toJson()).commit()) {
+            studyDao.replaceSnapshot(
+                    StudyNotebookSqlBridge.toSnapshot(notebook, currentOwnerId),
+                    currentOwnerId
+            );
+            if (!shadowPreferences.edit().putString(shadowKeyForOwner(currentOwnerId), notebook.toJson()).commit()) {
                 throw new IllegalStateException("保存未完成，请检查手机存储空间后重试");
             }
         } catch (RuntimeException e) {

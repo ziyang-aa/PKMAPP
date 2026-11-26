@@ -136,7 +136,7 @@ internal object StudyFocusDialogs {
                 val value = input.text.toString().trim().toInt()
                 fragment.store.update { n -> n.setSessionGoal(value); null }
                 sheet.dismiss()
-                fragment.render()
+                fragment.updateSessionGoalInPlace(value, alreadySaved = true)
             } catch (error: RuntimeException) {
                 if (error !is IllegalArgumentException && error !is IllegalStateException) throw error
                 errorMessage.text = if (error is NumberFormatException) "请输入 5 至 360 之间的分钟数" else error.message
@@ -154,9 +154,13 @@ internal object StudyFocusDialogs {
         pane.primary("以此开始专注") {
             work.save {
                 val title = StudyPlan.required(StudyWorkDialogs.value(goal), 120, "学习目标")
-                fragment.store.start("", title)
                 sheet.dismiss()
-                fragment.render()
+                fragment.ensureNotificationBeforeStart {
+                    fragment.perform {
+                        fragment.store.start("", title)
+                        fragment.render()
+                    }
+                }
             }
         }
         sheet.push(pane)

@@ -108,7 +108,7 @@ public final class BorrowingFragment extends Fragment {
         View backBtn = view.findViewById(R.id.borrowing_back_button);
         backBtn.setBackground(ripple(requireContext(), rounded(requireContext(), 0x125c4938, 0, 999), false));
         backBtn.setOnClickListener(v ->
-                ((MainActivity) requireActivity()).showDestination(AppDestination.DETAILS));
+                ((MainActivity) requireActivity()).navigateBackFromLifeTool());
         ForestMotion.bind(backBtn);
 
         TextView addBtn = view.findViewById(R.id.borrowing_add_button);

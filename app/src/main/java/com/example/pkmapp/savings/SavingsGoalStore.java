@@ -2,9 +2,11 @@ package com.example.pkmapp.savings;
 
 import android.content.Context;
 
+import com.example.pkmapp.core.database.AccountScope;
 import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.SavingsGoalDao;
 import com.example.pkmapp.core.database.SavingsGoalEntity;
+import com.example.pkmapp.core.database.SyncStatus;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,15 +14,21 @@ import java.util.List;
 import java.util.UUID;
 
 public final class SavingsGoalStore {
+    private final Context appContext;
     private final SavingsGoalDao savingsGoalDao;
 
     public SavingsGoalStore(Context context) {
-        savingsGoalDao = AppDatabase.getInstance(context).savingsGoalDao();
+        this.appContext = context.getApplicationContext();
+        this.savingsGoalDao = AppDatabase.getInstance(appContext).savingsGoalDao();
+    }
+
+    private String ownerId() {
+        return AccountScope.currentOwnerId(appContext);
     }
 
     public synchronized List<SavingsGoal> getGoals() {
         List<SavingsGoal> goals = new ArrayList<>();
-        for (SavingsGoalEntity row : savingsGoalDao.getAll()) {
+        for (SavingsGoalEntity row : savingsGoalDao.getAll(ownerId())) {
             try {
                 goals.add(new SavingsGoal(
                         row.getId(),
@@ -89,10 +97,12 @@ public final class SavingsGoalStore {
     }
 
     public synchronized void clear() {
-        savingsGoalDao.clear();
+        savingsGoalDao.clear(ownerId());
     }
 
     private void save(List<SavingsGoal> goals) {
+        String owner = ownerId();
+        long now = System.currentTimeMillis();
         List<SavingsGoalEntity> entities = new ArrayList<>(goals.size());
         for (int index = 0; index < goals.size(); index++) {
             SavingsGoal goal = goals.get(index);
@@ -103,9 +113,14 @@ public final class SavingsGoalStore {
                     goal.getSavedCents(),
                     "",
                     goal.getCreatedAtMillis(),
-                    index
+                    index,
+                    owner,
+                    now,
+                    0L,
+                    SyncStatus.PENDING_PUSH,
+                    AccountScope.newRequestId()
             ));
         }
-        savingsGoalDao.replaceAll(entities);
+        savingsGoalDao.replaceAll(entities, owner);
     }
 }

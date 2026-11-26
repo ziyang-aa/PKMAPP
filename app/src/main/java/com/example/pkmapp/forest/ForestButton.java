@@ -3,6 +3,7 @@ package com.example.pkmapp.forest;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.RippleDrawable;
+import android.util.AttributeSet;
 import com.google.android.material.button.MaterialButton;
 
 /** Keeps existing MaterialButton semantics while sharing the app's paper-and-ink appearance. */
@@ -13,6 +14,14 @@ public final class ForestButton extends MaterialButton {
 
     public ForestButton(Context context) {
         super(context);
+    }
+
+    public ForestButton(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    public ForestButton(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
     }
 
     @Override

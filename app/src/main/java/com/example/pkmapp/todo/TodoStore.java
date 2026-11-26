@@ -2,7 +2,9 @@ package com.example.pkmapp.todo;
 
 import android.content.Context;
 
+import com.example.pkmapp.core.database.AccountScope;
 import com.example.pkmapp.core.database.AppDatabase;
+import com.example.pkmapp.core.database.SyncStatus;
 import com.example.pkmapp.core.database.TodoDao;
 import com.example.pkmapp.core.database.TodoItemEntity;
 import com.example.pkmapp.core.datastore.AppPreferences;
@@ -27,6 +29,7 @@ public final class TodoStore {
     private final TodoDao todoDao;
     private final AppPreferences appPreferences;
     private final List<TodoItem> items = new ArrayList<>();
+    private String currentOwnerId;
     private boolean remindEnabled = true;
     private String defaultRemindTime = "18:00";
 
@@ -34,14 +37,30 @@ public final class TodoStore {
         this.appContext = context.getApplicationContext();
         this.todoDao = AppDatabase.getInstance(appContext).todoDao();
         this.appPreferences = AppPreferences.getInstance(appContext);
+        this.currentOwnerId = AccountScope.currentOwnerId(appContext);
         load();
     }
 
     public static synchronized TodoStore get(Context context) {
         if (instance == null) {
             instance = new TodoStore(context);
+        } else {
+            instance.ensureCurrentOwner();
         }
         return instance;
+    }
+
+    private synchronized void ensureCurrentOwner() {
+        String activeOwner = AccountScope.currentOwnerId(appContext);
+        if (!activeOwner.equals(currentOwnerId)) {
+            reloadForCurrentAccount();
+        }
+    }
+
+    public synchronized void reloadForCurrentAccount() {
+        currentOwnerId = AccountScope.currentOwnerId(appContext);
+        load();
+        TodoNotifications.refresh(appContext, this);
     }
 
     public synchronized boolean remindEnabled() {
@@ -193,7 +212,7 @@ public final class TodoStore {
         remindEnabled = prefs.getTodoRemindEnabled();
         String rt = TodoItem.validateTime(prefs.getTodoDefaultRemindTime());
         defaultRemindTime = rt.isEmpty() ? "18:00" : rt;
-        for (TodoItemEntity row : todoDao.getAll()) {
+        for (TodoItemEntity row : todoDao.getAll(currentOwnerId)) {
             try {
                 items.add(new TodoItem(
                     row.getId(),
@@ -212,6 +231,8 @@ public final class TodoStore {
     }
 
     private void saveItems() {
+        ensureCurrentOwner();
+        long now = System.currentTimeMillis();
         List<TodoItemEntity> entities = new ArrayList<>(items.size());
         for (int index = 0; index < items.size(); index++) {
             TodoItem item = items.get(index);
@@ -225,10 +246,15 @@ public final class TodoStore {
                 item.remindLeadMinutes,
                 item.created,
                 item.completed,
-                index
+                index,
+                currentOwnerId,
+                now,
+                0L,
+                SyncStatus.PENDING_PUSH,
+                AccountScope.newRequestId()
             ));
         }
-        todoDao.replaceAll(entities);
+        todoDao.replaceAll(entities, currentOwnerId);
         TodoNotifications.refresh(appContext, this);
     }
 

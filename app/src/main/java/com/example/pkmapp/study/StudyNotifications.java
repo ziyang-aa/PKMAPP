@@ -29,7 +29,8 @@ public final class StudyNotifications extends BroadcastReceiver {
     private static final String PAUSE = "com.example.pkmapp.study.PAUSE";
     private static final String RESUME = "com.example.pkmapp.study.RESUME";
     private static final String DUE = "com.example.pkmapp.study.DUE";
-    private static final String TIMER_CHANNEL = "study_timer";
+    private static final String LEGACY_TIMER_CHANNEL = "study_timer";
+    private static final String TIMER_CHANNEL = "study_timer_live";
     private static final String DEADLINE_CHANNEL = "study_deadlines";
     static final int TIMER_ID = 8101;
     private static final int DEADLINE_ID = 8102;
@@ -54,22 +55,76 @@ public final class StudyNotifications extends BroadcastReceiver {
         if (manager == null || !notebook.hasSession() || !permitted(context)) {
             return null;
         }
-        channel(manager, TIMER_CHANNEL, "学习计时", NotificationManager.IMPORTANCE_LOW);
+        ensureTimerChannel(manager);
         String id = notebook.sessionId();
         boolean running = notebook.running();
         long elapsed = store.elapsedMillis();
-        String title = notebook.activeSubject().title + (running ? " · 正在专注" : " · 已暂停");
+        int goalMin = notebook.activeGoal();
+        StudyPlan activePlan = notebook.plan(notebook.activePlanId());
+        StudyWork.Task activeTask = notebook.task(notebook.activeTaskId());
+        String subjectTitle = notebook.activeSubject().title;
+        String title = subjectTitle + (running ? " · 正在专注" : " · 已暂停");
+        String elapsedText = formatNotificationElapsed(elapsed);
+        StringBuilder detail = new StringBuilder();
+        detail.append("已学习 ").append(elapsedText);
+        if (!running) detail.append("（已暂停）");
+        if (goalMin > 0) detail.append(" · 目标 ").append(goalMin).append(" 分钟");
+        if (activeTask != null && activeTask.title != null && !activeTask.title.isEmpty()) {
+            detail.append(" · ").append(activeTask.title);
+        }
+
         Intent control = new Intent(context, StudyNotifications.class).setAction(running ? PAUSE : RESUME)
             .setData(identity(id)).putExtra(SESSION, id);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, TIMER_CHANNEL)
-            .setSmallIcon(R.drawable.ic_study_book).setContentTitle(title)
+            .setSmallIcon(R.drawable.ic_study_book)
+            .setContentTitle(title)
+            .setContentText(detail.toString())
             .setContentIntent(activity(context, OPEN_TIMER, id))
-            .setOnlyAlertOnce(true).setOngoing(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setShowWhen(running).setUsesChronometer(running).setWhen(System.currentTimeMillis() - elapsed)
+            .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setOngoing(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setShowWhen(running)
+            .setUsesChronometer(running)
+            .setWhen(System.currentTimeMillis() - elapsed)
             .addAction(0, running ? "暂停" : "继续", PendingIntent.getBroadcast(context, 0, control, FLAGS))
             .addAction(0, "结束", activity(context, FINISH_TIMER, id));
-        if (!running) builder.setContentText("已专注 " + StudyFormat.duration(elapsed));
+        if (activePlan != null && activePlan.title != null && !activePlan.title.isEmpty()) {
+            builder.setSubText(activePlan.title);
+        }
         return builder.build();
+    }
+
+    private static String formatNotificationElapsed(long elapsedMillis) {
+        long totalSeconds = Math.max(0L, elapsedMillis / 1000L);
+        long hours = totalSeconds / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        if (hours > 0) {
+            return minutes > 0 ? hours + " 小时 " + minutes + " 分钟" : hours + " 小时";
+        }
+        if (minutes > 0) {
+            return minutes + " 分钟";
+        }
+        return "不足 1 分钟";
+    }
+
+    private static void ensureTimerChannel(NotificationManager manager) {
+        if (Build.VERSION.SDK_INT < 26) return;
+        manager.deleteNotificationChannel(LEGACY_TIMER_CHANNEL);
+        NotificationChannel ch = new NotificationChannel(
+            TIMER_CHANNEL,
+            "专注计时（锁屏可见）",
+            NotificationManager.IMPORTANCE_DEFAULT
+        );
+        ch.setDescription("学习专注期间在通知栏和锁屏界面实时显示已学习时长");
+        ch.setSound(null, null);
+        ch.enableVibration(false);
+        ch.enableLights(false);
+        ch.setShowBadge(false);
+        ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        manager.createNotificationChannel(ch);
     }
 
     private static void refreshTimer(Context context, StudyStore store) {

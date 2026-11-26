@@ -44,6 +44,10 @@ public final class MoneyParser {
     public static String formatCents(long cents) {
         DecimalFormat formatter = new DecimalFormat("#,##0.00",
                 DecimalFormatSymbols.getInstance(Locale.CHINA));
-        return "¥" + formatter.format(BigDecimal.valueOf(cents, 2));
+        BigDecimal value = BigDecimal.valueOf(cents, 2);
+        if (value.signum() < 0) {
+            return "-¥" + formatter.format(value.abs());
+        }
+        return "¥" + formatter.format(value);
     }
 }

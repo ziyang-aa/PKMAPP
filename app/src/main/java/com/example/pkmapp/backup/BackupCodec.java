@@ -107,7 +107,7 @@ public final class BackupCodec {
         try {
             JSONObject root = new JSONObject(encoded);
             if (!FORMAT.equals(requiredString(root, "format"))) {
-                throw new IllegalArgumentException("不是芽叶记备份文件");
+                throw new IllegalArgumentException("不是小松果备份文件");
             }
             if (requiredLong(root, "version") != CURRENT_VERSION) {
                 throw new IllegalArgumentException("备份文件版本不受支持");

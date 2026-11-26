@@ -28,10 +28,15 @@ data class AppPreferencesSnapshot(
     val keepScreenOn: Boolean = false,
     val askedNotifications: Boolean = false,
     val todoRemindEnabled: Boolean = true,
-    val todoDefaultRemindTime: String = "18:00"
+    val todoDefaultRemindTime: String = "18:00",
+    val activeOwnerId: String = DEFAULT_OWNER_ID,
+    val encryptedAccessToken: String = "",
+    val encryptedRefreshToken: String = "",
+    val serverBaseUrl: String = ""
 ) {
     companion object {
         const val DEFAULT_NICKNAME = "森林守护员"
+        const val DEFAULT_OWNER_ID = "local_guest"
     }
 }
 
@@ -127,6 +132,48 @@ class AppPreferences internal constructor(
         }
     }
 
+    fun setSessionState(
+        ownerId: String,
+        encryptedAccessToken: String,
+        encryptedRefreshToken: String
+    ) {
+        val safeOwner = ownerId.trim().ifEmpty { AppPreferencesSnapshot.DEFAULT_OWNER_ID }
+        cached = cached.copy(
+            activeOwnerId = safeOwner,
+            encryptedAccessToken = encryptedAccessToken,
+            encryptedRefreshToken = encryptedRefreshToken
+        )
+        runBlocking(Dispatchers.IO) {
+            dataStore.edit { prefs ->
+                prefs[KEY_ACTIVE_OWNER_ID] = safeOwner
+                if (encryptedAccessToken.isEmpty()) {
+                    prefs.remove(KEY_ENCRYPTED_ACCESS_TOKEN)
+                } else {
+                    prefs[KEY_ENCRYPTED_ACCESS_TOKEN] = encryptedAccessToken
+                }
+                if (encryptedRefreshToken.isEmpty()) {
+                    prefs.remove(KEY_ENCRYPTED_REFRESH_TOKEN)
+                } else {
+                    prefs[KEY_ENCRYPTED_REFRESH_TOKEN] = encryptedRefreshToken
+                }
+            }
+        }
+    }
+
+    fun setServerBaseUrl(url: String) {
+        val clean = url.trim().trimEnd('/')
+        cached = cached.copy(serverBaseUrl = clean)
+        runBlocking(Dispatchers.IO) {
+            dataStore.edit { prefs ->
+                if (clean.isEmpty()) {
+                    prefs.remove(KEY_SERVER_BASE_URL)
+                } else {
+                    prefs[KEY_SERVER_BASE_URL] = clean
+                }
+            }
+        }
+    }
+
     fun writeMigratedBlocking(migrated: AppPreferencesSnapshot) {
         runBlocking(Dispatchers.IO) {
             dataStore.edit { prefs ->
@@ -139,6 +186,22 @@ class AppPreferences internal constructor(
                 prefs[KEY_ASKED_NOTIFICATIONS] = migrated.askedNotifications
                 prefs[KEY_TODO_REMIND_ENABLED] = migrated.todoRemindEnabled
                 prefs[KEY_TODO_DEFAULT_REMIND_TIME] = migrated.todoDefaultRemindTime
+                prefs[KEY_ACTIVE_OWNER_ID] = migrated.activeOwnerId
+                if (migrated.encryptedAccessToken.isEmpty()) {
+                    prefs.remove(KEY_ENCRYPTED_ACCESS_TOKEN)
+                } else {
+                    prefs[KEY_ENCRYPTED_ACCESS_TOKEN] = migrated.encryptedAccessToken
+                }
+                if (migrated.encryptedRefreshToken.isEmpty()) {
+                    prefs.remove(KEY_ENCRYPTED_REFRESH_TOKEN)
+                } else {
+                    prefs[KEY_ENCRYPTED_REFRESH_TOKEN] = migrated.encryptedRefreshToken
+                }
+                if (migrated.serverBaseUrl.isEmpty()) {
+                    prefs.remove(KEY_SERVER_BASE_URL)
+                } else {
+                    prefs[KEY_SERVER_BASE_URL] = migrated.serverBaseUrl
+                }
             }
             cached = mapPreferences(dataStore.data.first())
         }
@@ -156,6 +219,10 @@ class AppPreferences internal constructor(
         private val KEY_ASKED_NOTIFICATIONS = booleanPreferencesKey("asked_notifications")
         private val KEY_TODO_REMIND_ENABLED = booleanPreferencesKey("todo_remind_enabled")
         private val KEY_TODO_DEFAULT_REMIND_TIME = stringPreferencesKey("todo_default_remind_time")
+        private val KEY_ACTIVE_OWNER_ID = stringPreferencesKey("active_owner_id")
+        private val KEY_ENCRYPTED_ACCESS_TOKEN = stringPreferencesKey("encrypted_access_token")
+        private val KEY_ENCRYPTED_REFRESH_TOKEN = stringPreferencesKey("encrypted_refresh_token")
+        private val KEY_SERVER_BASE_URL = stringPreferencesKey("server_base_url")
 
         @Volatile
         private var instance: AppPreferences? = null
@@ -190,7 +257,13 @@ class AppPreferences internal constructor(
                 keepScreenOn = prefs[KEY_KEEP_SCREEN_ON] ?: false,
                 askedNotifications = prefs[KEY_ASKED_NOTIFICATIONS] ?: false,
                 todoRemindEnabled = prefs[KEY_TODO_REMIND_ENABLED] ?: true,
-                todoDefaultRemindTime = prefs[KEY_TODO_DEFAULT_REMIND_TIME] ?: "18:00"
+                todoDefaultRemindTime = prefs[KEY_TODO_DEFAULT_REMIND_TIME] ?: "18:00",
+                activeOwnerId = prefs[KEY_ACTIVE_OWNER_ID]
+                    ?.takeIf { it.isNotBlank() }
+                    ?: AppPreferencesSnapshot.DEFAULT_OWNER_ID,
+                encryptedAccessToken = prefs[KEY_ENCRYPTED_ACCESS_TOKEN] ?: "",
+                encryptedRefreshToken = prefs[KEY_ENCRYPTED_REFRESH_TOKEN] ?: "",
+                serverBaseUrl = prefs[KEY_SERVER_BASE_URL] ?: ""
             )
     }
 }

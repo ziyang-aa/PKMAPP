@@ -51,6 +51,13 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <com.example.pkmapp.forest.ForestLoadingView
+                android:id="@+id/exchange_loading"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/exchange_status"
                 android:layout_width="0dp"

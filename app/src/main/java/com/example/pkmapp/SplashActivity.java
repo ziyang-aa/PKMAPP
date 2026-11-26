@@ -43,7 +43,14 @@ public final class SplashActivity extends AppCompatActivity {
             return;
         }
         openedNotebook = true;
-        startActivity(new Intent(this, MainActivity.class));
+        com.example.pkmapp.core.database.PkmStorageBootstrap.ensureInitialized(getApplicationContext());
+        boolean needsLoginGate = new com.example.pkmapp.core.account.AuthRepository(getApplicationContext())
+                .currentAccount()
+                .isGuest();
+        Intent next = needsLoginGate
+                ? com.example.pkmapp.account.AuthActivity.createIntent(this, false, null)
+                : new Intent(this, MainActivity.class);
+        startActivity(next);
         finish();
     }
 

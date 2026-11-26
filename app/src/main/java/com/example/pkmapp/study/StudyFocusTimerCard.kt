@@ -2,13 +2,16 @@ package com.example.pkmapp.study
 
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
@@ -21,6 +24,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.widget.TextViewCompat
 import com.example.pkmapp.R
+import com.example.pkmapp.forest.ForestMotion
 import com.example.pkmapp.forest.ForestUi
 import com.example.pkmapp.forest.ForestUi.DEEP
 import com.example.pkmapp.forest.ForestUi.LIGHT
@@ -34,8 +38,16 @@ import com.example.pkmapp.forest.ForestUi.rounded
 import com.example.pkmapp.forest.ForestUi.row
 import com.example.pkmapp.forest.ForestUi.text
 import com.google.android.material.button.MaterialButton
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 internal object StudyFocusTimerCard {
+
+    internal class GoalTabSlot(
+        val minutes: Int?, // null represents the custom duration slot
+        val label: TextView,
+        val indicator: View
+    )
 
     internal class Holder(
         val root: LinearLayout,
@@ -50,8 +62,25 @@ internal object StudyFocusTimerCard {
         val dialRightCaption: TextView,
         val activeStatusText: TextView?,
         val startPauseButton: MaterialButton,
-        val focusGentleNote: TextView
-    )
+        val focusGentleNote: TextView,
+        private val goalSlots: List<GoalTabSlot>
+    ) {
+        fun syncSessionGoal(goalMinutes: Int) {
+            if (goalSlots.isEmpty()) return
+            val isCustom = goalMinutes != 25 && goalMinutes != 45 && goalMinutes != 60
+            for (slot in goalSlots) {
+                val selected = if (slot.minutes != null) {
+                    slot.minutes == goalMinutes
+                } else {
+                    isCustom
+                }
+                if (slot.minutes == null) {
+                    slot.label.text = if (isCustom) "${goalMinutes}分钟 ✎" else "自定义"
+                }
+                styleGoalSlot(slot, selected)
+            }
+        }
+    }
 
     fun build(
         fragment: StudyFocusFragment,
@@ -61,10 +90,19 @@ internal object StudyFocusTimerCard {
         initialKeepScreenOn: Boolean,
         onToggleCountdown: () -> Boolean,
         onToggleKeepScreenOn: () -> Boolean,
+        onSelectGoalMinutes: (Int) -> Unit,
         onStartOrPause: () -> Unit
     ): Holder {
         val ctx = fragment.ctx()
-        val timer = fragment.card().apply { elevation = fragment.dp(2).toFloat() }
+        val timer = fragment.card().apply {
+            background = buildFocusCardBackground(ctx, fragment)
+            setPadding(fragment.dp(20), fragment.dp(16), fragment.dp(20), fragment.dp(20))
+            elevation = fragment.dp(2).toFloat()
+            if (Build.VERSION.SDK_INT >= 28) {
+                outlineAmbientShadowColor = 0x245C4938
+                outlineSpotShadowColor = 0x2E5C4938
+            }
+        }
 
         val currentSubject = if (active) n.activeSubject() else n.selected()
         val subjectLabel = currentSubject.title + if (active) " · 本次科目" else "  切换 ›"
@@ -104,8 +142,8 @@ internal object StudyFocusTimerCard {
                 ctx,
                 rounded(
                     ctx,
-                    if (isCountdown) 0xffe6efe1.toInt() else 0xfff2eee3.toInt(),
-                    if (isCountdown) 0xffa7c2a0.toInt() else 0x225c4938,
+                    if (isCountdown) 0xffeef4ea.toInt() else 0xfffffefa.toInt(),
+                    if (isCountdown) 0xffa7c2a0.toInt() else 0x265c4938,
                     999
                 ),
                 false
@@ -118,14 +156,15 @@ internal object StudyFocusTimerCard {
                 }
             }
         }.apply {
-            textSize = 11f; minimumHeight = fragment.dp(30)
-            setPadding(fragment.dp(10), fragment.dp(4), fragment.dp(10), fragment.dp(4))
+            textSize = 11f
+            minimumHeight = fragment.dp(30)
+            setPadding(fragment.dp(11), fragment.dp(4), fragment.dp(11), fragment.dp(4))
             background = ripple(
                 ctx,
                 rounded(
                     ctx,
-                    if (initialCountdownMode) 0xffe6efe1.toInt() else 0xfff2eee3.toInt(),
-                    if (initialCountdownMode) 0xffa7c2a0.toInt() else 0x225c4938,
+                    if (initialCountdownMode) 0xffeef4ea.toInt() else 0xfffffefa.toInt(),
+                    if (initialCountdownMode) 0xffa7c2a0.toInt() else 0x265c4938,
                     999
                 ),
                 false
@@ -139,23 +178,14 @@ internal object StudyFocusTimerCard {
 
         val clockBlock = column(ctx).apply {
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(fragment.dp(4), fragment.dp(20), fragment.dp(4), fragment.dp(14))
+            setPadding(fragment.dp(4), fragment.dp(18), fragment.dp(4), fragment.dp(10))
         }
         val isRunning = active && n.running()
         val isPaused = active && !n.running()
         val pill = row(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(fragment.dp(12), fragment.dp(5), fragment.dp(12), fragment.dp(5))
-            background = rounded(
-                ctx,
-                when {
-                    isRunning -> 0xffeef3e8.toInt()
-                    isPaused -> 0xfff5efe3.toInt()
-                    else -> 0xfff2efe6.toInt()
-                },
-                0,
-                999
-            )
+            setPadding(fragment.dp(8), fragment.dp(3), fragment.dp(8), fragment.dp(3))
+            background = null
         }
         val dot = View(ctx).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -164,13 +194,16 @@ internal object StudyFocusTimerCard {
                 when {
                     isRunning -> 0xff456444.toInt()
                     isPaused -> 0xffb8894f.toInt()
-                    else -> 0xffb5afa0.toInt()
+                    else -> 0xffa79e8d.toInt()
                 },
                 0,
                 99
             )
         }
-        pill.addView(dot, LinearLayout.LayoutParams(fragment.dp(7), fragment.dp(7)).apply { marginEnd = fragment.dp(6) })
+        pill.addView(
+            dot,
+            LinearLayout.LayoutParams(fragment.dp(6), fragment.dp(6)).apply { marginEnd = fragment.dp(7) }
+        )
         var pulseAnimator: ObjectAnimator? = null
         if (isRunning && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled())) {
             pulseAnimator = ObjectAnimator.ofFloat(dot, View.ALPHA, 1f, 0.35f).apply {
@@ -191,30 +224,36 @@ internal object StudyFocusTimerCard {
             when {
                 isRunning -> 0xff315e3a.toInt()
                 isPaused -> 0xff7b5c3b.toInt()
-                else -> MUTED
+                else -> 0xff847a69.toInt()
             }
-        ).apply { typeface = Typeface.create("sans-serif-medium", Typeface.BOLD) }
+        ).apply {
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            letterSpacing = 0.08f
+        }
         pill.addView(statusLbl)
         clockBlock.addView(pill, LinearLayout.LayoutParams(-2, -2))
 
         val clockView = text(
             ctx,
             StudyFormat.clock(if (active) fragment.store.elapsedMillis() else 0),
-            48,
-            0xff243a28.toInt()
+            50,
+            0xff1f3424.toInt()
         ).apply {
             typeface = Typeface.create("serif", Typeface.NORMAL)
             fontFeatureSettings = "tnum"
-            letterSpacing = 0.02f
+            letterSpacing = 0.04f
             maxLines = 1
             id = R.id.study_timer
             gravity = Gravity.CENTER
             contentDescription = "本次学习计时"
         }
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-            clockView, 30, 50, 2, TypedValue.COMPLEX_UNIT_SP
+            clockView, 30, 52, 2, TypedValue.COMPLEX_UNIT_SP
         )
-        clockBlock.addView(clockView, LinearLayout.LayoutParams(-1, fragment.dp(62)).apply { topMargin = fragment.dp(12) })
+        clockBlock.addView(
+            clockView,
+            LinearLayout.LayoutParams(-1, fragment.dp(66)).apply { topMargin = fragment.dp(10) }
+        )
 
         val dialDrawable = StudyClockFace()
         val progressRail = View(ctx).apply {
@@ -223,8 +262,8 @@ internal object StudyFocusTimerCard {
         }
         clockBlock.addView(
             progressRail,
-            LinearLayout.LayoutParams(-1, fragment.dp(7)).apply {
-                setMargins(fragment.dp(6), fragment.dp(20), fragment.dp(6), 0)
+            LinearLayout.LayoutParams(-1, fragment.dp(5)).apply {
+                setMargins(fragment.dp(8), fragment.dp(16), fragment.dp(8), 0)
             }
         )
 
@@ -244,75 +283,67 @@ internal object StudyFocusTimerCard {
         progressMeta.addView(rightCap)
         clockBlock.addView(
             progressMeta,
-            LinearLayout.LayoutParams(-1, -2).apply { setMargins(fragment.dp(6), fragment.dp(8), fragment.dp(6), 0) }
+            LinearLayout.LayoutParams(-1, -2).apply { setMargins(fragment.dp(8), fragment.dp(8), fragment.dp(8), 0) }
         )
         timer.addView(clockBlock, LinearLayout.LayoutParams(-1, -2))
 
+        val goalSlots = ArrayList<GoalTabSlot>(4)
         var statusTxt: TextView? = null
         if (!active) {
+            val density = ctx.resources.displayMetrics.density
+            val indicatorH = max(3, (2.2f * density).roundToInt())
+            val hairline = GradientDrawable().apply { setColor(0x1f5c4938) }
             val goals = row(ctx).apply {
-                background = rounded(ctx, 0xffeae5d9.toInt(), 0, 13)
-                setPadding(fragment.dp(4), fragment.dp(4), fragment.dp(4), fragment.dp(4))
+                gravity = Gravity.BOTTOM
+                background = LayerDrawable(arrayOf<Drawable>(hairline)).apply {
+                    setLayerGravity(0, Gravity.BOTTOM or Gravity.FILL_HORIZONTAL)
+                    setLayerHeight(0, max(1, fragment.dp(0.75f)))
+                }
             }
             val presetGoals = intArrayOf(25, 45, 60)
             val isCustomGoal = focusGoal != 25 && focusGoal != 45 && focusGoal != 60
-            for (minutes in presetGoals) {
-                val selectedGoal = focusGoal == minutes
-                val chip = text(
-                    ctx,
-                    "${minutes}分钟",
-                    12,
-                    if (selectedGoal) 0xff243624.toInt() else 0xff6b7568.toInt()
-                ).apply {
-                    gravity = Gravity.CENTER
-                    typeface = Typeface.create(
-                        if (selectedGoal) "sans-serif-medium" else "sans-serif",
-                        if (selectedGoal) Typeface.BOLD else Typeface.NORMAL
-                    )
-                    background = ripple(
-                        ctx,
-                        rounded(
-                            ctx,
-                            if (selectedGoal) 0xfffffefa.toInt() else Color.TRANSPARENT,
-                            if (selectedGoal) 0x185c4938 else 0,
-                            10
-                        ),
-                        false
-                    )
-                    setOnClickListener {
-                        fragment.perform {
-                            fragment.store.update { book -> book.setSessionGoal(minutes); null }
-                            fragment.render()
-                        }
-                    }
+
+            fun buildSlot(labelText: String, minutes: Int?, selected: Boolean, onClick: () -> Unit): LinearLayout {
+                val tab = column(ctx).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+                    minimumHeight = fragment.dp(40)
+                    isClickable = true
+                    isFocusable = true
+                    background = ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 8), false)
+                    setOnClickListener { onClick() }
                 }
-                fragment.addEqual(goals, chip, 36)
+                val lbl = text(ctx, labelText, 13, 0xff827b6d.toInt()).apply {
+                    gravity = Gravity.CENTER
+                    fontFeatureSettings = "tnum"
+                    maxLines = 1
+                    setPadding(fragment.dp(2), fragment.dp(8), fragment.dp(2), fragment.dp(7))
+                }
+                val bar = View(ctx).apply {
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }
+                tab.addView(lbl, LinearLayout.LayoutParams(-2, -2))
+                tab.addView(bar, LinearLayout.LayoutParams(fragment.dp(22), indicatorH))
+                val slot = GoalTabSlot(minutes, lbl, bar)
+                styleGoalSlot(slot, selected)
+                goalSlots.add(slot)
+                return tab
             }
-            val customChip = text(
-                ctx,
+
+            for (minutes in presetGoals) {
+                val tab = buildSlot("${minutes}分钟", minutes, focusGoal == minutes) {
+                    onSelectGoalMinutes(minutes)
+                }
+                goals.addView(tab, LinearLayout.LayoutParams(0, -2, 1f))
+            }
+            val customTab = buildSlot(
                 if (isCustomGoal) "${focusGoal}分钟 ✎" else "自定义",
-                12,
-                if (isCustomGoal) 0xff243624.toInt() else 0xff6b7568.toInt()
-            ).apply {
-                gravity = Gravity.CENTER
-                typeface = Typeface.create(
-                    if (isCustomGoal) "sans-serif-medium" else "sans-serif",
-                    if (isCustomGoal) Typeface.BOLD else Typeface.NORMAL
-                )
-                background = ripple(
-                    ctx,
-                    rounded(
-                        ctx,
-                        if (isCustomGoal) 0xfffffefa.toInt() else Color.TRANSPARENT,
-                        if (isCustomGoal) 0x185c4938 else 0,
-                        10
-                    ),
-                    false
-                )
-                setOnClickListener { StudyFocusDialogs.showCustomSessionGoalDialog(fragment) }
+                null,
+                isCustomGoal
+            ) {
+                StudyFocusDialogs.showCustomSessionGoalDialog(fragment)
             }
-            fragment.addEqual(goals, customChip, 36)
-            ForestUi.add(timer, goals, 10)
+            goals.addView(customTab, LinearLayout.LayoutParams(0, -2, 1f))
+            ForestUi.add(timer, goals, 6)
         } else {
             StudySheet.addHairline(timer, 6, 8)
             val activeBar = row(ctx).apply {
@@ -336,15 +367,21 @@ internal object StudyFocusTimerCard {
                 wakeBtn.setTextColor(if (keep) 0xff2a4e2f.toInt() else MUTED)
                 wakeBtn.background = ripple(
                     ctx,
-                    rounded(ctx, if (keep) 0xffeef4ea.toInt() else 0xfff2eee3.toInt(), 0, 999),
+                    rounded(ctx, if (keep) 0xffeef4ea.toInt() else 0xfffffefa.toInt(), 0x225c4938, 999),
                     false
                 )
             }.apply {
-                textSize = 11f; minimumHeight = fragment.dp(28)
+                textSize = 11f
+                minimumHeight = fragment.dp(28)
                 setPadding(fragment.dp(11), fragment.dp(4), fragment.dp(11), fragment.dp(4))
                 background = ripple(
                     ctx,
-                    rounded(ctx, if (initialKeepScreenOn) 0xffeef4ea.toInt() else 0xfff2eee3.toInt(), 0, 999),
+                    rounded(
+                        ctx,
+                        if (initialKeepScreenOn) 0xffeef4ea.toInt() else 0xfffffefa.toInt(),
+                        0x225c4938,
+                        999
+                    ),
                     false
                 )
             }
@@ -352,7 +389,9 @@ internal object StudyFocusTimerCard {
             timer.addView(activeBar, LinearLayout.LayoutParams(-1, -2))
         }
 
-        val controls = row(ctx)
+        val controls = row(ctx).apply {
+            setPadding(fragment.dp(6), 0, fragment.dp(6), 0)
+        }
         val mainBtnLabel = when {
             active -> if (n.running()) "暂停一下" else "继续学习"
             n.hasSession() -> "返回原计划保存计时"
@@ -360,38 +399,69 @@ internal object StudyFocusTimerCard {
         }
         val mainBtn = button(ctx, mainBtnLabel, true).apply {
             id = R.id.study_start_pause_button
-            cornerRadius = fragment.dp(12)
+            backgroundTintList = null
+            background = buildSculptedFocusCta(ctx, fragment)
+            setTextColor(0xfffffdf8.toInt())
+            textSize = 15f
+            letterSpacing = 0.05f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            stateListAnimator = null
+            elevation = fragment.dp(4).toFloat()
+            if (Build.VERSION.SDK_INT >= 28) {
+                outlineAmbientShadowColor = 0x40365436
+                outlineSpotShadowColor = 0x58365436
+            }
+            setIconResource(if (active && n.running()) R.drawable.ic_study_pause else R.drawable.ic_study_play)
+            iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+            iconSize = fragment.dp(16)
+            iconPadding = fragment.dp(8)
+            iconTint = ColorStateList.valueOf(0xfffffdf8.toInt())
+            insetTop = 0
+            insetBottom = 0
             setOnClickListener { onStartOrPause() }
+            ForestMotion.bind(this)
         }
-        controls.addView(mainBtn, LinearLayout.LayoutParams(0, fragment.dp(48), 1f))
+        controls.addView(mainBtn, LinearLayout.LayoutParams(0, fragment.dp(50), 1f))
         if (active) {
             val finish = button(ctx, "完成学习", false).apply {
                 id = R.id.study_finish_button
-                cornerRadius = fragment.dp(12)
+                cornerRadius = fragment.dp(25)
+                backgroundTintList = ColorStateList.valueOf(0xfffffefa.toInt())
+                strokeColor = ColorStateList.valueOf(0x36456444)
+                strokeWidth = fragment.dp(1)
+                setTextColor(0xff315e3a.toInt())
+                insetTop = 0
+                insetBottom = 0
                 setOnClickListener { fragment.perform { StudyFocusDialogs.showFinishDialog(fragment) } }
+                ForestMotion.bind(this)
             }
-            controls.addView(finish, LinearLayout.LayoutParams(fragment.dp(98), fragment.dp(48)).apply { leftMargin = fragment.dp(8) })
+            controls.addView(
+                finish,
+                LinearLayout.LayoutParams(fragment.dp(98), fragment.dp(50)).apply { leftMargin = fragment.dp(10) }
+            )
         }
-        ForestUi.add(timer, controls, 12)
+        ForestUi.add(timer, controls, 18)
 
         if (active) {
             if (fragment.store.elapsedMillis() < 3 * 60_000L) {
                 val withdraw = StudySheet.link(ctx, "误触开始？撤回本次专注", 0xff8d4836.toInt()) {
                     StudyFocusDialogs.showConfirmDiscard(fragment, fragment.newSheet())
                 }.apply {
-                    textSize = 12f; minimumHeight = fragment.dp(34)
+                    textSize = 12f
+                    minimumHeight = fragment.dp(34)
                     setPadding(fragment.dp(12), fragment.dp(5), fragment.dp(12), fragment.dp(5))
-                    background = ripple(ctx, rounded(ctx, 0xfff9efea.toInt(), 0xffe6cfc5.toInt(), 10), false)
+                    background = ripple(ctx, rounded(ctx, 0xfff9efea.toInt(), 0xffe6cfc5.toInt(), 999), false)
                 }
-                ForestUi.add(timer, withdraw, 8)
+                ForestUi.add(timer, withdraw, 10)
             } else {
                 val withdraw = StudySheet.link(ctx, "放弃本次专注", 0xff8f8578.toInt()) {
                     StudyFocusDialogs.showConfirmDiscard(fragment, fragment.newSheet())
                 }.apply {
-                    textSize = 11f; minimumHeight = fragment.dp(32)
+                    textSize = 11f
+                    minimumHeight = fragment.dp(32)
                     setPadding(fragment.dp(10), fragment.dp(4), fragment.dp(10), fragment.dp(4))
                 }
-                ForestUi.add(timer, withdraw, 4)
+                ForestUi.add(timer, withdraw, 6)
             }
         }
 
@@ -403,10 +473,13 @@ internal object StudyFocusTimerCard {
                 else -> "正向计时 · 随时暂停 · 到达目标仍可继续"
             },
             11,
-            MUTED
-        ).apply { gravity = Gravity.CENTER }
+            0xff8a8172.toInt()
+        ).apply {
+            gravity = Gravity.CENTER
+            letterSpacing = 0.02f
+        }
         gentleNoteRef = gentleNote
-        ForestUi.add(timer, gentleNote, 8)
+        ForestUi.add(timer, gentleNote, 12)
 
         if (!n.hasSession()) {
             ForestUi.add(
@@ -418,7 +491,7 @@ internal object StudyFocusTimerCard {
         } else if (active && !StudyNotifications.permitted(ctx)) {
             ForestUi.add(
                 timer,
-                StudySheet.link(ctx, "启用通知栏控制", DEEP) { fragment.allowStudyNotifications() }
+                StudySheet.link(ctx, "开启锁屏与通知栏计时", DEEP) { fragment.allowStudyNotifications() }
                     .apply { minimumHeight = fragment.dp(36) },
                 2
             )
@@ -437,8 +510,70 @@ internal object StudyFocusTimerCard {
             dialRightCaption = rightCap,
             activeStatusText = statusTxt,
             startPauseButton = mainBtn,
-            focusGentleNote = gentleNote
+            focusGentleNote = gentleNote,
+            goalSlots = goalSlots
         )
+    }
+
+    private fun styleGoalSlot(slot: GoalTabSlot, selected: Boolean) {
+        slot.label.setTextColor(if (selected) 0xff284d2f.toInt() else 0xff827b6d.toInt())
+        slot.label.typeface = Typeface.create(
+            if (selected) "sans-serif-medium" else "sans-serif",
+            if (selected) Typeface.BOLD else Typeface.NORMAL
+        )
+        slot.indicator.background = rounded(
+            slot.label.context,
+            if (selected) 0xff456444.toInt() else Color.TRANSPARENT,
+            0,
+            99
+        )
+    }
+
+    private fun buildFocusCardBackground(ctx: Context, fragment: BaseStudyFragment): Drawable {
+        val radius = fragment.dp(22).toFloat()
+        val body = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(0xf2fffefa.toInt(), 0xe8f9f5eb.toInt())
+        ).apply {
+            cornerRadius = radius
+            setStroke(max(1, fragment.dp(0.85f)), 0x265c4938)
+        }
+        val innerHighlight = GradientDrawable().apply {
+            cornerRadius = radius - fragment.dp(1)
+            setColor(Color.TRANSPARENT)
+            setStroke(max(1, fragment.dp(0.75f)), 0x88ffffff.toInt())
+        }
+        return LayerDrawable(arrayOf(body, InsetDrawable(innerHighlight, fragment.dp(1))))
+    }
+
+    private fun buildSculptedFocusCta(ctx: Context, fragment: BaseStudyFragment): Drawable {
+        val radius = fragment.dp(25).toFloat()
+        val normalBase = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(0xff52764f.toInt(), 0xff3b5b3a.toInt())
+        ).apply {
+            cornerRadius = radius
+            setStroke(max(1, fragment.dp(1)), 0xff324f31.toInt())
+        }
+        val normalHighlight = GradientDrawable().apply {
+            cornerRadius = radius - fragment.dp(1)
+            setColor(Color.TRANSPARENT)
+            setStroke(max(1, fragment.dp(0.8f)), 0x33ffffff)
+        }
+        val normal = LayerDrawable(arrayOf(normalBase, InsetDrawable(normalHighlight, fragment.dp(1))))
+
+        val pressed = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(0xff3f5e3e.toInt(), 0xff2f4a2e.toInt())
+        ).apply {
+            cornerRadius = radius
+            setStroke(max(1, fragment.dp(1)), 0xff284027.toInt())
+        }
+
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(), normal)
+        }
     }
 
     internal class AgendaPreviewHolder(
@@ -466,7 +601,8 @@ internal object StudyFocusTimerCard {
             StudyFocusDialogs.showDailyGoalDialog(fragment)
         }.apply {
             id = R.id.study_daily_goal_button
-            textSize = 12f; minimumHeight = fragment.dp(34)
+            textSize = 12f
+            minimumHeight = fragment.dp(34)
             setPadding(fragment.dp(12), fragment.dp(6), fragment.dp(12), fragment.dp(6))
             background = ripple(ctx, rounded(ctx, 0xfff3efe3.toInt(), 0xffdcd8c8.toInt(), 10), false)
         }

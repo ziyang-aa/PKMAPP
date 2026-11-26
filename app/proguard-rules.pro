@@ -12,6 +12,9 @@
 -keep class com.example.pkmapp.core.work.ReminderRescheduleWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+-keep class com.example.pkmapp.core.work.SyncWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 
 # XML 布局反射实例化的自定义 View
 -keep public class com.example.pkmapp.** extends android.view.View {

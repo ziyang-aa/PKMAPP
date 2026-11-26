@@ -1,17 +1,30 @@
 package com.example.pkmapp.details;
 
+import static com.example.pkmapp.forest.ForestUi.DEEP;
+import static com.example.pkmapp.forest.ForestUi.MUTED;
+import static com.example.pkmapp.forest.ForestUi.dp;
+import static com.example.pkmapp.forest.ForestUi.ripple;
+import static com.example.pkmapp.forest.ForestUi.rounded;
+import static com.example.pkmapp.forest.ForestUi.row;
+import static com.example.pkmapp.forest.ForestUi.text;
+
+import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,17 +35,24 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
 import com.example.pkmapp.data.Ledger;
+import com.example.pkmapp.data.MonthlyBudgetEvaluator;
 import com.example.pkmapp.data.MonthlyTotals;
 import com.example.pkmapp.databinding.FragmentDetailsBinding;
+import com.example.pkmapp.forest.ForestDialogBuilder;
+import com.example.pkmapp.forest.ForestMotion;
+import com.example.pkmapp.forest.ForestSheetHelper;
+import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.life.LifeSnapshot;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 
+import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public final class DetailsFragment extends Fragment {
     private LifeSharedViewModel viewModel;
@@ -49,6 +69,7 @@ public final class DetailsFragment extends Fragment {
         binding.pageBackButton.setOnClickListener(
                 view -> ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
         binding.detailsLedgerSwitchButton.setOnClickListener(view -> showLedgerChooser());
+        binding.detailsBudgetSection.setOnClickListener(view -> showBudgetSheet());
         binding.detailsFxToolButton.setOnClickListener(view ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.EXCHANGE));
         binding.detailsBorrowingToolButton.setOnClickListener(view ->
@@ -75,89 +96,176 @@ public final class DetailsFragment extends Fragment {
         viewModel.observe(getViewLifecycleOwner(), this::renderSnapshot);
     }
 
+    private void showBudgetSheet() {
+        Context ctx = requireContext();
+        Ledger current = viewModel.getCurrentSnapshot().getCurrentLedger();
+        long currentBudget = current.getMonthlyBudgetCents();
+        BottomSheetDialog sheet = createManagedSheet();
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx,
+                sheet,
+                "设置月度预算",
+                "当前账本 · " + current.getName() + "（作为本月与历史月的基准预算）"
+        );
+
+        root.addView(ForestSheetHelper.fieldLabel(ctx, "每月预算金额（元）"));
+        EditText amountInput = ForestSheetHelper.underlineInput(
+                ctx,
+                "例如：2000",
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
+        );
+        amountInput.setTextSize(24f);
+        amountInput.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        amountInput.setFontFeatureSettings("tnum");
+        if (currentBudget > 0L) {
+            amountInput.setText(formatPlainYuan(currentBudget));
+            amountInput.setSelection(amountInput.getText().length());
+        }
+        root.addView(amountInput, new LinearLayout.LayoutParams(-1, -2));
+
+        // Quick preset chips (wrap_content, hairline porcelain)
+        LinearLayout presets = row(ctx);
+        int[] presetValues = {1500, 2000, 3000, 5000};
+        for (int i = 0; i < presetValues.length; i++) {
+            int yuan = presetValues[i];
+            TextView chip = ForestSheetHelper.quickChip(ctx, "¥" + yuan, v -> {
+                amountInput.setText(String.valueOf(yuan));
+                amountInput.setSelection(amountInput.getText().length());
+                amountInput.setError(null);
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) lp.setMarginStart(dp(ctx, 8));
+            presets.addView(chip, lp);
+        }
+        ForestUi.add(root, presets, 14);
+
+        MaterialButton saveBtn = ForestSheetHelper.primaryButton(ctx, "保存月度预算", v -> {
+            String raw = amountInput.getText().toString().trim();
+            if (raw.isEmpty() || "0".equals(raw) || "0.00".equals(raw)) {
+                viewModel.updateCurrentLedgerMonthlyBudget(0L);
+                sheet.dismiss();
+                Toast.makeText(ctx, "已关闭本账本月度预算", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            try {
+                long cents = MoneyParser.parseYuanToCents(raw);
+                viewModel.updateCurrentLedgerMonthlyBudget(cents);
+                sheet.dismiss();
+                Toast.makeText(ctx, "已设定月度预算 " + MoneyParser.formatCents(cents),
+                        Toast.LENGTH_SHORT).show();
+            } catch (IllegalArgumentException e) {
+                amountInput.setError(e.getMessage());
+                amountInput.requestFocus();
+            }
+        });
+        ForestUi.add(root, saveBtn, 18);
+
+        if (currentBudget > 0L) {
+            TextView clearBtn = ForestSheetHelper.quietAction(ctx, "清除月度预算",
+                    ForestSheetHelper.TERRACOTTA, v -> {
+                        viewModel.updateCurrentLedgerMonthlyBudget(0L);
+                        sheet.dismiss();
+                        Toast.makeText(ctx, "已清除月度预算", Toast.LENGTH_SHORT).show();
+                    });
+            ForestUi.add(root, clearBtn, 6);
+        }
+
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
+    }
+
     private void showLedgerChooser() {
+        Context ctx = requireContext();
         LifeSnapshot snapshot = viewModel.getCurrentSnapshot();
         List<Ledger> ledgers = snapshot.getLedgers();
-        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        View root = LayoutInflater.from(requireContext()).inflate(
-                R.layout.dialog_details_ledger_picker, null);
-        LinearLayout options = root.findViewById(R.id.details_ledger_options);
         String currentLedgerId = snapshot.getCurrentLedger().getId();
-        for (Ledger ledger : ledgers) {
+
+        BottomSheetDialog sheet = createManagedSheet();
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx, sheet, "切换账本", "每本账本独立统计收支、资产与月度预算"
+        );
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            Ledger ledger = ledgers.get(i);
             boolean selected = ledger.getId().equals(currentLedgerId);
-            TextView option = pickerOption(ledger.getName() + (selected ? "  · 当前" : ""), selected);
-            option.setContentDescription("切换到" + ledger.getName());
-            option.setOnClickListener(view -> {
+            LinearLayout itemRow = row(ctx);
+            itemRow.setMinimumHeight(dp(ctx, 50));
+            itemRow.setPadding(dp(ctx, 4), dp(ctx, 10), dp(ctx, 4), dp(ctx, 10));
+            itemRow.setBackground(ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 10), false));
+            itemRow.setContentDescription("切换到" + ledger.getName());
+
+            TextView nameView = text(ctx, ledger.getName(), 15,
+                    selected ? DEEP : ForestSheetHelper.INK);
+            nameView.setTypeface(Typeface.create(selected ? "sans-serif-medium" : "sans-serif",
+                    selected ? Typeface.BOLD : Typeface.NORMAL));
+            itemRow.addView(nameView, new LinearLayout.LayoutParams(0, -2, 1));
+
+            String rightLabel;
+            if (selected) {
+                rightLabel = ledger.getMonthlyBudgetCents() > 0L
+                        ? "预算 " + MoneyParser.formatCents(ledger.getMonthlyBudgetCents()) + " · 当前"
+                        : "当前";
+            } else if (ledger.getMonthlyBudgetCents() > 0L) {
+                rightLabel = "预算 " + MoneyParser.formatCents(ledger.getMonthlyBudgetCents());
+            } else {
+                rightLabel = "切换 ›";
+            }
+            TextView tagView = text(ctx, rightLabel, 12, selected ? DEEP : MUTED);
+            tagView.setFontFeatureSettings("tnum");
+            itemRow.addView(tagView);
+
+            itemRow.setOnClickListener(v -> {
                 viewModel.switchLedger(ledger.getId());
-                dialog.dismiss();
+                sheet.dismiss();
             });
-            options.addView(option);
+            ForestMotion.bind(itemRow);
+            root.addView(itemRow, new LinearLayout.LayoutParams(-1, -2));
+            if (i < ledgers.size() - 1) {
+                ForestSheetHelper.addHairline(root, 0, 0);
+            }
         }
-        root.findViewById(R.id.details_ledger_picker_close).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.details_ledger_picker_cancel).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.details_new_ledger_button).setOnClickListener(view -> {
-            dialog.dismiss();
+
+        ForestSheetHelper.addHairline(root, 8, 14);
+        TextView newBtn = ForestSheetHelper.quickChip(ctx, "＋ 新建一本账本", v -> {
+            sheet.dismiss();
             showCreateLedgerSheet();
         });
-        showPaperSheet(dialog, root);
+        newBtn.setMinimumHeight(dp(ctx, 44));
+        LinearLayout.LayoutParams newLp = new LinearLayout.LayoutParams(-2, -2);
+        newLp.gravity = Gravity.CENTER_HORIZONTAL;
+        root.addView(newBtn, newLp);
+
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
     }
 
     private void showCreateLedgerSheet() {
-        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        LinearLayout root = new LinearLayout(requireContext());
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(20), dp(20), dp(16));
-        root.setBackgroundResource(R.drawable.bg_details_picker_sheet);
+        Context ctx = requireContext();
+        BottomSheetDialog sheet = createManagedSheet();
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx, sheet, "新建一本账本", "可随时为不同生活场景分别记账"
+        );
 
-        TextView eyebrow = pickerLabel("NEW FOREST LEDGER", 9, R.color.forest_green);
-        eyebrow.setLetterSpacing(0.12f);
-        root.addView(eyebrow, wrapContent());
-        TextView title = pickerLabel("给新账本取个名字", 21, R.color.wood_brown);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        LinearLayout.LayoutParams titleParams = wrapContent();
-        titleParams.topMargin = dp(4);
-        root.addView(title, titleParams);
+        root.addView(ForestSheetHelper.fieldLabel(ctx, "账本名称"));
+        EditText nameInput = ForestSheetHelper.underlineInput(
+                ctx, "例如：旅行账本、校园日常", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        );
+        root.addView(nameInput, new LinearLayout.LayoutParams(-1, -2));
 
-        EditText nameInput = new EditText(requireContext());
-        nameInput.setSingleLine(true);
-        nameInput.setHint("例如：北京旅行账本");
-        nameInput.setTextColor(ContextCompat.getColor(requireContext(), R.color.ink));
-        nameInput.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.wood_brown));
-        nameInput.setPadding(dp(16), 0, dp(16), 0);
-        nameInput.setBackgroundResource(R.drawable.bg_details_picker_option);
-        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        inputParams.topMargin = dp(16);
-        root.addView(nameInput, inputParams);
-
-        LinearLayout actions = new LinearLayout(requireContext());
-        actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView cancel = pickerLabel("取消", 13, R.color.wood_brown);
-        cancel.setGravity(android.view.Gravity.CENTER);
-        TextView create = pickerLabel("创建并切换", 13, R.color.forest_green);
-        create.setGravity(android.view.Gravity.CENTER);
-        create.setTypeface(null, android.graphics.Typeface.BOLD);
-        create.setBackgroundResource(R.drawable.bg_details_picker_selected);
-        actions.addView(cancel, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams createParams = new LinearLayout.LayoutParams(0, dp(48), 1);
-        createParams.leftMargin = dp(8);
-        actions.addView(create, createParams);
-        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
-        actionsParams.topMargin = dp(12);
-        root.addView(actions, actionsParams);
-
-        cancel.setOnClickListener(view -> dialog.dismiss());
-        create.setOnClickListener(view -> {
+        MaterialButton createBtn = ForestSheetHelper.primaryButton(ctx, "创建并切换", v -> {
             String name = nameInput.getText().toString().trim();
             if (name.isEmpty()) {
                 nameInput.setError("请输入账本名称");
+                nameInput.requestFocus();
                 return;
             }
             viewModel.createAndSwitchLedger(name);
-            dialog.dismiss();
+            sheet.dismiss();
         });
-        showPaperSheet(dialog, root);
+        ForestUi.add(root, createBtn, 18);
+
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
     }
 
     private void render() {
@@ -171,7 +279,8 @@ public final class DetailsFragment extends Fragment {
             return;
         }
         MonthlyTotals totals = viewModel.monthTotalsFor(selectedMonth.getTimeInMillis());
-        String ledgerName = snapshot.getCurrentLedger().getName();
+        Ledger currentLedger = snapshot.getCurrentLedger();
+        String ledgerName = currentLedger.getName();
         binding.detailsLedgerSwitchButton.setText(ledgerName + "  ▾");
         binding.detailsLedgerName.setText("当前账本 · " + ledgerName);
         binding.detailsIncome.setText(flowText("↑ 收入", totals.getIncomeInCents(),
@@ -180,6 +289,8 @@ public final class DetailsFragment extends Fragment {
                 R.color.expense_red), TextView.BufferType.SPANNABLE);
         binding.detailsBalance.setText(balanceText(totals.getBalanceInCents()),
                 TextView.BufferType.SPANNABLE);
+
+        renderBudgetBar(currentLedger.getMonthlyBudgetCents(), totals.getExpenseInCents());
 
         binding.detailsMonthPickerButton.setText(DetailsPickerLabels.monthButtonText(
                 selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH)));
@@ -191,75 +302,122 @@ public final class DetailsFragment extends Fragment {
                 System.currentTimeMillis()));
     }
 
+    private void renderBudgetBar(long budgetCents, long expenseCents) {
+        Calendar now = Calendar.getInstance();
+        boolean isCurrentMonth = selectedMonth.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+                && selectedMonth.get(Calendar.MONTH) == now.get(Calendar.MONTH);
+        String prefix = isCurrentMonth
+                ? "月度预算"
+                : String.format(Locale.CHINA, "%d月复盘", selectedMonth.get(Calendar.MONTH) + 1);
+        binding.detailsBudgetLabel.setText(prefix);
+
+        MonthlyBudgetEvaluator.Status status = MonthlyBudgetEvaluator.evaluate(budgetCents, expenseCents);
+        if (!status.isSet()) {
+            binding.detailsBudgetBadge.setText("未设定");
+            binding.detailsBudgetBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.brown_soft));
+            binding.detailsBudgetSummary.setText("设预算 ›");
+            binding.detailsBudgetSummary.setTextColor(ContextCompat.getColor(requireContext(), R.color.forest_green));
+            binding.detailsBudgetTrackWrap.setVisibility(View.GONE);
+            return;
+        }
+
+        int accentColor;
+        String badgeText;
+        String rightText;
+        if (status.getLevel() == MonthlyBudgetEvaluator.Level.EXCEEDED) {
+            accentColor = ForestSheetHelper.TERRACOTTA;
+            badgeText = "超支 " + status.getUsagePercent() + "%";
+            rightText = "超支 " + MoneyParser.formatCents(status.getOverBudgetCents())
+                    + " / " + MoneyParser.formatCents(status.getBudgetCents()) + " ›";
+        } else if (status.getLevel() == MonthlyBudgetEvaluator.Level.WARNING) {
+            accentColor = ForestSheetHelper.AMBER;
+            badgeText = "已用 " + status.getUsagePercent() + "% · 接近上限";
+            rightText = "余 " + MoneyParser.formatCents(status.getRemainingCents())
+                    + " / " + MoneyParser.formatCents(status.getBudgetCents()) + " ›";
+        } else {
+            accentColor = ForestSheetHelper.PINE;
+            badgeText = "已用 " + status.getUsagePercent() + "%";
+            rightText = "余 " + MoneyParser.formatCents(status.getRemainingCents())
+                    + " / " + MoneyParser.formatCents(status.getBudgetCents()) + " ›";
+        }
+
+        binding.detailsBudgetBadge.setText(badgeText);
+        binding.detailsBudgetBadge.setTextColor(accentColor);
+        binding.detailsBudgetSummary.setText(rightText);
+        binding.detailsBudgetSummary.setTextColor(
+                status.getLevel() == MonthlyBudgetEvaluator.Level.EXCEEDED
+                        ? ForestSheetHelper.TERRACOTTA
+                        : ContextCompat.getColor(requireContext(), R.color.ink));
+        binding.detailsBudgetTrackWrap.setVisibility(View.VISIBLE);
+        binding.detailsBudgetFill.setBackgroundColor(accentColor);
+
+        final int permille = status.getProgressPermille();
+        binding.detailsBudgetTrackWrap.post(() -> {
+            if (binding == null) return;
+            int totalWidth = binding.detailsBudgetTrackWrap.getWidth();
+            if (totalWidth <= 0) return;
+            ViewGroup.LayoutParams lp = binding.detailsBudgetFill.getLayoutParams();
+            lp.width = Math.round(totalWidth * (permille / 1000f));
+            binding.detailsBudgetFill.setLayoutParams(lp);
+        });
+    }
+
     private void showMonthPicker() {
-        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        View root = LayoutInflater.from(requireContext()).inflate(
-                R.layout.dialog_details_month_picker, null);
-        LinearLayout yearOptions = root.findViewById(R.id.details_year_options);
-        LinearLayout monthOptions = root.findViewById(R.id.details_month_options);
+        Context ctx = requireContext();
+        BottomSheetDialog sheet = createManagedSheet();
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx, sheet, "选择查看月份", "支持切换历史月份复盘收支与预算"
+        );
+
         final int[] chosen = {selectedMonth.get(Calendar.YEAR), selectedMonth.get(Calendar.MONTH)};
+        LinearLayout columns = row(ctx);
+
+        ScrollView yearScroll = new ScrollView(ctx);
+        yearScroll.setVerticalScrollBarEnabled(false);
+        LinearLayout yearOptions = ForestUi.column(ctx);
+        yearScroll.addView(yearOptions, new ViewGroup.LayoutParams(-1, -2));
+
+        ScrollView monthScroll = new ScrollView(ctx);
+        monthScroll.setVerticalScrollBarEnabled(false);
+        LinearLayout monthOptions = ForestUi.column(ctx);
+        monthScroll.addView(monthOptions, new ViewGroup.LayoutParams(-1, -2));
+
+        columns.addView(yearScroll, new LinearLayout.LayoutParams(0, dp(ctx, 210), 1f));
+        View divider = new View(ctx);
+        divider.setBackgroundColor(ForestSheetHelper.HAIRLINE);
+        LinearLayout.LayoutParams divLp = new LinearLayout.LayoutParams(
+                Math.max(1, Math.round(0.75f * getResources().getDisplayMetrics().density)),
+                dp(ctx, 210));
+        divLp.setMarginStart(dp(ctx, 8));
+        divLp.setMarginEnd(dp(ctx, 8));
+        columns.addView(divider, divLp);
+        columns.addView(monthScroll, new LinearLayout.LayoutParams(0, dp(ctx, 210), 1f));
+        root.addView(columns, new LinearLayout.LayoutParams(-1, -2));
+
         renderYearOptions(yearOptions, chosen);
         renderMonthOptions(monthOptions, chosen);
-        root.findViewById(R.id.details_month_picker_close).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.details_month_picker_cancel).setOnClickListener(view -> dialog.dismiss());
-        root.findViewById(R.id.details_month_picker_confirm).setOnClickListener(view -> {
+
+        MaterialButton confirmBtn = ForestSheetHelper.primaryButton(ctx, "查看该月明细", v -> {
             selectedMonth.set(chosen[0], chosen[1], 1, 12, 0, 0);
             selectedMonth.set(Calendar.MILLISECOND, 0);
             render();
-            dialog.dismiss();
+            sheet.dismiss();
         });
-        showPaperSheet(dialog, root);
+        ForestUi.add(root, confirmBtn, 16);
+
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
     }
 
     private void confirmDeleteTransaction(com.example.pkmapp.data.Transaction transaction) {
-        final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        LinearLayout root = new LinearLayout(requireContext());
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(20), dp(20), dp(16));
-        root.setBackgroundResource(R.drawable.bg_details_picker_sheet);
-
-        TextView eyebrow = pickerLabel("FOREST RECORD", 9, R.color.forest_green);
-        eyebrow.setLetterSpacing(0.12f);
-        root.addView(eyebrow, wrapContent());
-        TextView title = pickerLabel("删除这笔记录？", 21, R.color.wood_brown);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        LinearLayout.LayoutParams titleParams = wrapContent();
-        titleParams.topMargin = dp(4);
-        root.addView(title, titleParams);
-
-        TextView summary = pickerLabel(transaction.getCategory() + "  ·  "
-                + MoneyParser.formatCents(transaction.getAmountInCents()), 15, R.color.ink);
-        LinearLayout.LayoutParams summaryParams = wrapContent();
-        summaryParams.topMargin = dp(16);
-        root.addView(summary, summaryParams);
-        TextView hint = pickerLabel("删除后本月收入、支出和结余会立即更新", 12, R.color.wood_brown);
-        LinearLayout.LayoutParams hintParams = wrapContent();
-        hintParams.topMargin = dp(4);
-        root.addView(hint, hintParams);
-
-        LinearLayout actions = new LinearLayout(requireContext());
-        actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView cancel = pickerLabel("保留记录", 13, R.color.wood_brown);
-        cancel.setGravity(android.view.Gravity.CENTER);
-        TextView delete = pickerLabel("确认删除", 13, R.color.expense_red);
-        delete.setGravity(android.view.Gravity.CENTER);
-        delete.setTypeface(null, android.graphics.Typeface.BOLD);
-        delete.setBackgroundResource(R.drawable.bg_details_delete_action);
-        actions.addView(cancel, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(0, dp(48), 1);
-        deleteParams.leftMargin = dp(8);
-        actions.addView(delete, deleteParams);
-        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
-        actionsParams.topMargin = dp(16);
-        root.addView(actions, actionsParams);
-
-        cancel.setOnClickListener(view -> dialog.dismiss());
-        delete.setOnClickListener(view -> {
-            viewModel.deleteTransaction(transaction.getId());
-            dialog.dismiss();
-        });
-        showPaperSheet(dialog, root);
+        String summary = transaction.getCategory() + " · "
+                + MoneyParser.formatCents(transaction.getAmountInCents());
+        new ForestDialogBuilder(requireContext())
+                .setTitle("删除这笔记录？")
+                .setMessage(summary + "\n删除后本月收入、支出、预算与结余会立即更新。")
+                .setNegativeButton("保留记录", null)
+                .setPositiveButton("确认删除", (d, w) -> viewModel.deleteTransaction(transaction.getId()))
+                .show();
     }
 
     private void renderYearOptions(LinearLayout container, int[] chosen) {
@@ -278,13 +436,23 @@ public final class DetailsFragment extends Fragment {
 
     private void renderIntegerOptions(LinearLayout container, int min, int max, int selected,
             String suffix, PickerValueListener listener) {
+        Context ctx = container.getContext();
         container.removeAllViews();
         for (int value = min; value <= max; value++) {
-            TextView option = pickerOption(DetailsPickerLabels.pickerOptionText(value, suffix),
-                    value == selected);
+            boolean isSelected = value == selected;
+            String label = DetailsPickerLabels.pickerOptionText(value, suffix);
+            TextView option = text(ctx, label, 14, isSelected ? DEEP : MUTED);
+            option.setGravity(Gravity.CENTER);
+            option.setMinimumHeight(dp(ctx, 42));
+            option.setFontFeatureSettings("tnum");
+            option.setTypeface(Typeface.create(isSelected ? "sans-serif-medium" : "sans-serif",
+                    isSelected ? Typeface.BOLD : Typeface.NORMAL));
+            option.setBackground(ripple(ctx,
+                    rounded(ctx, isSelected ? 0xffeef4ea : Color.TRANSPARENT, 0, 10), false));
+            option.setContentDescription("选择" + label);
             final int chosenValue = value;
             option.setOnClickListener(view -> listener.onSelected(chosenValue));
-            container.addView(option);
+            container.addView(option, new LinearLayout.LayoutParams(-1, -2));
         }
     }
 
@@ -292,15 +460,21 @@ public final class DetailsFragment extends Fragment {
         void onSelected(int value);
     }
 
-    private TextView pickerOption(String text, boolean selected) {
-        TextView option = (TextView) LayoutInflater.from(requireContext()).inflate(
-                R.layout.item_details_picker_option, null, false);
-        option.setText(text);
-        option.setTypeface(null, selected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
-        option.setTextColor(ContextCompat.getColor(requireContext(),
-                selected ? R.color.forest_green : R.color.wood_brown));
-        option.setContentDescription("选择" + text);
-        return option;
+    private BottomSheetDialog createManagedSheet() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+        }
+        BottomSheetDialog sheet = ForestSheetHelper.createSheet(requireContext());
+        activeSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (activeSheet == sheet) activeSheet = null;
+        });
+        return sheet;
+    }
+
+    private static String formatPlainYuan(long cents) {
+        BigDecimal bd = BigDecimal.valueOf(cents, 2).stripTrailingZeros();
+        return bd.scale() <= 0 ? bd.toBigInteger().toString() : bd.toPlainString();
     }
 
     private CharSequence balanceText(long balanceInCents) {
@@ -328,45 +502,6 @@ public final class DetailsFragment extends Fragment {
         text.setSpan(new ForegroundColorSpan(ContextCompat.getColor(requireContext(), amountColor)),
                 label.length() + 1, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return text;
-    }
-
-    private TextView pickerLabel(String text, int size, int color) {
-        TextView label = new TextView(requireContext());
-        label.setText(text);
-        label.setTextSize(size);
-        label.setTextColor(ContextCompat.getColor(requireContext(), color));
-        return label;
-    }
-
-    private LinearLayout.LayoutParams wrapContent() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private void showPaperSheet(BottomSheetDialog dialog, View root) {
-        if (activeSheet != null) {
-            activeSheet.dismiss();
-        }
-        activeSheet = dialog;
-        dialog.setOnDismissListener(d -> {
-            if (activeSheet == dialog) activeSheet = null;
-        });
-        dialog.setContentView(root);
-        dialog.setOnShowListener(ignored -> {
-            FrameLayout bottomSheet = dialog.findViewById(
-                    com.google.android.material.R.id.design_bottom_sheet);
-            if (bottomSheet != null) {
-                bottomSheet.setBackgroundColor(Color.TRANSPARENT);
-                BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottomSheet);
-                behavior.setSkipCollapsed(true);
-                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-            }
-        });
-        dialog.show();
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override

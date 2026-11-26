@@ -80,7 +80,8 @@ interface LedgerDao {
         ledgerPairs: List<Pair<String, String>>,
         transactions: List<TransactionEntity>,
         currentLedgerId: String,
-        ownerId: String = AccountScope.GUEST_OWNER_ID
+        ownerId: String = AccountScope.GUEST_OWNER_ID,
+        monthlyBudgets: Map<String, Long> = emptyMap()
     ) {
         val now = System.currentTimeMillis()
         val existingLedgers = getAllRowsIncludingPlaceholders(ownerId).associateBy { it.id }
@@ -89,8 +90,10 @@ interface LedgerDao {
 
         ledgerPairs.forEachIndexed { index, (id, name) ->
             val old = existingLedgers[id]
+            val budgetCents = (monthlyBudgets[id] ?: old?.monthlyBudgetCents ?: 0L).coerceAtLeast(0L)
             val changed = old == null ||
                 old.name != name ||
+                old.monthlyBudgetCents != budgetCents ||
                 old.isCurrent != (id == currentLedgerId) ||
                 old.isDefault != (index == 0) ||
                 old.sortOrder != index ||
@@ -110,7 +113,8 @@ interface LedgerDao {
                     deletedAt = 0L,
                     syncStatus = if (changed) SyncStatus.PENDING_PUSH else old!!.syncStatus,
                     clientRequestId = old?.clientRequestId?.ifEmpty { AccountScope.newRequestId() }
-                        ?: AccountScope.newRequestId()
+                        ?: AccountScope.newRequestId(),
+                    monthlyBudgetCents = budgetCents
                 )
             )
         }

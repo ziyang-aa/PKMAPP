@@ -19,12 +19,15 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.content.res.ColorStateList
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import com.example.pkmapp.R
 import com.example.pkmapp.core.datastore.AppPreferences
 import com.example.pkmapp.forest.ForestMotion
+import com.example.pkmapp.forest.ForestSheetHelper
 import com.example.pkmapp.forest.ForestUi
 import com.example.pkmapp.forest.ForestUi.DEEP
 import com.example.pkmapp.forest.ForestUi.GREEN
@@ -225,10 +228,20 @@ class StudyFocusFragment : BaseStudyFragment() {
         }
 
         if (plan.due.isNotEmpty() || plan.previous.isNotEmpty()) {
-            val metaRow = row(ctx())
-            if (plan.due.isNotEmpty()) {
-                val duePrefix = if (plan.due <= StudyNotebook.dayKey(System.currentTimeMillis())) "预计结束日已到 · " else "预计结束 · "
-                metaRow.addView(note(duePrefix + plan.due), LinearLayout.LayoutParams(0, -2, 1f))
+            val metaRow = row(ctx()).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            val countdown = ExamCountdownFormatter.evaluate(plan.title, plan.due, System.currentTimeMillis())
+            if (countdown != null) {
+                val countdownView = text(ctx(), countdown.focusHeadline, 12, countdown.accentColor).apply {
+                    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                    fontFeatureSettings = "tnum"
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.END
+                    setOnClickListener { planDialogs().manager() }
+                }
+                metaRow.addView(countdownView, LinearLayout.LayoutParams(0, -2, 1f))
             } else {
                 metaRow.addView(View(ctx()), LinearLayout.LayoutParams(0, 1, 1f))
             }
@@ -283,6 +296,9 @@ class StudyFocusFragment : BaseStudyFragment() {
             },
             onSelectGoalMinutes = { minutes ->
                 updateSessionGoalInPlace(minutes)
+            },
+            onOpenSoundSheet = {
+                showSoundSheet()
             },
             onStartOrPause = {
                 perform {
@@ -463,6 +479,122 @@ class StudyFocusFragment : BaseStudyFragment() {
         syncKeepScreenOn()
         updateTimer()
         if (isAdded) sharedViewModel.syncFromStores(ctx())
+    }
+
+    private fun showSoundSheet() {
+        val context = ctx()
+        val sheet = ForestSheetHelper.createSheet(context)
+        val root = ForestSheetHelper.createSheetRoot(
+            context,
+            sheet,
+            "森林白噪音",
+            "专注开始时自动轻声伴随，暂停或结束时自动停止"
+        )
+
+        var selected = ForestSoundEngine.selectedSound(context)
+        val rowHolders = ArrayList<Pair<ForestSoundEngine.AmbientSound, Pair<View, TextView>>>()
+        val previewButtons = LinkedHashMap<ForestSoundEngine.AmbientSound, TextView>()
+
+        fun refreshSelection() {
+            for ((sound, pair) in rowHolders) {
+                val (dot, titleView) = pair
+                val isChosen = sound == selected
+                dot.background = rounded(
+                    context,
+                    if (isChosen) 0xff456444.toInt() else 0x265c4938,
+                    0,
+                    99
+                )
+                titleView.setTextColor(if (isChosen) DEEP else ForestSheetHelper.INK)
+                titleView.typeface = Typeface.create(
+                    if (isChosen) "sans-serif-medium" else "sans-serif",
+                    if (isChosen) Typeface.BOLD else Typeface.NORMAL
+                )
+            }
+            timerHolder?.syncSoundLabel(selected)
+        }
+
+        val sounds = ForestSoundEngine.AmbientSound.entries
+        sounds.forEachIndexed { index, sound ->
+            val item = row(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52)
+                setPadding(dp(2), dp(8), dp(2), dp(8))
+                background = ripple(context, rounded(context, Color.TRANSPARENT, 0, 10), false)
+                setOnClickListener {
+                    selected = sound
+                    ForestSoundEngine.setSelectedSound(context, sound)
+                    refreshSelection()
+                }
+            }
+            val dot = View(context)
+            item.addView(dot, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginEnd = dp(12) })
+
+            val copy = column(context)
+            val title = text(context, sound.title, 15, ForestSheetHelper.INK)
+            val sub = text(context, sound.subtitle, 11, MUTED)
+            copy.addView(title)
+            ForestUi.add(copy, sub, 2)
+            item.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
+            rowHolders.add(sound to (dot to title))
+
+            if (sound != ForestSoundEngine.AmbientSound.NONE) {
+                val previewBtn = ForestSheetHelper.quickChip(context, "试听 5s") {
+                    for ((s, btn) in previewButtons) {
+                        btn.text = if (s == sound) "试听中…" else "试听 5s"
+                    }
+                    ForestSoundEngine.preview(context, sound, 5_000L) {
+                        previewButtons[sound]?.post {
+                            previewButtons[sound]?.text = "试听 5s"
+                        }
+                    }
+                }
+                previewButtons[sound] = previewBtn
+                item.addView(previewBtn, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+            }
+            root.addView(item, LinearLayout.LayoutParams(-1, -2))
+            if (index < sounds.lastIndex) {
+                ForestSheetHelper.addHairline(root, 0, 0)
+            }
+        }
+
+        ForestSheetHelper.addHairline(root, 10, 12)
+        val initialVol = ForestSoundEngine.volume(context)
+        val volHeader = row(context)
+        volHeader.addView(ForestSheetHelper.fieldLabel(context, "白噪音音量"), LinearLayout.LayoutParams(0, -2, 1f))
+        val volValue = text(context, "${(initialVol * 100).toInt()}%", 12, DEEP).apply {
+            fontFeatureSettings = "tnum"
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        }
+        volHeader.addView(volValue)
+        root.addView(volHeader, LinearLayout.LayoutParams(-1, -2))
+
+        val seekBar = SeekBar(context).apply {
+            max = 95 // maps to 5%..100%
+            progress = ((initialVol * 100).toInt() - 5).coerceIn(0, 95)
+            progressTintList = ColorStateList.valueOf(ForestSheetHelper.PINE)
+            thumbTintList = ColorStateList.valueOf(ForestSheetHelper.PINE)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, value: Int, fromUser: Boolean) {
+                    val pct = (value + 5).coerceIn(5, 100)
+                    volValue.text = "$pct%"
+                    if (fromUser) {
+                        ForestSoundEngine.setVolume(context, pct / 100f)
+                    }
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) = Unit
+                override fun onStopTrackingTouch(sb: SeekBar?) = Unit
+            })
+        }
+        ForestUi.add(root, seekBar, 8)
+
+        refreshSelection()
+        sheet.setOnDismissListener {
+            ForestSoundEngine.stopPreviewAndRestore(context)
+            timerHolder?.syncSoundLabel(ForestSoundEngine.selectedSound(context))
+        }
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root)
+        sheet.show()
     }
 
     private fun syncKeepScreenOn() {

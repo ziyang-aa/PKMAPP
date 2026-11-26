@@ -31,6 +31,7 @@ import com.example.pkmapp.R;
 import com.example.pkmapp.forest.ForestCalendarView;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSegmentedControl;
+import com.example.pkmapp.forest.ForestSheetHelper;
 import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
@@ -209,13 +210,11 @@ public final class BorrowingFragment extends Fragment {
             long initialOccurredAt, @Nullable String initialSourceTxId) {
         Context ctx = requireContext();
         if (activeSheet != null) activeSheet.dismiss();
-        BottomSheetDialog sheet = new BottomSheetDialog(ctx, R.style.ThemeOverlay_PkmAPP_StudySheet);
+        BottomSheetDialog sheet = ForestSheetHelper.createSheet(ctx);
         activeSheet = sheet;
         sheet.setOnDismissListener(d -> {
             if (activeSheet == sheet) activeSheet = null;
         });
-        sheet.getBehavior().setSkipCollapsed(true);
-        sheet.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
 
         LinearLayout root = column(ctx);
         root.setPadding(dp(ctx, 22), dp(ctx, 10), dp(ctx, 22), dp(ctx, 20));
@@ -335,7 +334,7 @@ public final class BorrowingFragment extends Fragment {
         });
         ForestUi.add(root, saveBtn, 18);
 
-        sheet.setContentView(root);
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
         sheet.show();
     }
 

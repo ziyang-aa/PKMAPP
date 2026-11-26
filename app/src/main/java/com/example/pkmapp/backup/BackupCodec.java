@@ -38,6 +38,9 @@ public final class BackupCodec {
                 JSONObject item = new JSONObject();
                 item.put("id", ledger.getId());
                 item.put("name", ledger.getName());
+                if (ledger.getMonthlyBudgetCents() > 0L) {
+                    item.put("monthlyBudgetCents", ledger.getMonthlyBudgetCents());
+                }
                 ledgers.put(item);
             }
             root.put("ledgers", ledgers);
@@ -117,7 +120,11 @@ public final class BackupCodec {
             JSONArray ledgerArray = requiredArray(root, "ledgers");
             for (int index = 0; index < ledgerArray.length(); index++) {
                 JSONObject item = ledgerArray.getJSONObject(index);
-                ledgers.add(new Ledger(requiredString(item, "id"), requiredString(item, "name")));
+                long budgetCents = Math.max(0L, item.optLong("monthlyBudgetCents", 0L));
+                ledgers.add(new Ledger(
+                        requiredString(item, "id"),
+                        requiredString(item, "name"),
+                        budgetCents));
             }
 
             List<Transaction> transactions = new ArrayList<>();

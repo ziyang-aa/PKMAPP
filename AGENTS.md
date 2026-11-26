@@ -71,7 +71,10 @@
 
 ## 6. 开发流程、实机验收与上下文/仓库纪律
 
-- **复杂视觉改动先出 HTML 原型**：涉及页面重设计或多种布局权衡时，先输出可交互 HTML 设计稿供用户定夺，确认方案后再落地原生 Java/XML。
+- **复杂视觉改动先出交互式 HTML Artifact（禁止发 `.html` 源码路径、禁止塞 Base64）**：
+  - 涉及页面重设计或多种布局权衡时，先按 `generative_ui` 技能制作可交互 HTML 设计稿供用户定夺，确认后再改原生代码。
+  - **必须作为正式 Artifact 交付**：一律使用原生 `write_file` 工具直接写入对话根目录 `<Artifact Directory Path>/<name>.html`（**严禁**放进 `scratch/`，也**严禁**只用 Python/PowerShell 脚本创建文件从而跳过元数据），并附带 `ArtifactMetadata`（`UserFacing: true`、`RequestFeedback: false`、`Summary` 用中文简要说明方案），回复中用 clickable artifact 链接展示；多方案竖排手机框等高大于 `450px` 的原型以独立侧栏 Artifact 交付，避免用 `<agent-embed>` 强行内联导致裁切滚动。
+  - **防 `unexpected EOF` 与防上下文膨胀红线（严禁模型读写 Base64）**：**禁止**把 `.png/.webp` 转成 `.b64` 后用 `read_file` 读入上下文，更**禁止**在 `write_file` 输出流里让模型手写/复述上万字符的 Base64 数据。优先使用轻量纯 HTML/CSS/inline SVG 表达结构与交互；若确需嵌入项目真实水彩/宠物素材，必须拆为两步：先用 `write_file`（带 `ArtifactMetadata`）写入含极短占位符（如 `__BEAR_URI__`）的轻量 HTML 骨架，再单跑一次本地 Python/PowerShell 脚本将图片压缩为小体积 WebP（宽度 ≤160px）后原地替换 `<Artifact Directory Path>/<name>.html` 里的占位符（`metadata.json` 不受影响）。
 - **分级验证与编译门禁（避免频繁全量冷启动）**：
   - 连续编码过程中**不要每改一处就跑全量 `--no-daemon` 门禁**；局部调试优先使用开启 Gradle Daemon 的增量检查（如 `.\gradlew.bat compileDebugJavaWithJavac --console=plain` 或单类测试），避免超 10 秒转后台并频繁注入异步系统通知。
   - 仅在阶段/功能闭环收口、交付验收前，在项目根目录执行一次完整门禁（常规复用 Daemon；仅当需清理残留进程时加 `--no-daemon`）：
@@ -85,9 +88,9 @@
 - **轻量交接与上下文控制纪律**：
   - 每个 Phase 结束、跨模块切换（如 Android ↔ `pkmapp_wx`）或当前会话上下文接近 **200K** 时，顺手更新简短的 `docs/HANDOFF.md`（控制在 80 行以内，只记：当前进度、刚修改的关键文件、已通过验证、下一步待办），并提示用户开启新会话。
   - 新会话启动时优先只读 `AGENTS.md` 与 `docs/HANDOFF.md`（`DESIGN.md`、`docs/REFACTORING-PLAN.md` 按需检索局部章节），避免开局无差别全量读完所有长文档。
-  - **代码探索优先用 CodeGraph（不禁止 `read_file`）**：仓库已建有 `.codegraph/` 索引，查找 Java/Kotlin 类方法、调用链与测试影响面时优先用 `codegraph_explore`；阅读 `docs/*.md`、`res/` 布局资源、Gradle 配置，以及大类改代码前核对精确行号上下文时，照常使用 `read_file` 精读局部范围。
+  - **代码探索强制优先用 CodeGraph（不禁止局部 `read_file`）**：本仓库已建立 `.codegraph/` 索引，了解模块结构、查找 Java/Kotlin/Spring/Vue 类方法、追踪调用链或受影响测试时，**禁止用 `Select-String`/`rg` 扫目录或从第 1 行连读多个源码文件**，请先调用 `call_mcp_tool(ServerName="codegraph", ToolName="codegraph_explore", Arguments={"query": "<关键词或符号>", "projectPath": "d:\\\\pkmAPP", "maxFiles": 5})`（`maxFiles` 控制在 4–6，避免首轮并发多个 `maxFiles: 10` 一次吐出数十 KB；调用后同时会自动激活后台实时文件监听）。`codegraph_explore` 的 `Source Code` 块已展示完整代码的文件禁止再次全文 `read_file`；大类仅按 `StartLine`–`EndLine` 补读未展示行段；阅读 `docs/*.md`、`res/` 布局资源、Gradle/YAML 配置照常使用 `read_file`。
   - 单步避免一次性生成过多大文件（建议拆批 `write_file`），降低超长输出中途断流重试概率。
 - **仓库清洁与 Git 纪律**：
-  - 临时验证脚本、截屏与 HTML 原型稿统一存放在对话 artifact / scratch 目录，**严禁**写入仓库根目录或提交进 Git。
+  - 临时验证脚本、中间图片与过程截屏统一存放在对话 `scratch/` 目录；需要给用户渲染预览的 HTML 设计稿与报告一律放在对话 `<Artifact Directory Path>` 根目录作为正式 Artifact，**严禁**写入仓库根目录或提交进 Git。
   - 未经用户明确许可，禁止执行 `git commit` 或 `git push`；不得随意删除本地忽略的资产目录（如 `pkmapp_wx/`、`宝可梦账本素材/`）。
   - 推送 GitHub 若遇 22 端口超时，可使用 SSH 443 通道：`git -c "core.sshCommand=ssh -o Hostname=ssh.github.com -o Port=443" push origin <branch>`。

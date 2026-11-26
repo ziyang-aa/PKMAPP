@@ -6,6 +6,7 @@ import com.example.pkmapp.core.database.AccountScope;
 import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.LedgerDao;
 import com.example.pkmapp.core.database.LedgerEntity;
+import com.example.pkmapp.core.work.SyncWorker;
 
 /** Persists the starting asset and liability values for each ledger in Room, scoped by ownerId. */
 public final class AssetStore {
@@ -44,6 +45,7 @@ public final class AssetStore {
             throw new IllegalArgumentException("资产和负债不能为负数");
         }
         ledgerDao.saveStartingValues(safeLedgerId, initialAssetsInCents, liabilitiesInCents, ownerId());
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public void addLiability(String ledgerId, long amountInCents) {
@@ -52,15 +54,18 @@ public final class AssetStore {
             throw new IllegalArgumentException("负债金额必须大于零");
         }
         ledgerDao.addLiability(safeLedgerId, amountInCents, ownerId());
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public void clear() {
         ledgerDao.clearAllAssetValues(ownerId(), System.currentTimeMillis());
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public void deleteStartingValues(String ledgerId) {
         String safeLedgerId = requireLedgerId(ledgerId);
         ledgerDao.resetAssetValuesForLedger(safeLedgerId, ownerId());
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     private static String requireLedgerId(String ledgerId) {

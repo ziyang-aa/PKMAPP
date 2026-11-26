@@ -1,11 +1,19 @@
 package com.example.pkmapp.savings;
 
+import static com.example.pkmapp.forest.ForestUi.dp;
+import static com.example.pkmapp.forest.ForestUi.row;
+
+import android.content.Context;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,19 +25,24 @@ import androidx.fragment.app.Fragment;
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
 import com.example.pkmapp.databinding.FragmentSavingsBinding;
+import com.example.pkmapp.forest.ForestDialogBuilder;
+import com.example.pkmapp.forest.ForestMotion;
+import com.example.pkmapp.forest.ForestSheetHelper;
+import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.MoneyParser;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 
 import java.math.BigDecimal;
 import java.util.List;
-
-import com.example.pkmapp.forest.ForestDialogBuilder;
 
 public final class SavingsFragment extends Fragment {
     private FragmentSavingsBinding binding;
     private LifeSharedViewModel viewModel;
     private List<SavingsGoal> renderedGoals;
+    private BottomSheetDialog activeSheet;
 
     @Nullable
     @Override
@@ -44,7 +57,7 @@ public final class SavingsFragment extends Fragment {
         viewModel = LifeSharedViewModel.get(requireActivity());
         binding.pageBackButton.setOnClickListener(v ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
-        binding.savingsAddGoalButton.setOnClickListener(v -> addNewGoalCard());
+        binding.savingsAddGoalButton.setOnClickListener(v -> showGoalEditorSheet(null));
         viewModel.observe(getViewLifecycleOwner(), snapshot -> renderGoalsIfChanged(snapshot.getSavingsGoals()));
     }
 
@@ -59,13 +72,35 @@ public final class SavingsFragment extends Fragment {
         binding.savingsGoalCount.setText(goals.size() + " 个目标");
         binding.savingsGoalList.removeAllViews();
         if (goals.isEmpty()) {
-            binding.savingsGoalList.addView(createGoalCard(null));
+            binding.savingsGoalList.addView(createEmptyGoalHint());
         } else {
             for (SavingsGoal goal : goals) {
                 binding.savingsGoalList.addView(createGoalCard(goal));
             }
         }
-        binding.savingsAddGoalButton.setVisibility(goals.isEmpty() ? View.GONE : View.VISIBLE);
+        binding.savingsAddGoalButton.setVisibility(View.VISIBLE);
+    }
+
+    private View createEmptyGoalHint() {
+        Context ctx = requireContext();
+        LinearLayout empty = ForestUi.column(ctx);
+        empty.setGravity(Gravity.CENTER_HORIZONTAL);
+        empty.setPadding(dp(ctx, 16), dp(ctx, 28), dp(ctx, 16), dp(ctx, 20));
+        ImageView sprout = new ImageView(ctx);
+        sprout.setImageResource(R.drawable.savings_seedling_stage_1);
+        sprout.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        empty.addView(sprout, new LinearLayout.LayoutParams(dp(ctx, 84), dp(ctx, 84)));
+        TextView title = ForestUi.heading(ctx, "种下第一颗攒钱心愿", 17);
+        title.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        title.setTextColor(ForestSheetHelper.INK);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-2, -2);
+        titleLp.topMargin = dp(ctx, 10);
+        empty.addView(title, titleLp);
+        TextView hint = ForestUi.text(ctx, "点下方「＋ 新建目标」，设定心愿名称和目标金额。", 12, ForestUi.MUTED);
+        LinearLayout.LayoutParams hintLp = new LinearLayout.LayoutParams(-2, -2);
+        hintLp.topMargin = dp(ctx, 4);
+        empty.addView(hint, hintLp);
+        return empty;
     }
 
     private static boolean sameGoals(List<SavingsGoal> a, List<SavingsGoal> b) {
@@ -83,80 +118,170 @@ public final class SavingsFragment extends Fragment {
         return true;
     }
 
-    private void addNewGoalCard() {
-        if (binding == null) {
-            return;
-        }
-        binding.savingsGoalList.addView(createGoalCard(null));
-    }
-
-    private View createGoalCard(@Nullable SavingsGoal goal) {
+    private View createGoalCard(SavingsGoal goal) {
         View card = LayoutInflater.from(requireContext()).inflate(
                 R.layout.item_savings_goal, binding.savingsGoalList, false);
         ViewGroup.MarginLayoutParams cardParams =
                 (ViewGroup.MarginLayoutParams) card.getLayoutParams();
-        cardParams.topMargin = dp(12);
+        cardParams.topMargin = dp(requireContext(), 12);
         card.setLayoutParams(cardParams);
 
         TextView kicker = card.findViewById(R.id.savings_goal_kicker);
         TextView state = card.findViewById(R.id.savings_goal_state);
         ImageView stageImage = card.findViewById(R.id.savings_goal_stage_image);
         TextView name = card.findViewById(R.id.savings_goal_name);
-        TextView description = card.findViewById(R.id.savings_goal_description);
-        View stats = card.findViewById(R.id.savings_goal_stats);
         TextView target = card.findViewById(R.id.savings_goal_target);
         TextView percentLabel = card.findViewById(R.id.savings_goal_percent);
         ProgressBar progress = card.findViewById(R.id.savings_goal_progress);
         TextView saved = card.findViewById(R.id.savings_goal_saved);
-        View bottom = card.findViewById(R.id.savings_goal_bottom);
         TextView remaining = card.findViewById(R.id.savings_goal_remaining);
-        View deposit = card.findViewById(R.id.savings_goal_deposit);
-        EditText nameInput = card.findViewById(R.id.savings_goal_name_input);
-        EditText targetInput = card.findViewById(R.id.savings_goal_target_input);
-        TextView message = card.findViewById(R.id.savings_goal_message);
-        TextView saveButton = card.findViewById(R.id.savings_goal_save_button);
-        EditText depositInput = card.findViewById(R.id.savings_goal_deposit_input);
         TextView depositButton = card.findViewById(R.id.savings_goal_deposit_button);
-        TextView deleteButton = card.findViewById(R.id.savings_goal_delete_button);
+        TextView editButton = card.findViewById(R.id.savings_goal_edit_button);
 
+        int percent = goal.getProgressPercent();
         kicker.setText("攒钱心愿卡");
-        if (goal == null) {
-            stageImage.setImageResource(R.drawable.savings_seedling_stage_1);
-            state.setText("空白目标");
-            name.setText("种下一颗愿望");
-            description.setText("给它一个名字和金额，今天就可以开始慢慢靠近。");
-            stats.setVisibility(View.GONE);
-            progress.setVisibility(View.GONE);
-            bottom.setVisibility(View.GONE);
-            deposit.setVisibility(View.GONE);
-            deleteButton.setVisibility(View.GONE);
-            depositButton.setEnabled(false);
-        } else {
-            int percent = goal.getProgressPercent();
-            stageImage.setImageResource(stageDrawable(percent));
-            state.setText(goal.isComplete() ? "已经完成" : "进行中");
-            name.setText(goal.getName());
-            description.setText("每一次存入，都会让这张卡片长出新的叶子。");
-            stats.setVisibility(View.VISIBLE);
-            percentLabel.setText(percent + "%");
-            target.setText(MoneyParser.formatCents(goal.getTargetCents()));
-            progress.setProgress(percent);
-            progress.setVisibility(View.VISIBLE);
-            bottom.setVisibility(View.VISIBLE);
-            saved.setText("已存入 " + MoneyParser.formatCents(goal.getSavedCents()));
-            remaining.setText(goal.isComplete() ? "已达到目标，还可继续存入"
+        stageImage.setImageResource(stageDrawable(percent));
+        state.setText(goal.isComplete() ? "已完成" : "进行中");
+        name.setText(goal.getName());
+        saved.setText(MoneyParser.formatCents(goal.getSavedCents()));
+        target.setText("/ " + MoneyParser.formatCents(goal.getTargetCents()));
+        percentLabel.setText(percent + "%");
+        progress.setProgress(percent);
+        remaining.setText(goal.isComplete()
+                ? "已达成目标，还可继续存入"
                 : "还差 " + MoneyParser.formatCents(goal.getRemainingCents()));
-            deposit.setVisibility(View.VISIBLE);
+
+        depositButton.setText(goal.isComplete() ? "＋ 继续存入" : "＋ 存入");
+        depositButton.setOnClickListener(v -> showDepositSheet(goal));
+        editButton.setOnClickListener(v -> showGoalEditorSheet(goal));
+        ForestMotion.bind(depositButton);
+        ForestMotion.bind(editButton);
+        return card;
+    }
+
+    private void showDepositSheet(SavingsGoal goal) {
+        Context ctx = requireContext();
+        BottomSheetDialog sheet = createManagedSheet();
+        String subtitle = "已存 " + MoneyParser.formatCents(goal.getSavedCents())
+                + " / 目标 " + MoneyParser.formatCents(goal.getTargetCents());
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx, sheet, "存入「" + goal.getName() + "」", subtitle
+        );
+
+        root.addView(ForestSheetHelper.fieldLabel(ctx, "存入金额（元）"));
+        EditText amountInput = ForestSheetHelper.underlineInput(
+                ctx, "0.00", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
+        );
+        amountInput.setTextSize(26f);
+        amountInput.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        amountInput.setFontFeatureSettings("tnum");
+        root.addView(amountInput, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout quickRow = row(ctx);
+        int[] quickAmounts = {50, 100, 200};
+        for (int i = 0; i < quickAmounts.length; i++) {
+            int yuan = quickAmounts[i];
+            TextView chip = ForestSheetHelper.quickChip(ctx, "+" + yuan, v -> {
+                amountInput.setText(String.valueOf(yuan));
+                amountInput.setSelection(amountInput.getText().length());
+                amountInput.setError(null);
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) lp.setMarginStart(dp(ctx, 10));
+            quickRow.addView(chip, lp);
+        }
+        ForestUi.add(root, quickRow, 14);
+
+        MaterialButton confirmBtn = ForestSheetHelper.primaryButton(ctx, "放进罐子", v -> {
+            try {
+                long amountCents = MoneyParser.parseYuanToCents(amountInput.getText().toString());
+                renderedGoals = null;
+                SavingsGoal updated = viewModel.depositSavingsGoal(
+                        goal.getId(), amountCents, System.currentTimeMillis());
+                sheet.dismiss();
+                Toast.makeText(ctx, updated.isComplete()
+                        ? "目标完成，森林又长大了一点" : "已存入 " + MoneyParser.formatCents(amountCents),
+                        Toast.LENGTH_SHORT).show();
+            } catch (IllegalArgumentException exception) {
+                amountInput.setError(exception.getMessage());
+                amountInput.requestFocus();
+            }
+        });
+        ForestUi.add(root, confirmBtn, 18);
+
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
+    }
+
+    private void showGoalEditorSheet(@Nullable SavingsGoal goal) {
+        Context ctx = requireContext();
+        BottomSheetDialog sheet = createManagedSheet();
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx,
+                sheet,
+                goal == null ? "新建攒钱目标" : "编辑攒钱目标",
+                goal == null ? "定一个小目标，每次存入都会记入生活账本" : "修改名称或目标金额不会影响已存入金额"
+        );
+
+        root.addView(ForestSheetHelper.fieldLabel(ctx, "目标名称"));
+        EditText nameInput = ForestSheetHelper.underlineInput(
+                ctx, "例如：周末去看海", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        );
+        if (goal != null) {
             nameInput.setText(goal.getName());
+            nameInput.setSelection(nameInput.getText().length());
+        }
+        root.addView(nameInput, new LinearLayout.LayoutParams(-1, -2));
+
+        ForestUi.add(root, ForestSheetHelper.fieldLabel(ctx, "目标金额（元）"), 16);
+        EditText targetInput = ForestSheetHelper.underlineInput(
+                ctx, "例如：3000", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
+        );
+        targetInput.setTextSize(22f);
+        targetInput.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        targetInput.setFontFeatureSettings("tnum");
+        if (goal != null) {
             targetInput.setText(formatInputYuan(goal.getTargetCents()));
-            depositButton.setText(goal.isComplete() ? "继续存入" : "放进罐子");
-            deleteButton.setOnClickListener(v -> confirmDeleteGoal(goal));
+        }
+        root.addView(targetInput, new LinearLayout.LayoutParams(-1, -2));
+
+        MaterialButton saveBtn = ForestSheetHelper.primaryButton(
+                ctx, goal == null ? "保存这张目标卡" : "保存修改", v -> {
+                    String name = nameInput.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        nameInput.setError("请输入目标名称");
+                        nameInput.requestFocus();
+                        return;
+                    }
+                    try {
+                        long targetCents = MoneyParser.parseYuanToCents(targetInput.getText().toString());
+                        renderedGoals = null;
+                        if (goal == null) {
+                            viewModel.createSavingsGoal(name, targetCents);
+                            Toast.makeText(ctx, "目标已加入森林", Toast.LENGTH_SHORT).show();
+                        } else {
+                            viewModel.updateSavingsGoal(goal.getId(), name, targetCents);
+                            Toast.makeText(ctx, "目标已更新", Toast.LENGTH_SHORT).show();
+                        }
+                        sheet.dismiss();
+                    } catch (IllegalArgumentException exception) {
+                        targetInput.setError(exception.getMessage());
+                        targetInput.requestFocus();
+                    }
+                });
+        ForestUi.add(root, saveBtn, 18);
+
+        if (goal != null) {
+            TextView deleteBtn = ForestSheetHelper.quietAction(
+                    ctx, "删除这个目标", ForestSheetHelper.TERRACOTTA, v -> {
+                        sheet.dismiss();
+                        confirmDeleteGoal(goal);
+                    });
+            ForestUi.add(root, deleteBtn, 6);
         }
 
-        saveButton.setText(goal == null ? "保存这张目标卡" : "保存修改");
-        saveButton.setOnClickListener(v -> saveGoal(goal, nameInput, targetInput, message));
-        depositButton.setOnClickListener(v -> deposit(goal, depositInput, message));
-        return card;
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
     }
 
     private int stageDrawable(int progressPercent) {
@@ -167,47 +292,6 @@ public final class SavingsFragment extends Fragment {
             return R.drawable.savings_seedling_stage_2;
         }
         return R.drawable.savings_seedling_stage_1;
-    }
-
-    private void saveGoal(@Nullable SavingsGoal goal, EditText nameInput, EditText targetInput,
-            TextView message) {
-        String name = nameInput.getText().toString().trim();
-        if (name.isEmpty()) {
-            nameInput.setError("请输入目标名称");
-            return;
-        }
-        try {
-            long targetCents = MoneyParser.parseYuanToCents(targetInput.getText().toString());
-            renderedGoals = null;
-            if (goal == null) {
-                viewModel.createSavingsGoal(name, targetCents);
-                Toast.makeText(requireContext(), "目标已加入森林", Toast.LENGTH_SHORT).show();
-            } else {
-                viewModel.updateSavingsGoal(goal.getId(), name, targetCents);
-                Toast.makeText(requireContext(), "目标已更新", Toast.LENGTH_SHORT).show();
-            }
-        } catch (IllegalArgumentException exception) {
-            targetInput.setError(exception.getMessage());
-            message.setText(exception.getMessage());
-        }
-    }
-
-    private void deposit(@Nullable SavingsGoal goal, EditText depositInput, TextView message) {
-        if (goal == null) {
-            message.setText("请先保存目标，再存入金额");
-            return;
-        }
-        try {
-            long amountCents = MoneyParser.parseYuanToCents(depositInput.getText().toString());
-            renderedGoals = null;
-            SavingsGoal updated = viewModel.depositSavingsGoal(goal.getId(), amountCents,
-                    System.currentTimeMillis());
-            Toast.makeText(requireContext(), updated.isComplete()
-                    ? "目标完成，森林又长大了一点" : "已存入目标", Toast.LENGTH_SHORT).show();
-        } catch (IllegalArgumentException exception) {
-            depositInput.setError(exception.getMessage());
-            message.setText(exception.getMessage());
-        }
     }
 
     private void confirmDeleteGoal(SavingsGoal goal) {
@@ -224,16 +308,29 @@ public final class SavingsFragment extends Fragment {
                 .show();
     }
 
-    private String formatInputYuan(long cents) {
-        return BigDecimal.valueOf(cents, 2).toPlainString();
+    private BottomSheetDialog createManagedSheet() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+        }
+        BottomSheetDialog sheet = ForestSheetHelper.createSheet(requireContext());
+        activeSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (activeSheet == sheet) activeSheet = null;
+        });
+        return sheet;
     }
 
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    private static String formatInputYuan(long cents) {
+        BigDecimal bd = BigDecimal.valueOf(cents, 2).stripTrailingZeros();
+        return bd.scale() <= 0 ? bd.toBigInteger().toString() : bd.toPlainString();
     }
 
     @Override
     public void onDestroyView() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+            activeSheet = null;
+        }
         binding = null;
         renderedGoals = null;
         super.onDestroyView();

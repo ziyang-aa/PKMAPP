@@ -68,7 +68,17 @@ public final class StudyNotifications extends BroadcastReceiver {
         StringBuilder detail = new StringBuilder();
         detail.append("已学习 ").append(elapsedText);
         if (!running) detail.append("（已暂停）");
-        if (goalMin > 0) detail.append(" · 目标 ").append(goalMin).append(" 分钟");
+        int progressPermille = -1;
+        if (goalMin > 0) {
+            long goalMillis = goalMin * 60_000L;
+            progressPermille = (int) Math.min(1000L, Math.max(0L, (elapsed * 1000L) / goalMillis));
+            int percent = Math.min(100, (int) Math.round((elapsed * 100.0) / goalMillis));
+            if (elapsed >= goalMillis) {
+                detail.append(" · 已达成 ").append(goalMin).append(" 分钟目标");
+            } else {
+                detail.append(" / 目标 ").append(goalMin).append(" 分钟（").append(percent).append("%）");
+            }
+        }
         if (activeTask != null && activeTask.title != null && !activeTask.title.isEmpty()) {
             detail.append(" · ").append(activeTask.title);
         }
@@ -91,6 +101,9 @@ public final class StudyNotifications extends BroadcastReceiver {
             .setWhen(System.currentTimeMillis() - elapsed)
             .addAction(0, running ? "暂停" : "继续", PendingIntent.getBroadcast(context, 0, control, FLAGS))
             .addAction(0, "结束", activity(context, FINISH_TIMER, id));
+        if (progressPermille >= 0) {
+            builder.setProgress(1000, progressPermille, false);
+        }
         if (activePlan != null && activePlan.title != null && !activePlan.title.isEmpty()) {
             builder.setSubText(activePlan.title);
         }

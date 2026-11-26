@@ -10,6 +10,7 @@ import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.PkmStorageBootstrap;
 import com.example.pkmapp.core.database.StudyDao;
 import com.example.pkmapp.core.database.StudyDatabaseSnapshot;
+import com.example.pkmapp.core.work.SyncWorker;
 
 /** Room-backed learning store scoped by ownerId with per-owner shadow mirror in SharedPreferences. */
 public final class StudyStore {
@@ -131,6 +132,8 @@ public final class StudyStore {
             throw e;
         }
         StudyNotifications.refresh(context, this);
+        SyncWorker.scheduleDebouncedSync(context);
+        com.example.pkmapp.widget.ForestWidgets.refreshAll(context);
         return result;
     }
 

@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LocalAccountEntity::class,
         FeedbackRecordEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -590,6 +590,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        @JvmField
+        val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `ledgers` ADD COLUMN `monthlyBudgetCents` INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -601,7 +610,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .allowMainThreadQueries()
                     .build()
                     .also { instance = it }

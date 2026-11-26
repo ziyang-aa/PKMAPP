@@ -109,6 +109,33 @@ public final class InMemoryLedgerRepository {
         return ledger;
     }
 
+    public Ledger updateLedgerMonthlyBudget(String ledgerId, long monthlyBudgetCents) {
+        String selectedId = requireId(ledgerId);
+        if (monthlyBudgetCents < 0L) {
+            throw new IllegalArgumentException("月度预算不能为负数");
+        }
+        Ledger updated;
+        boolean changed;
+        synchronized (this) {
+            Ledger existing = ledgers.get(selectedId);
+            if (existing == null) {
+                throw new IllegalArgumentException("账本不存在");
+            }
+            changed = existing.getMonthlyBudgetCents() != monthlyBudgetCents;
+            updated = existing.withMonthlyBudgetCents(monthlyBudgetCents);
+            ledgers.put(selectedId, updated);
+        }
+        if (changed) {
+            persist();
+            notifyListeners();
+        }
+        return updated;
+    }
+
+    public Ledger updateCurrentLedgerMonthlyBudget(long monthlyBudgetCents) {
+        return updateLedgerMonthlyBudget(getCurrentLedger().getId(), monthlyBudgetCents);
+    }
+
     public void switchLedger(String ledgerId) {
         String selectedId = requireId(ledgerId);
         boolean changed;

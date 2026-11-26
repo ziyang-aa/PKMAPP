@@ -43,6 +43,7 @@ import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.profile.AvatarStore;
 import com.example.pkmapp.record.MoneyParser;
+import com.example.pkmapp.study.ExamCountdownFormatter;
 import com.example.pkmapp.study.StudyFormat;
 import com.example.pkmapp.study.StudyNotebook;
 import com.example.pkmapp.study.StudySharedViewModel;
@@ -65,6 +66,7 @@ public final class HomeFragment extends Fragment {
     private TextView summaryFocusValue;
     private TextView summaryTodoValue;
     private TextView summaryExpenseValue;
+    private TextView summaryCountdownBadge;
     private ImageView avatarImage;
     private TextView avatarNickname;
     private TextView avatarSubtitle;
@@ -334,7 +336,12 @@ public final class HomeFragment extends Fragment {
         TextView label = text(requireContext(), "今日速览", 12, DEEP);
         label.setTypeface(null, android.graphics.Typeface.BOLD);
         head.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
-        head.addView(text(requireContext(), "点击直达对应页面", 10, MUTED));
+        summaryCountdownBadge = text(requireContext(), "点击直达对应页面", 10, MUTED);
+        summaryCountdownBadge.setFontFeatureSettings("tnum");
+        summaryCountdownBadge.setMaxLines(1);
+        summaryCountdownBadge.setEllipsize(TextUtils.TruncateAt.END);
+        summaryCountdownBadge.setOnClickListener(v -> open(AppDestination.STUDY_FOCUS));
+        head.addView(summaryCountdownBadge);
         card.addView(head);
 
         LinearLayout metrics = row(requireContext());
@@ -496,6 +503,22 @@ public final class HomeFragment extends Fragment {
         long monthExpense = lifeViewModel == null
             ? 0L : lifeViewModel.getCurrentSnapshot().getCurrentMonthTotals().getExpenseInCents();
         summaryExpenseValue.setText(MoneyParser.formatCents(monthExpense));
+
+        if (summaryCountdownBadge != null) {
+            ExamCountdownFormatter.Countdown countdown =
+                ExamCountdownFormatter.currentPlanCountdown(notebook, now);
+            if (countdown != null) {
+                summaryCountdownBadge.setText(countdown.getHomeCompactBadge());
+                summaryCountdownBadge.setTextColor(countdown.getAccentColor());
+                summaryCountdownBadge.setTypeface(null, Typeface.BOLD);
+                summaryCountdownBadge.setTextSize(11);
+            } else {
+                summaryCountdownBadge.setText("点击直达对应页面");
+                summaryCountdownBadge.setTextColor(MUTED);
+                summaryCountdownBadge.setTypeface(null, Typeface.NORMAL);
+                summaryCountdownBadge.setTextSize(10);
+            }
+        }
     }
 
     private View door(int id, String description, AppDestination destination) {
@@ -629,6 +652,7 @@ public final class HomeFragment extends Fragment {
         summaryFocusValue = null;
         summaryTodoValue = null;
         summaryExpenseValue = null;
+        summaryCountdownBadge = null;
         avatarImage = null;
         avatarNickname = null;
         avatarSubtitle = null;

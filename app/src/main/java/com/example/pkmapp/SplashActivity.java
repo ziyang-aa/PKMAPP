@@ -20,6 +20,20 @@ public final class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String widgetDest = getIntent() != null
+                ? getIntent().getStringExtra(MainActivity.EXTRA_WIDGET_DESTINATION)
+                : null;
+        if (widgetDest != null && !widgetDest.trim().isEmpty()) {
+            openedNotebook = true;
+            com.example.pkmapp.core.database.PkmStorageBootstrap.ensureInitialized(getApplicationContext());
+            Intent direct = new Intent(this, MainActivity.class)
+                    .putExtra(MainActivity.EXTRA_WIDGET_DESTINATION, widgetDest.trim())
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(direct);
+            finish();
+            overridePendingTransition(0, 0);
+            return;
+        }
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
                 getWindow(), getWindow().getDecorView());

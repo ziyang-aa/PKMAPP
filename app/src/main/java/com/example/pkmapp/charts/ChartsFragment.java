@@ -1,16 +1,26 @@
 package com.example.pkmapp.charts;
 
+import static com.example.pkmapp.forest.ForestUi.DEEP;
+import static com.example.pkmapp.forest.ForestUi.MUTED;
+import static com.example.pkmapp.forest.ForestUi.ripple;
+import static com.example.pkmapp.forest.ForestUi.rounded;
+import static com.example.pkmapp.forest.ForestUi.row;
+
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupWindow;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -18,23 +28,26 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import android.graphics.drawable.ColorDrawable;
-
 import com.example.pkmapp.MainActivity;
 import com.example.pkmapp.R;
 import com.example.pkmapp.data.Transaction;
 import com.example.pkmapp.data.TransactionType;
 import com.example.pkmapp.databinding.FragmentChartsBinding;
+import com.example.pkmapp.forest.ForestMotion;
+import com.example.pkmapp.forest.ForestSheetHelper;
+import com.example.pkmapp.forest.ForestUi;
 import com.example.pkmapp.life.LifeSharedViewModel;
 import com.example.pkmapp.life.LifeSnapshot;
 import com.example.pkmapp.navigation.AppDestination;
 import com.example.pkmapp.record.CategoryIconResolver;
 import com.example.pkmapp.record.MoneyParser;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class ChartsFragment extends Fragment {
@@ -47,7 +60,7 @@ public final class ChartsFragment extends Fragment {
     private TransactionType type = TransactionType.EXPENSE;
     private ChartDataCalculator.Period period = ChartDataCalculator.Period.MONTH;
     private Calendar selectedDate = Calendar.getInstance();
-    private PopupWindow periodPopup;
+    private BottomSheetDialog activeSheet;
 
     @Nullable
     @Override
@@ -73,37 +86,52 @@ public final class ChartsFragment extends Fragment {
         }
         binding.pageBackButton.setOnClickListener(v ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
-        binding.chartExpenseButton.setChecked(type == TransactionType.EXPENSE);
-        binding.chartIncomeButton.setChecked(type == TransactionType.INCOME);
-        binding.chartWeekButton.setChecked(period == ChartDataCalculator.Period.WEEK);
-        binding.chartMonthButton.setChecked(period == ChartDataCalculator.Period.MONTH);
-        binding.chartYearButton.setChecked(period == ChartDataCalculator.Period.YEAR);
-        binding.chartExpenseButton.setOnClickListener(v -> {
+
+        View.OnClickListener selectExpense = v -> {
             type = TransactionType.EXPENSE;
             render();
-        });
-        binding.chartIncomeButton.setOnClickListener(v -> {
+        };
+        View.OnClickListener selectIncome = v -> {
             type = TransactionType.INCOME;
             render();
+        };
+        binding.chartExpenseTab.setOnClickListener(selectExpense);
+        binding.chartExpenseButton.setOnClickListener(selectExpense);
+        binding.chartIncomeTab.setOnClickListener(selectIncome);
+        binding.chartIncomeButton.setOnClickListener(selectIncome);
+        binding.chartModeMascot.setOnClickListener(v -> {
+            type = type == TransactionType.EXPENSE ? TransactionType.INCOME : TransactionType.EXPENSE;
+            v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(90).withEndAction(() ->
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(140).start()).start();
+            render();
         });
+
         binding.chartWeekButton.setOnClickListener(v -> {
-            dismissPeriodPopup();
+            dismissActiveSheet();
             period = ChartDataCalculator.Period.WEEK;
             render();
         });
         binding.chartMonthButton.setOnClickListener(v -> {
-            dismissPeriodPopup();
+            dismissActiveSheet();
             period = ChartDataCalculator.Period.MONTH;
             render();
         });
         binding.chartYearButton.setOnClickListener(v -> {
-            dismissPeriodPopup();
+            dismissActiveSheet();
             period = ChartDataCalculator.Period.YEAR;
             render();
         });
-        binding.chartPeriodPrevious.setOnClickListener(v -> shiftSelectedWeek(-1));
-        binding.chartPeriodNext.setOnClickListener(v -> shiftSelectedWeek(1));
-        binding.chartPeriodSelector.setOnClickListener(v -> togglePeriodSelector());
+        binding.chartPeriodPrevious.setOnClickListener(v -> shiftSelectedPeriod(-1));
+        binding.chartPeriodNext.setOnClickListener(v -> shiftSelectedPeriod(1));
+        binding.chartPeriodSelector.setOnClickListener(v -> openPeriodSheet());
+
+        ForestMotion.bind(binding.chartWeekButton);
+        ForestMotion.bind(binding.chartMonthButton);
+        ForestMotion.bind(binding.chartYearButton);
+        ForestMotion.bind(binding.chartPeriodPrevious);
+        ForestMotion.bind(binding.chartPeriodNext);
+        ForestMotion.bind(binding.chartPeriodSelector);
+
         viewModel = LifeSharedViewModel.get(requireActivity());
         viewModel.observe(getViewLifecycleOwner(), this::renderSnapshot);
     }
@@ -118,12 +146,20 @@ public final class ChartsFragment extends Fragment {
         if (binding == null || !isAdded()) {
             return;
         }
+        Context ctx = requireContext();
         boolean expense = type == TransactionType.EXPENSE;
-        styleSegmentButton(binding.chartExpenseButton, expense);
-        styleSegmentButton(binding.chartIncomeButton, !expense);
-        styleSegmentButton(binding.chartWeekButton, period == ChartDataCalculator.Period.WEEK);
-        styleSegmentButton(binding.chartMonthButton, period == ChartDataCalculator.Period.MONTH);
-        styleSegmentButton(binding.chartYearButton, period == ChartDataCalculator.Period.YEAR);
+
+        // 1. Editorial underline primary tabs (Expense / Income)
+        styleEditorialTab(binding.chartExpenseButton, binding.chartExpenseIndicator, expense);
+        styleEditorialTab(binding.chartIncomeButton, binding.chartIncomeIndicator, !expense);
+        binding.chartModeMascot.setImageResource(
+                expense ? R.drawable.chart_expense_character : R.drawable.chart_income_character);
+
+        // 2. Compact right-aligned granularity toggles (W / M / Y)
+        styleCompactPeriodChip(binding.chartWeekButton, period == ChartDataCalculator.Period.WEEK);
+        styleCompactPeriodChip(binding.chartMonthButton, period == ChartDataCalculator.Period.MONTH);
+        styleCompactPeriodChip(binding.chartYearButton, period == ChartDataCalculator.Period.YEAR);
+
         List<Transaction> transactions = snapshot.getTransactions();
         Calendar reference = (Calendar) selectedDate.clone();
         long[] points = ChartDataCalculator.bucketTotals(transactions, type, reference, period);
@@ -147,18 +183,69 @@ public final class ChartsFragment extends Fragment {
                 moneyType, "最高" + (expense ? "消费" : "收入") + " "
                         + MoneyParser.formatCents(peak));
         renderRanking(ranks);
-        binding.chartPeriodPrevious.setVisibility(period == ChartDataCalculator.Period.WEEK
-                ? View.VISIBLE : View.INVISIBLE);
-        binding.chartPeriodNext.setVisibility(period == ChartDataCalculator.Period.WEEK
-                ? View.VISIBLE : View.INVISIBLE);
-        boolean selectablePeriod = period != ChartDataCalculator.Period.WEEK;
-        binding.chartPeriodSelector.setText(periodName() + (selectablePeriod ? "  ▾" : ""));
-        binding.chartPeriodSelector.setBackgroundResource(selectablePeriod
-                ? R.drawable.bg_period_selector : android.R.color.transparent);
-        binding.chartPeriodSelector.setClickable(selectablePeriod);
-        binding.chartPeriodSelector.setFocusable(selectablePeriod);
-        binding.chartPeriodSelector.setContentDescription(selectablePeriod
-                ? "选择统计时间，当前" + periodName() : periodName());
+
+        // 3. Integrated borderless card-header date stepper (works across Week / Month / Year)
+        boolean isWeek = period == ChartDataCalculator.Period.WEEK;
+        String prevDesc = isWeek ? "上一周" : (period == ChartDataCalculator.Period.YEAR ? "上一年" : "上个月");
+        String nextDesc = isWeek ? "下一周" : (period == ChartDataCalculator.Period.YEAR ? "下一年" : "下个月");
+        binding.chartPeriodPrevious.setVisibility(View.VISIBLE);
+        binding.chartPeriodNext.setVisibility(View.VISIBLE);
+        binding.chartPeriodPrevious.setContentDescription(prevDesc);
+        binding.chartPeriodNext.setContentDescription(nextDesc);
+        binding.chartPeriodPrevious.setBackground(
+                ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 999), false));
+        binding.chartPeriodNext.setBackground(
+                ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 999), false));
+        binding.chartPeriodSelector.setTextColor(ForestSheetHelper.INK);
+        if (isWeek) {
+            binding.chartPeriodSelector.setBackground(null);
+            binding.chartPeriodSelector.setText(periodName());
+            binding.chartPeriodSelector.setClickable(false);
+            binding.chartPeriodSelector.setFocusable(false);
+            binding.chartPeriodSelector.setContentDescription(periodName());
+        } else {
+            String label = periodName();
+            SpannableString formatted = new SpannableString(label + " ▾");
+            formatted.setSpan(new ForegroundColorSpan(0xff7b5c3b), label.length(), formatted.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            formatted.setSpan(new RelativeSizeSpan(0.78f), label.length(), formatted.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            binding.chartPeriodSelector.setBackground(
+                    ripple(ctx, rounded(ctx, Color.TRANSPARENT, 0, 10), false));
+            binding.chartPeriodSelector.setText(formatted);
+            binding.chartPeriodSelector.setClickable(true);
+            binding.chartPeriodSelector.setFocusable(true);
+            binding.chartPeriodSelector.setContentDescription("选择统计时间，当前" + label);
+        }
+    }
+
+    private void styleEditorialTab(TextView label, View indicator, boolean selected) {
+        label.setTextColor(selected ? ForestSheetHelper.INK : 0xff827b6d);
+        label.setTextSize(selected ? 22f : 19f);
+        label.setTypeface(Typeface.create("serif", selected ? Typeface.BOLD : Typeface.NORMAL));
+        indicator.setBackground(rounded(
+                requireContext(),
+                selected ? ForestSheetHelper.PINE : Color.TRANSPARENT,
+                0,
+                99
+        ));
+    }
+
+    private void styleCompactPeriodChip(TextView chip, boolean selected) {
+        Context ctx = requireContext();
+        chip.setTextColor(selected ? DEEP : MUTED);
+        chip.setTypeface(Typeface.create(selected ? "sans-serif-medium" : "sans-serif",
+                selected ? Typeface.BOLD : Typeface.NORMAL));
+        chip.setBackground(ripple(
+                ctx,
+                rounded(
+                        ctx,
+                        selected ? ForestSheetHelper.PORCELAIN : Color.TRANSPARENT,
+                        selected ? 0x33315e3a : 0,
+                        999
+                ),
+                false
+        ));
     }
 
     private String[] pointLabels(Calendar reference, int pointCount) {
@@ -168,16 +255,16 @@ public final class ChartsFragment extends Fragment {
             Calendar pointDate = (Calendar) periodStart.clone();
             if (period == ChartDataCalculator.Period.YEAR) {
                 pointDate.add(Calendar.MONTH, i);
-                labels[i] = String.format(java.util.Locale.CHINA, "%d年%d月",
+                labels[i] = String.format(Locale.CHINA, "%d年%d月",
                         pointDate.get(Calendar.YEAR), pointDate.get(Calendar.MONTH) + 1);
             } else {
                 pointDate.add(Calendar.DAY_OF_MONTH, i);
                 labels[i] = period == ChartDataCalculator.Period.WEEK
-                        ? String.format(java.util.Locale.CHINA, "%d月%d日 周%s",
+                        ? String.format(Locale.CHINA, "%d月%d日 周%s",
                                 pointDate.get(Calendar.MONTH) + 1,
                                 pointDate.get(Calendar.DAY_OF_MONTH),
                                 new String[]{"一", "二", "三", "四", "五", "六", "日"}[i])
-                        : String.format(java.util.Locale.CHINA, "%d月%d日",
+                        : String.format(Locale.CHINA, "%d月%d日",
                                 pointDate.get(Calendar.MONTH) + 1,
                                 pointDate.get(Calendar.DAY_OF_MONTH));
             }
@@ -211,6 +298,7 @@ public final class ChartsFragment extends Fragment {
 
             TextView number = text(String.format(LocaleHolder.ROOT, "%02d", rank), 14, R.color.warm_orange);
             number.setTypeface(null, Typeface.BOLD);
+            number.setFontFeatureSettings("tnum");
             row.addView(number, new LinearLayout.LayoutParams(dp(30), dp(44)));
 
             ImageView icon = new ImageView(requireContext());
@@ -237,6 +325,7 @@ public final class ChartsFragment extends Fragment {
             TextView amount = text(MoneyParser.formatCents(entry.getValue().getAmountInCents()), 14,
                     type == TransactionType.INCOME ? R.color.forest_green : R.color.expense_red);
             amount.setTypeface(null, Typeface.BOLD);
+            amount.setFontFeatureSettings("tnum");
             row.addView(amount, new LinearLayout.LayoutParams(-2, dp(44)));
             row.setBackgroundResource(R.drawable.bg_transaction_row);
             binding.chartRankingGroup.addView(row, new LinearLayout.LayoutParams(-1, dp(60)));
@@ -265,9 +354,10 @@ public final class ChartsFragment extends Fragment {
             case WEEK:
                 Calendar end = (Calendar) start.clone();
                 end.add(Calendar.DAY_OF_MONTH, 6);
-                return String.format(LocaleHolder.ROOT, "%d年%d月%d日 - %d月%d日",
-                        start.get(Calendar.YEAR), start.get(Calendar.MONTH) + 1,
-                        start.get(Calendar.DAY_OF_MONTH), end.get(Calendar.MONTH) + 1,
+                return String.format(LocaleHolder.ROOT, "%d.%02d – %d.%02d",
+                        start.get(Calendar.MONTH) + 1,
+                        start.get(Calendar.DAY_OF_MONTH),
+                        end.get(Calendar.MONTH) + 1,
                         end.get(Calendar.DAY_OF_MONTH));
             case YEAR:
                 return String.format(LocaleHolder.ROOT, "%d年", start.get(Calendar.YEAR));
@@ -287,146 +377,153 @@ public final class ChartsFragment extends Fragment {
         }
     }
 
-    private void shiftSelectedWeek(int amount) {
-        if (period != ChartDataCalculator.Period.WEEK) {
-            return;
+    private void shiftSelectedPeriod(int amount) {
+        switch (period) {
+            case WEEK:
+                selectedDate.add(Calendar.DAY_OF_MONTH, amount * 7);
+                break;
+            case YEAR:
+                selectedDate.add(Calendar.YEAR, amount);
+                break;
+            case MONTH:
+            default:
+                selectedDate.add(Calendar.MONTH, amount);
+                break;
         }
-        selectedDate.add(Calendar.DAY_OF_MONTH, amount * 7);
         render();
     }
 
-    private void styleSegmentButton(com.google.android.material.button.MaterialButton button, boolean selected) {
-        button.setChecked(selected);
-        button.setStrokeWidth(selected ? dp(1) : 0);
-        button.setStrokeColor(android.content.res.ColorStateList.valueOf(selected ? 0xff9fb289 : Color.TRANSPARENT));
-        button.setTypeface(null, selected ? Typeface.BOLD : Typeface.NORMAL);
-    }
-
-    private void togglePeriodSelector() {
-        if (periodPopup != null && periodPopup.isShowing()) {
-            periodPopup.dismiss();
-            return;
-        }
+    private void openPeriodSheet() {
         if (period == ChartDataCalculator.Period.WEEK) {
             return;
         }
-
+        dismissActiveSheet();
+        Context ctx = requireContext();
         final boolean monthMode = period == ChartDataCalculator.Period.MONTH;
         final int[] chosenYear = {selectedDate.get(Calendar.YEAR)};
-        LinearLayout card = new LinearLayout(requireContext());
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(12), dp(12), dp(12), dp(12));
-        card.setBackground(ContextCompat.getDrawable(requireContext(),
-                R.drawable.bg_date_dropdown_popup));
 
-        TextView title = text(monthMode ? "选择统计年月" : "选择统计年份", 14, R.color.wood_brown);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setPadding(dp(4), 0, 0, dp(4));
-        card.addView(title, new LinearLayout.LayoutParams(-1, dp(28)));
+        BottomSheetDialog sheet = ForestSheetHelper.createSheet(ctx);
+        activeSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (activeSheet == sheet) activeSheet = null;
+        });
 
-        LinearLayout yearRow = new LinearLayout(requireContext());
-        yearRow.setGravity(Gravity.CENTER);
-        TextView previousYear = yearArrow("上一年", "‹");
-        TextView yearLabel = text(chosenYear[0] + "年", 17, R.color.forest_green);
+        LinearLayout root = ForestSheetHelper.createSheetRoot(
+                ctx,
+                sheet,
+                monthMode ? "选择统计年月" : "选择统计年份",
+                "切换周期查看历史收支趋势与分类占比"
+        );
+
+        LinearLayout yearRow = row(ctx);
+        yearRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView prevYear = yearArrow(ctx, "上一年", "‹");
+        TextView yearLabel = ForestUi.heading(ctx, chosenYear[0] + "年", 19);
+        yearLabel.setTypeface(Typeface.create("serif", Typeface.BOLD));
+        yearLabel.setFontFeatureSettings("tnum");
         yearLabel.setGravity(Gravity.CENTER);
-        yearLabel.setTypeface(null, Typeface.BOLD);
-        TextView nextYear = yearArrow("下一年", "›");
-        yearRow.addView(previousYear, new LinearLayout.LayoutParams(dp(48), dp(44)));
-        yearRow.addView(yearLabel, new LinearLayout.LayoutParams(0, dp(44), 1));
-        yearRow.addView(nextYear, new LinearLayout.LayoutParams(dp(48), dp(44)));
-        card.addView(yearRow);
+        yearLabel.setTextColor(ForestSheetHelper.INK);
+        TextView nextYear = yearArrow(ctx, "下一年", "›");
+        yearRow.addView(prevYear, new LinearLayout.LayoutParams(dp(44), dp(42)));
+        yearRow.addView(yearLabel, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        yearRow.addView(nextYear, new LinearLayout.LayoutParams(dp(44), dp(42)));
+        root.addView(yearRow, new LinearLayout.LayoutParams(-1, -2));
 
-        Runnable refreshYear = () -> {
-            yearLabel.setText(chosenYear[0] + "年");
-            if (!monthMode) {
-                setSelectedDate(chosenYear[0], Calendar.JANUARY, 1);
-                render();
+        LinearLayout monthGrid = ForestUi.column(ctx);
+        Runnable renderMonths = () -> {
+            monthGrid.removeAllViews();
+            if (!monthMode) return;
+            for (int rowIndex = 0; rowIndex < 3; rowIndex++) {
+                LinearLayout mRow = row(ctx);
+                for (int col = 0; col < 4; col++) {
+                    int month = rowIndex * 4 + col;
+                    boolean selected = chosenYear[0] == selectedDate.get(Calendar.YEAR)
+                            && month == selectedDate.get(Calendar.MONTH);
+                    TextView cell = ForestUi.text(
+                            ctx,
+                            (month + 1) + "月",
+                            13,
+                            selected ? 0xfffffefa : ForestSheetHelper.INK
+                    );
+                    cell.setGravity(Gravity.CENTER);
+                    cell.setFontFeatureSettings("tnum");
+                    cell.setTypeface(Typeface.create(selected ? "sans-serif-medium" : "sans-serif",
+                            selected ? Typeface.BOLD : Typeface.NORMAL));
+                    cell.setBackground(ripple(
+                            ctx,
+                            rounded(
+                                    ctx,
+                                    selected ? ForestSheetHelper.PINE : Color.TRANSPARENT,
+                                    selected ? 0 : 0x1f5c4938,
+                                    12
+                            ),
+                            selected
+                    ));
+                    cell.setContentDescription((month + 1) + "月" + (selected ? "，当前选择" : ""));
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(42), 1f);
+                    lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+                    mRow.addView(cell, lp);
+                    cell.setOnClickListener(v -> {
+                        setSelectedDate(chosenYear[0], month, 1);
+                        render();
+                        sheet.dismiss();
+                    });
+                }
+                monthGrid.addView(mRow, new LinearLayout.LayoutParams(-1, -2));
             }
         };
-        previousYear.setOnClickListener(v -> {
+
+        prevYear.setOnClickListener(v -> {
             if (chosenYear[0] > 1970) {
                 chosenYear[0]--;
-                refreshYear.run();
+                yearLabel.setText(chosenYear[0] + "年");
+                if (monthMode) {
+                    renderMonths.run();
+                } else {
+                    setSelectedDate(chosenYear[0], Calendar.JANUARY, 1);
+                    render();
+                }
             }
         });
         nextYear.setOnClickListener(v -> {
             if (chosenYear[0] < 2100) {
                 chosenYear[0]++;
-                refreshYear.run();
+                yearLabel.setText(chosenYear[0] + "年");
+                if (monthMode) {
+                    renderMonths.run();
+                } else {
+                    setSelectedDate(chosenYear[0], Calendar.JANUARY, 1);
+                    render();
+                }
             }
         });
 
         if (monthMode) {
-            TextView monthHeading = text("月份", 12, R.color.wood_brown);
-            monthHeading.setPadding(dp(4), dp(4), 0, dp(4));
-            card.addView(monthHeading, new LinearLayout.LayoutParams(-1, dp(28)));
-            for (int rowIndex = 0; rowIndex < 3; rowIndex++) {
-                LinearLayout monthRow = new LinearLayout(requireContext());
-                monthRow.setGravity(Gravity.CENTER);
-                for (int column = 0; column < 4; column++) {
-                    int month = rowIndex * 4 + column;
-                    boolean selected = chosenYear[0] == selectedDate.get(Calendar.YEAR)
-                            && month == selectedDate.get(Calendar.MONTH);
-                    TextView monthCell = text((month + 1) + "月", 13,
-                            selected ? android.R.color.white : R.color.wood_brown);
-                    monthCell.setGravity(Gravity.CENTER);
-                    monthCell.setTypeface(null, selected ? Typeface.BOLD : Typeface.NORMAL);
-                    monthCell.setBackground(monthCellBackground(selected));
-                    monthCell.setContentDescription((month + 1) + "月"
-                            + (selected ? "，当前选择" : ""));
-                    monthCell.setClickable(true);
-                    monthCell.setFocusable(true);
-                    LinearLayout.LayoutParams cellParams =
-                            new LinearLayout.LayoutParams(0, dp(44), 1);
-                    cellParams.setMargins(dp(3), dp(3), dp(3), dp(3));
-                    monthRow.addView(monthCell, cellParams);
-                    monthCell.setOnClickListener(v -> {
-                        setSelectedDate(chosenYear[0], month, 1);
-                        render();
-                        if (periodPopup != null) periodPopup.dismiss();
-                    });
-                }
-                card.addView(monthRow, new LinearLayout.LayoutParams(-1, dp(50)));
-            }
+            ForestSheetHelper.addHairline(root, 12, 10);
+            renderMonths.run();
+            root.addView(monthGrid, new LinearLayout.LayoutParams(-1, -2));
+        } else {
+            ForestUi.add(root, ForestSheetHelper.primaryButton(ctx, "确认年份", v -> sheet.dismiss()), 16);
         }
 
-        periodPopup = new PopupWindow(card, binding.chartPeriodSelector.getWidth(),
-                ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        periodPopup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        periodPopup.setOutsideTouchable(true);
-        periodPopup.setElevation(dp(8));
-        periodPopup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
-        periodPopup.setOnDismissListener(() -> periodPopup = null);
-        periodPopup.showAsDropDown(binding.chartPeriodSelector, 0, dp(4),
-                Gravity.CENTER_HORIZONTAL);
+        ForestSheetHelper.attachContentWithImeAvoidance(sheet, root);
+        sheet.show();
     }
 
-    private void dismissPeriodPopup() {
-        if (periodPopup != null) {
-            periodPopup.dismiss();
-            periodPopup = null;
+    private void dismissActiveSheet() {
+        if (activeSheet != null) {
+            activeSheet.dismiss();
+            activeSheet = null;
         }
     }
 
-    private TextView yearArrow(String description, String label) {
-        TextView arrow = text(label, 24, R.color.wood_brown);
+    private TextView yearArrow(Context ctx, String description, String label) {
+        TextView arrow = ForestUi.text(ctx, label, 22, DEEP);
         arrow.setGravity(Gravity.CENTER);
         arrow.setContentDescription(description);
-        arrow.setBackground(monthCellBackground(false));
-        arrow.setClickable(true);
-        arrow.setFocusable(true);
+        arrow.setBackground(ripple(ctx, rounded(ctx, 0x125c4938, 0, 999), false));
+        ForestMotion.bind(arrow);
         return arrow;
-    }
-
-    private GradientDrawable monthCellBackground(boolean selected) {
-        GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.RECTANGLE);
-        background.setCornerRadius(dp(10));
-        background.setColor(ContextCompat.getColor(requireContext(), selected
-                ? R.color.forest_green : R.color.paper_card));
-        background.setStroke(dp(1), ContextCompat.getColor(requireContext(), selected
-                ? R.color.forest_green : R.color.paper_deep));
-        return background;
     }
 
     private void setSelectedDate(int year, int month, int day) {
@@ -450,7 +547,7 @@ public final class ChartsFragment extends Fragment {
         }
         double change = (current - previous) * 100.0 / previous;
         String sign = change >= 0 ? "+" : "−";
-        return String.format(java.util.Locale.CHINA, "较%s %s%.1f%%", previousName, sign,
+        return String.format(Locale.CHINA, "较%s %s%.1f%%", previousName, sign,
                 Math.abs(change));
     }
 
@@ -466,7 +563,7 @@ public final class ChartsFragment extends Fragment {
     private String middleLabel(int pointCount) {
         if (period == ChartDataCalculator.Period.WEEK) return "周四";
         if (period == ChartDataCalculator.Period.YEAR) return "6月";
-        return String.format(java.util.Locale.CHINA, "%02d日", Math.max(1, (pointCount + 1) / 2));
+        return String.format(Locale.CHINA, "%02d日", Math.max(1, (pointCount + 1) / 2));
     }
 
     private String endLabel(int pointCount) {
@@ -477,7 +574,7 @@ public final class ChartsFragment extends Fragment {
                     end.get(Calendar.MONTH) + 1, end.get(Calendar.DAY_OF_MONTH));
         }
         if (period == ChartDataCalculator.Period.YEAR) return "12月";
-        return String.format(java.util.Locale.CHINA, "%02d日", pointCount);
+        return String.format(Locale.CHINA, "%02d日", pointCount);
     }
 
     private int dp(int value) {
@@ -493,12 +590,12 @@ public final class ChartsFragment extends Fragment {
     }
 
     private static final class LocaleHolder {
-        private static final java.util.Locale ROOT = java.util.Locale.ROOT;
+        private static final Locale ROOT = Locale.ROOT;
     }
 
     @Override
     public void onDestroyView() {
-        dismissPeriodPopup();
+        dismissActiveSheet();
         binding = null;
         super.onDestroyView();
     }

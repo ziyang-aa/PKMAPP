@@ -3,8 +3,10 @@ package com.example.pkmapp.core.sync
 import android.content.Context
 import com.example.pkmapp.core.database.AccountScope
 import com.example.pkmapp.core.database.AppDatabase
+import com.example.pkmapp.core.database.LedgerEntity
 import com.example.pkmapp.core.database.SyncStatus
 import com.example.pkmapp.core.security.CryptoSessionStore
+import com.example.pkmapp.data.InMemoryLedgerRepository
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -76,6 +78,7 @@ class SyncRepository @JvmOverloads constructor(
                             .put("name", it.name)
                             .put("initialAssetsCents", it.initialAssetsCents)
                             .put("liabilitiesCents", it.liabilitiesCents)
+                            .put("monthlyBudgetCents", it.monthlyBudgetCents)
                             .put("isDefault", it.isDefault)
                             .put("isCurrent", it.isCurrent)
                             .put("sortOrder", it.sortOrder)
@@ -204,13 +207,67 @@ class SyncRepository @JvmOverloads constructor(
 
         val delta = SyncApiClient.pullSyncDelta(session.serverBaseUrl, session.accessToken, serverCursor)
         if (delta != null) {
+            val appliedLedgers = applyPulledLedgersLww(ownerId, delta.optJSONArray("ledgers"))
             val nextCursor = delta.optLong("nextCursor", serverCursor)
             if (nextCursor > serverCursor) {
                 serverCursor = nextCursor
                 database.localAccountDao().updateSyncCursor(ownerId, serverCursor, System.currentTimeMillis())
             }
+            if (appliedLedgers && AccountScope.currentOwnerId(appContext) == ownerId) {
+                InMemoryLedgerRepository.getInstance().reloadFromPersistence()
+            }
         }
 
         return SyncOutcome.Synced(pushedTotal, serverCursor)
+    }
+
+    internal fun applyPulledLedgersLww(ownerId: String, ledgersArray: JSONArray?): Boolean {
+        if (ledgersArray == null || ledgersArray.length() == 0) {
+            return false
+        }
+        val ledgerDao = database.ledgerDao()
+        val existingById = ledgerDao.getAllRowsIncludingPlaceholders(ownerId).associateBy { it.id }
+        val toUpsert = ArrayList<LedgerEntity>()
+        val now = System.currentTimeMillis()
+        for (i in 0 until ledgersArray.length()) {
+            val item = ledgersArray.optJSONObject(i) ?: continue
+            val id = item.optString("id", "").trim()
+            if (id.isEmpty()) continue
+            val remoteUpdatedAt = item.optLong("updatedAt", 0L)
+            val local = existingById[id]
+            if (local != null && local.updatedAt > remoteUpdatedAt) {
+                continue
+            }
+            val mergedName = item.optString("name", local?.name ?: "生活账本").ifBlank { local?.name ?: "生活账本" }
+            val mergedBudget = if (item.has("monthlyBudgetCents")) {
+                item.optLong("monthlyBudgetCents", 0L).coerceAtLeast(0L)
+            } else {
+                local?.monthlyBudgetCents ?: 0L
+            }
+            toUpsert.add(
+                LedgerEntity(
+                    id = id,
+                    name = mergedName,
+                    initialAssetsCents = item.optLong("initialAssetsCents", local?.initialAssetsCents ?: 0L).coerceAtLeast(0L),
+                    liabilitiesCents = item.optLong("liabilitiesCents", local?.liabilitiesCents ?: 0L).coerceAtLeast(0L),
+                    createdAt = local?.createdAt ?: remoteUpdatedAt.takeIf { it > 0L } ?: now,
+                    isDefault = item.optBoolean("isDefault", local?.isDefault ?: false),
+                    isCurrent = item.optBoolean("isCurrent", local?.isCurrent ?: false),
+                    sortOrder = item.optInt("sortOrder", local?.sortOrder ?: i),
+                    ownerId = ownerId,
+                    updatedAt = maxOf(remoteUpdatedAt, local?.updatedAt ?: 0L),
+                    deletedAt = item.optLong("deletedAt", 0L).coerceAtLeast(0L),
+                    syncStatus = SyncStatus.SYNCED,
+                    clientRequestId = item.optString("clientRequestId", local?.clientRequestId ?: "")
+                        .ifEmpty { AccountScope.newRequestId() },
+                    monthlyBudgetCents = mergedBudget
+                )
+            )
+        }
+        if (toUpsert.isEmpty()) {
+            return false
+        }
+        ledgerDao.upsertAll(toUpsert)
+        return true
     }
 }

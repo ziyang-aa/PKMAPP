@@ -63,8 +63,17 @@ internal object StudyFocusTimerCard {
         val activeStatusText: TextView?,
         val startPauseButton: MaterialButton,
         val focusGentleNote: TextView,
+        val soundTrigger: TextView?,
         private val goalSlots: List<GoalTabSlot>
     ) {
+        fun syncSoundLabel(sound: ForestSoundEngine.AmbientSound) {
+            soundTrigger?.apply {
+                val activeSound = sound != ForestSoundEngine.AmbientSound.NONE
+                text = if (activeSound) "白噪音 · ${sound.shortLabel}" else "白噪音"
+                setTextColor(if (activeSound) 0xff2a4e2f.toInt() else MUTED)
+            }
+        }
+
         fun syncSessionGoal(goalMinutes: Int) {
             if (goalSlots.isEmpty()) return
             val isCustom = goalMinutes != 25 && goalMinutes != 45 && goalMinutes != 60
@@ -91,6 +100,7 @@ internal object StudyFocusTimerCard {
         onToggleCountdown: () -> Boolean,
         onToggleKeepScreenOn: () -> Boolean,
         onSelectGoalMinutes: (Int) -> Unit,
+        onOpenSoundSheet: () -> Unit,
         onStartOrPause: () -> Unit
     ): Holder {
         val ctx = fragment.ctx()
@@ -289,6 +299,14 @@ internal object StudyFocusTimerCard {
 
         val goalSlots = ArrayList<GoalTabSlot>(4)
         var statusTxt: TextView? = null
+        var soundBtnRef: TextView? = null
+        val currentSound = ForestSoundEngine.selectedSound(ctx)
+        val soundBtnText = if (currentSound == ForestSoundEngine.AmbientSound.NONE) {
+            "白噪音"
+        } else {
+            "白噪音 · ${currentSound.shortLabel}"
+        }
+        val soundBtnColor = if (currentSound == ForestSoundEngine.AmbientSound.NONE) MUTED else 0xff2a4e2f.toInt()
         if (!active) {
             val density = ctx.resources.displayMetrics.density
             val indicatorH = max(3, (2.2f * density).roundToInt())
@@ -356,6 +374,28 @@ internal object StudyFocusTimerCard {
                 MUTED
             )
             activeBar.addView(statusTxt, LinearLayout.LayoutParams(0, -2, 1f))
+            val soundPill = StudySheet.link(ctx, soundBtnText, soundBtnColor) {
+                onOpenSoundSheet()
+            }.apply {
+                textSize = 11f
+                minimumHeight = fragment.dp(28)
+                setPadding(fragment.dp(10), fragment.dp(4), fragment.dp(10), fragment.dp(4))
+                background = ripple(
+                    ctx,
+                    rounded(
+                        ctx,
+                        if (currentSound != ForestSoundEngine.AmbientSound.NONE) 0xffeef4ea.toInt() else 0xfffffefa.toInt(),
+                        0x225c4938,
+                        999
+                    ),
+                    false
+                )
+            }
+            soundBtnRef = soundPill
+            activeBar.addView(
+                soundPill,
+                LinearLayout.LayoutParams(-2, -2).apply { marginEnd = fragment.dp(6) }
+            )
             lateinit var wakeBtn: TextView
             wakeBtn = StudySheet.link(
                 ctx,
@@ -482,12 +522,25 @@ internal object StudyFocusTimerCard {
         ForestUi.add(timer, gentleNote, 12)
 
         if (!n.hasSession()) {
-            ForestUi.add(
-                timer,
-                StudySheet.link(ctx, "添加本次目标", DEEP) { StudyFocusDialogs.showSessionGoalDialog(fragment) }
-                    .apply { minimumHeight = fragment.dp(36) },
-                2
-            )
+            val quietRow = row(ctx).apply { gravity = Gravity.CENTER }
+            val addGoalLink = StudySheet.link(ctx, "添加本次目标", DEEP) {
+                StudyFocusDialogs.showSessionGoalDialog(fragment)
+            }.apply {
+                minimumHeight = fragment.dp(36)
+                setPadding(fragment.dp(10), fragment.dp(4), fragment.dp(10), fragment.dp(4))
+            }
+            val dotSep = text(ctx, "·", 12, 0x557b5c3b)
+            val soundLink = StudySheet.link(ctx, soundBtnText, soundBtnColor) {
+                onOpenSoundSheet()
+            }.apply {
+                minimumHeight = fragment.dp(36)
+                setPadding(fragment.dp(10), fragment.dp(4), fragment.dp(10), fragment.dp(4))
+            }
+            soundBtnRef = soundLink
+            quietRow.addView(addGoalLink)
+            quietRow.addView(dotSep)
+            quietRow.addView(soundLink)
+            ForestUi.add(timer, quietRow, 2)
         } else if (active && !StudyNotifications.permitted(ctx)) {
             ForestUi.add(
                 timer,
@@ -511,6 +564,7 @@ internal object StudyFocusTimerCard {
             activeStatusText = statusTxt,
             startPauseButton = mainBtn,
             focusGentleNote = gentleNote,
+            soundTrigger = soundBtnRef,
             goalSlots = goalSlots
         )
     }

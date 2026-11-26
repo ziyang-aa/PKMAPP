@@ -7,6 +7,7 @@ import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.CategoryDao;
 import com.example.pkmapp.core.database.CustomCategoryEntity;
 import com.example.pkmapp.core.database.SyncStatus;
+import com.example.pkmapp.core.work.SyncWorker;
 import com.example.pkmapp.data.TransactionType;
 
 import java.util.ArrayList;
@@ -66,6 +67,7 @@ public final class CategoryStore {
         if (defaults.contains(normalized)) {
             if (existing != null && existing.isDeletedDefault()) {
                 categoryDao.deleteByTypeAndName(type.name(), normalized, owner);
+                SyncWorker.scheduleDebouncedSync(appContext);
                 return true;
             }
             return false;
@@ -86,6 +88,7 @@ public final class CategoryStore {
                 SyncStatus.PENDING_PUSH,
                 AccountScope.newRequestId()
         ));
+        SyncWorker.scheduleDebouncedSync(appContext);
         return true;
     }
 
@@ -97,7 +100,11 @@ public final class CategoryStore {
         String owner = ownerId();
         CustomCategoryEntity existing = categoryDao.find(type.name(), normalized, owner);
         if (existing != null && !existing.isDeletedDefault()) {
-            return categoryDao.deleteByTypeAndName(type.name(), normalized, owner) > 0;
+            boolean deleted = categoryDao.deleteByTypeAndName(type.name(), normalized, owner) > 0;
+            if (deleted) {
+                SyncWorker.scheduleDebouncedSync(appContext);
+            }
+            return deleted;
         }
         if (!defaultCategories(type).contains(normalized)) {
             return false;
@@ -118,6 +125,7 @@ public final class CategoryStore {
                 SyncStatus.PENDING_PUSH,
                 AccountScope.newRequestId()
         ));
+        SyncWorker.scheduleDebouncedSync(appContext);
         return true;
     }
 

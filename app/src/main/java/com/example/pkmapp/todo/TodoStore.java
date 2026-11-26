@@ -256,6 +256,7 @@ public final class TodoStore {
         }
         todoDao.replaceAll(entities, currentOwnerId);
         TodoNotifications.refresh(appContext, this);
+        com.example.pkmapp.core.work.SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public static final class TodoItem {

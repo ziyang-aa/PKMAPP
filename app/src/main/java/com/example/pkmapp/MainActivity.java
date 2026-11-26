@@ -66,6 +66,7 @@ import com.example.pkmapp.vault.VaultFragment;
 import com.google.android.material.button.MaterialButton;
 
 public final class MainActivity extends AppCompatActivity {
+    public static final String EXTRA_WIDGET_DESTINATION = "com.example.pkmapp.EXTRA_WIDGET_DESTINATION";
     private static final String STATE_DESTINATION = "destination";
     private static final int BOTTOM_BAR_MARGIN_DP = 10;
 
@@ -215,7 +216,11 @@ public final class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, backPressedCallback);
 
         if (savedInstanceState == null) {
-            showDestination(HomeFragment.resolveStartupDestination(this));
+            AppDestination widgetTarget = parseWidgetDestination(getIntent());
+            showDestination(widgetTarget != null ? widgetTarget : HomeFragment.resolveStartupDestination(this));
+            if (widgetTarget != null) {
+                getIntent().removeExtra(EXTRA_WIDGET_DESTINATION);
+            }
             if (getIntent().getBooleanExtra(AuthActivity.EXTRA_PROMPT_GUEST_MERGE, false)) {
                 getIntent().removeExtra(AuthActivity.EXTRA_PROMPT_GUEST_MERGE);
                 binding.getRoot().post(this::maybeShowGuestMergeSheet);
@@ -231,7 +236,26 @@ public final class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(@NonNull android.content.Intent intent) {
         super.onNewIntent(intent);
+        setIntent(intent);
+        AppDestination widgetTarget = parseWidgetDestination(intent);
+        if (widgetTarget != null) {
+            intent.removeExtra(EXTRA_WIDGET_DESTINATION);
+            showDestination(widgetTarget);
+            return;
+        }
         openStudyNotification(intent);
+    }
+
+    @Nullable
+    private static AppDestination parseWidgetDestination(@Nullable Intent intent) {
+        if (intent == null) return null;
+        String raw = intent.getStringExtra(EXTRA_WIDGET_DESTINATION);
+        if (raw == null || raw.trim().isEmpty()) return null;
+        try {
+            return AppDestination.valueOf(raw.trim());
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private void openStudyNotification(android.content.Intent intent) {

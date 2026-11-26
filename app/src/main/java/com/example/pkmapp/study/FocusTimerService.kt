@@ -13,7 +13,7 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 
-/** Foreground service keeping active focus timer notifications live on the lock screen & status bar. */
+/** Foreground service keeping active focus timer notifications & forest white noise alive. */
 class FocusTimerService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -26,6 +26,7 @@ class FocusTimerService : Service() {
                 stopGracefully()
                 return
             }
+            ForestSoundEngine.syncWithFocusState(appContext, notebook.running())
             val notification = StudyNotifications.buildTimerNotification(appContext, store)
             if (notification != null) {
                 val manager = appContext.getSystemService(NotificationManager::class.java)
@@ -68,6 +69,7 @@ class FocusTimerService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        ForestSoundEngine.syncWithFocusState(appContext, store.notebook().running())
         handler.removeCallbacks(periodicRefresh)
         if (store.notebook().running()) {
             handler.postDelayed(periodicRefresh, REFRESH_INTERVAL_MS)
@@ -77,25 +79,30 @@ class FocusTimerService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(periodicRefresh)
+        ForestSoundEngine.stopAmbient()
         super.onDestroy()
     }
 
     private fun stopGracefully() {
         handler.removeCallbacks(periodicRefresh)
+        ForestSoundEngine.stopAmbient()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     companion object {
         private const val TAG = "FocusTimerService"
-        private const val REFRESH_INTERVAL_MS = 30_000L
+        private const val REFRESH_INTERVAL_MS = 15_000L
         private const val ACTION_SYNC = "com.example.pkmapp.study.FOCUS_SERVICE_SYNC"
         private const val ACTION_STOP = "com.example.pkmapp.study.FOCUS_SERVICE_STOP"
 
         @JvmStatic
         fun sync(context: Context, store: StudyStore) {
             val appContext = context.applicationContext
-            val active = store.notebook().hasSession() && StudyNotifications.permitted(appContext)
+            val notebook = store.notebook()
+            val running = notebook.hasSession() && notebook.running()
+            ForestSoundEngine.syncWithFocusState(appContext, running)
+            val active = notebook.hasSession() && StudyNotifications.permitted(appContext)
             val intent = Intent(appContext, FocusTimerService::class.java)
                 .setAction(if (active) ACTION_SYNC else ACTION_STOP)
             try {

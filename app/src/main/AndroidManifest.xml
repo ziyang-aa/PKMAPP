@@ -46,6 +46,28 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".widget.FocusWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_focus_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_focus_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.LifeBudgetWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_life_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_life_budget_info" />
+        </receiver>
         <activity
             android:name=".SplashActivity"
             android:exported="true">

@@ -6,4 +6,8 @@
     <string name="nav_savings">攒钱</string>
     <string name="nav_vault">小金库</string>
     <string name="nav_profile">我的</string>
+    <string name="widget_focus_label">小松果 · 专注自习室</string>
+    <string name="widget_focus_description">展示今日专注时长与考期倒计时，免开屏直达自习室</string>
+    <string name="widget_life_label">小松果 · 月度预算</string>
+    <string name="widget_life_description">展示本月支出与预算进度，免开屏直达记一笔或明细</string>
 </resources>

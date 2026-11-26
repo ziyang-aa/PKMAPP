@@ -126,6 +126,9 @@ class FeedbackRepository @JvmOverloads constructor(
             }
         }
 
+        if (!syncedRemote) {
+            com.example.pkmapp.core.work.SyncWorker.scheduleDebouncedSync(appContext)
+        }
         val latest = feedbackDao.getByOwner(session.ownerId).firstOrNull { it.id == record.id } ?: record
         return SubmitResult.Saved(latest, syncedRemote)
     }

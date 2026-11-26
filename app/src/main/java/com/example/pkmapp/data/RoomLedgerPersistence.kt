@@ -4,15 +4,18 @@ import android.content.Context
 import com.example.pkmapp.core.database.AccountScope
 import com.example.pkmapp.core.database.AppDatabase
 import com.example.pkmapp.core.database.TransactionEntity
+import com.example.pkmapp.core.work.SyncWorker
 
 internal class RoomLedgerPersistence(
     private val database: AppDatabase,
-    private val ownerIdProvider: () -> String
+    private val ownerIdProvider: () -> String,
+    private val appContext: Context? = null
 ) : LedgerPersistence {
 
     constructor(context: Context) : this(
         AppDatabase.getInstance(context.applicationContext),
-        { AccountScope.currentOwnerId(context.applicationContext) }
+        { AccountScope.currentOwnerId(context.applicationContext) },
+        context.applicationContext
     )
 
     @Synchronized
@@ -23,7 +26,7 @@ internal class RoomLedgerPersistence(
         if (ledgerRows.isEmpty()) {
             return null
         }
-        val ledgers = ledgerRows.map { Ledger(it.id, it.name) }
+        val ledgers = ledgerRows.map { Ledger(it.id, it.name, it.monthlyBudgetCents) }
         val currentId = ledgerRows.firstOrNull { it.isCurrent }?.id ?: ledgerRows.first().id
         val transactions = dao.getAllTransactions(ownerId).mapNotNull { row ->
             try {
@@ -51,6 +54,7 @@ internal class RoomLedgerPersistence(
     ) {
         val ownerId = ownerIdProvider()
         val ledgerPairs = ledgers.map { it.id to it.name }
+        val monthlyBudgets = ledgers.associate { it.id to it.monthlyBudgetCents }
         val txEntities = transactions.mapIndexed { index, tx ->
             TransactionEntity(
                 id = tx.id,
@@ -69,7 +73,10 @@ internal class RoomLedgerPersistence(
             ledgerPairs = ledgerPairs,
             transactions = txEntities,
             currentLedgerId = currentLedgerId,
-            ownerId = ownerId
+            ownerId = ownerId,
+            monthlyBudgets = monthlyBudgets
         )
+        SyncWorker.scheduleDebouncedSync(appContext)
+        com.example.pkmapp.widget.ForestWidgets.refreshAll(appContext)
     }
 }

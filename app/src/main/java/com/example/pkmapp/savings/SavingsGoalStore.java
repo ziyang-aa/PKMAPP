@@ -7,6 +7,7 @@ import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.SavingsGoalDao;
 import com.example.pkmapp.core.database.SavingsGoalEntity;
 import com.example.pkmapp.core.database.SyncStatus;
+import com.example.pkmapp.core.work.SyncWorker;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,5 +123,6 @@ public final class SavingsGoalStore {
             ));
         }
         savingsGoalDao.replaceAll(entities, owner);
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 }

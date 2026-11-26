@@ -251,6 +251,12 @@ class LifeSharedViewModel(
         return ledger
     }
 
+    fun updateCurrentLedgerMonthlyBudget(monthlyBudgetCents: Long): Ledger =
+        dataSource.repository.updateCurrentLedgerMonthlyBudget(monthlyBudgetCents)
+
+    fun updateLedgerMonthlyBudget(ledgerId: String, monthlyBudgetCents: Long): Ledger =
+        dataSource.repository.updateLedgerMonthlyBudget(ledgerId, monthlyBudgetCents)
+
     fun deleteLedger(ledgerId: String) {
         if (dataSource.repository.ledgers.size <= 1) {
             throw IllegalStateException("至少保留一本账本")

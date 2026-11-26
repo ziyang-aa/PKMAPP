@@ -113,6 +113,7 @@ class PkmServerIntegrationTest {
                         "name": "日常账本",
                         "initialAssetsCents": 100000,
                         "liabilitiesCents": 0,
+                        "monthlyBudgetCents": 300000,
                         "isDefault": true,
                         "isCurrent": true,
                         "sortOrder": 0,
@@ -168,6 +169,7 @@ class PkmServerIntegrationTest {
                     .andExpect(jsonPath("$.ok").value(true))
                     .andExpect(jsonPath("$.data.nextCursor").value(serverSeq))
                     .andExpect(jsonPath("$.data.ledgers[0].name").value("日常账本"))
+                    .andExpect(jsonPath("$.data.ledgers[0].monthlyBudgetCents").value(300000))
                     .andExpect(jsonPath("$.data.transactions[0].note").value("抹茶拿铁"))
                     .andExpect(jsonPath("$.data.todos[0].title").value("复习线性代数"));
 

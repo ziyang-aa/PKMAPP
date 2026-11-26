@@ -92,15 +92,16 @@ class AppDatabaseMigrationAndIsolationTest {
         }
         v1Helper.close()
 
-        // Open with Room v2 + MIGRATION_1_2: Room executes MIGRATION_1_2 AND runs full schema validation!
+        // Open with Room v3 + MIGRATION_1_2 + MIGRATION_2_3: runs lossless 1->2->3 migration & full schema validation!
         val roomDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
         try {
             val guest = AccountScope.GUEST_OWNER_ID
             assertEquals(1, roomDb.ledgerDao().getOrderedLedgers(guest).size)
             assertEquals(100000L, roomDb.ledgerDao().getById("l1", guest)?.initialAssetsCents)
+            assertEquals(0L, roomDb.ledgerDao().getById("l1", guest)?.monthlyBudgetCents)
             assertEquals(1, roomDb.ledgerDao().getAllTransactions(guest).size)
             assertEquals(1, roomDb.borrowingDao().getAll(guest).size)
             assertEquals(1, roomDb.savingsGoalDao().getAll(guest).size)

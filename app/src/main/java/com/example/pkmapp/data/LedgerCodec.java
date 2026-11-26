@@ -28,6 +28,9 @@ public final class LedgerCodec {
                     JSONObject item = new JSONObject();
                     item.put("id", ledger.getId());
                     item.put("name", ledger.getName());
+                    if (ledger.getMonthlyBudgetCents() > 0L) {
+                        item.put("monthlyBudgetCents", ledger.getMonthlyBudgetCents());
+                    }
                     ledgerArray.put(item);
                 }
             }
@@ -67,7 +70,8 @@ public final class LedgerCodec {
                 for (int index = 0; index < ledgerArray.length(); index++) {
                     try {
                         JSONObject item = ledgerArray.getJSONObject(index);
-                        ledgers.add(new Ledger(item.getString("id"), item.getString("name")));
+                        long budgetCents = Math.max(0L, item.optLong("monthlyBudgetCents", 0L));
+                        ledgers.add(new Ledger(item.getString("id"), item.getString("name"), budgetCents));
                     } catch (JSONException | IllegalArgumentException exception) {
                         // A damaged item should not make all locally saved ledgers disappear.
                     }

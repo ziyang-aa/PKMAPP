@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS biz_ledgers (
   name                 VARCHAR(64) NOT NULL,
   initial_assets_cents BIGINT      NOT NULL DEFAULT 0,
   liabilities_cents    BIGINT      NOT NULL DEFAULT 0,
+  monthly_budget_cents BIGINT      NOT NULL DEFAULT 0,
   is_default           TINYINT(1)  NOT NULL DEFAULT 0,
   is_current           TINYINT(1)  NOT NULL DEFAULT 0,
   sort_order           INT         NOT NULL DEFAULT 0,

@@ -124,13 +124,14 @@ public class SyncService {
             jdbcTemplate.update(
                     """
                     INSERT INTO biz_ledgers (
-                        user_id, id, name, initial_assets_cents, liabilities_cents,
+                        user_id, id, name, initial_assets_cents, liabilities_cents, monthly_budget_cents,
                         is_default, is_current, sort_order, client_request_id, updated_at, deleted_at, server_seq
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE
                         name = IF(VALUES(updated_at) >= updated_at, VALUES(name), name),
                         initial_assets_cents = IF(VALUES(updated_at) >= updated_at, VALUES(initial_assets_cents), initial_assets_cents),
                         liabilities_cents = IF(VALUES(updated_at) >= updated_at, VALUES(liabilities_cents), liabilities_cents),
+                        monthly_budget_cents = IF(VALUES(updated_at) >= updated_at, VALUES(monthly_budget_cents), monthly_budget_cents),
                         is_default = IF(VALUES(updated_at) >= updated_at, VALUES(is_default), is_default),
                         is_current = IF(VALUES(updated_at) >= updated_at, VALUES(is_current), is_current),
                         sort_order = IF(VALUES(updated_at) >= updated_at, VALUES(sort_order), sort_order),
@@ -142,6 +143,7 @@ public class SyncService {
                     userId, id, text(n, "name", "默认账本"),
                     longVal(n, "initialAssetsCents", 0L),
                     longVal(n, "liabilitiesCents", 0L),
+                    Math.max(0L, longVal(n, "monthlyBudgetCents", 0L)),
                     boolInt(n, "isDefault", false),
                     boolInt(n, "isCurrent", false),
                     intVal(n, "sortOrder", 0),
@@ -597,6 +599,7 @@ public class SyncService {
                     m.put("name", rs.getString("name"));
                     m.put("initialAssetsCents", rs.getLong("initial_assets_cents"));
                     m.put("liabilitiesCents", rs.getLong("liabilities_cents"));
+                    m.put("monthlyBudgetCents", rs.getLong("monthly_budget_cents"));
                     m.put("isDefault", rs.getInt("is_default") == 1);
                     m.put("isCurrent", rs.getInt("is_current") == 1);
                     m.put("sortOrder", rs.getInt("sort_order"));

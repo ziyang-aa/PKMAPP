@@ -7,6 +7,7 @@ import com.example.pkmapp.core.database.AppDatabase;
 import com.example.pkmapp.core.database.BorrowingDao;
 import com.example.pkmapp.core.database.BorrowingRecordEntity;
 import com.example.pkmapp.core.database.SyncStatus;
+import com.example.pkmapp.core.work.SyncWorker;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,6 +59,7 @@ public final class BorrowingRecordStore {
             throw new IllegalArgumentException("借钱记录不能为空");
         }
         borrowingDao.upsert(toEntity(record, ownerId()));
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public synchronized void replaceAll(List<BorrowingRecord> records) {
@@ -72,6 +74,7 @@ public final class BorrowingRecordStore {
             }
         }
         borrowingDao.replaceAll(entities, owner);
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public synchronized void deleteForLedger(String ledgerId) {
@@ -79,6 +82,7 @@ public final class BorrowingRecordStore {
             return;
         }
         borrowingDao.deleteForLedger(ledgerId.trim(), ownerId());
+        SyncWorker.scheduleDebouncedSync(appContext);
     }
 
     public synchronized void clear() {

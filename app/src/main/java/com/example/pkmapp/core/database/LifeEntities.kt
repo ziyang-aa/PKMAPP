@@ -1,5 +1,6 @@
 package com.example.pkmapp.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -22,7 +23,9 @@ data class LedgerEntity(
     val updatedAt: Long = 0L,
     val deletedAt: Long = 0L,
     val syncStatus: Int = SyncStatus.PENDING_PUSH,
-    val clientRequestId: String = ""
+    val clientRequestId: String = "",
+    @ColumnInfo(defaultValue = "0")
+    val monthlyBudgetCents: Long = 0L
 )
 
 @Entity(

@@ -1,7 +1,7 @@
 # 小松果（PKMAPP）项目交接备忘（HANDOFF）
 
-## 1. 当前进度（`5.0` 分支已收口并推送至 GitHub）
-- **当前分支**：`5.0`（基于 `codex/v4-release` 演进；含品牌「小松果」、双空间、三段式登录、Room v3 多账号隔离与云同步、Spring Boot 3.5.11 + MySQL 8.4 后端，本机 `pkmapp` 库含真实用户数据，**严禁清库**）。
+## 1. 当前进度（`release/v5.0` 分支已收口并推送至 GitHub）
+- **当前分支**：`release/v5.0`（基于 `release/v4.0` 演进；含品牌「小松果」、双空间、三段式登录、Room v3 多账号隔离与云同步、Spring Boot 3.5.11 + MySQL 8.4 后端，本机 `pkmapp` 库含真实用户数据，**严禁清库**）。
 - **本版已完成 6 大迭代交付**：
   1. **月度预算 Room `v2 → v3` + MySQL 云同步 + 5 秒静默防抖同步**：
      - [LifeEntities.kt](../app/src/main/java/com/example/pkmapp/core/database/LifeEntities.kt) / [AppDatabase.kt](../app/src/main/java/com/example/pkmapp/core/database/AppDatabase.kt)（`MIGRATION_2_3` + `3.json`）、[LifeDaos.kt](../app/src/main/java/com/example/pkmapp/core/database/LifeDaos.kt)、[Ledger.java](../app/src/main/java/com/example/pkmapp/data/Ledger.java)、[MonthlyBudgetEvaluator.kt](../app/src/main/java/com/example/pkmapp/data/MonthlyBudgetEvaluator.kt)；
@@ -33,4 +33,4 @@
 
 ## 3. 下一步待办
 1. 如需同步安装到 vivo 真机或重启服务端 JAR：连接真机后 `adb install -r app/build/outputs/apk/debug/app-debug.apk`；服务端先停旧进程再 `mvn -f d:\pkmAPP\server\pom.xml package -DskipTests` 与 `java -jar`。
-2. 后续按需规划 `v5.x` 迭代或合并 `5.0` 至 `main`。
+2. 后续按需规划 `v5.x` 迭代或合并 `release/v5.0` 至 `main`。

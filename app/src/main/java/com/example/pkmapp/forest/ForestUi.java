@@ -162,6 +162,22 @@ public final class ForestUi {
         return checkInternal(context, title, subtitle, false);
     }
 
+    public static MaterialCheckBox compactSwitch(Context context) {
+        MaterialCheckBox checkbox = new MaterialCheckBox(context);
+        checkbox.setUseMaterialThemeColors(false);
+        checkbox.setButtonTintList(null);
+        checkbox.setButtonIconDrawable(null);
+        checkbox.setButtonDrawable(new ForestCheckDrawable(context, true, null));
+        checkbox.setBackground(null);
+        checkbox.setText(null);
+        checkbox.setMinWidth(0);
+        checkbox.setMinimumWidth(0);
+        checkbox.setMinHeight(0);
+        checkbox.setMinimumHeight(0);
+        checkbox.setPadding(0, 0, 0, 0);
+        return checkbox;
+    }
+
     public static MaterialCheckBox flatSwitchRow(Context context, String title, String subtitle) {
         MaterialCheckBox checkbox = new MaterialCheckBox(context);
         checkbox.setUseMaterialThemeColors(false);
@@ -185,8 +201,7 @@ public final class ForestUi {
         checkbox.setMinHeight(dp(context, 56));
         checkbox.setMinimumHeight(dp(context, 56));
         checkbox.setPadding(dp(context, 2), dp(context, 12), dp(context, 2), dp(context, 12));
-        checkbox.setBackground(ripple(context, rounded(context, android.graphics.Color.TRANSPARENT, 0, 12), false));
-        ForestMotion.bind(checkbox);
+        checkbox.setBackground(null);
         return checkbox;
     }
 

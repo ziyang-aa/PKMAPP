@@ -26,6 +26,7 @@ class ReminderRescheduleWorker(
         PkmStorageBootstrap.ensureInitialized(context)
         StudyNotifications.rescheduleAll(context)
         TodoNotifications.rescheduleAll(context)
+        RecurringTransactionWorker.enqueuePeriodic(context)
         return Result.success()
     }
 

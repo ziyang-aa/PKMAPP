@@ -10,12 +10,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
+    private static final String DEFAULT_LOCAL_SECRET = "songguo-pkmapp-local-jwt-secret-key-2026-please-change-in-prod";
     private static final String HMAC_ALG = "HmacSHA256";
     private static final Base64.Encoder URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder URL_DECODER = Base64.getUrlDecoder();
@@ -37,6 +41,9 @@ public class JwtService {
         this.secretBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.accessTtlSeconds = accessTtlSeconds;
         this.refreshTtlSeconds = refreshTtlSeconds;
+        if (this.secretBytes.length < 32 || DEFAULT_LOCAL_SECRET.equals(secret)) {
+            log.warn("SECURITY WARNING: pkm.jwt.secret is using the local default or is shorter than 32 bytes. Set a strong PKM_JWT_SECRET in production!");
+        }
     }
 
     public String hashPassword(String rawPassword) {
@@ -78,6 +85,11 @@ public class JwtService {
             return null;
         }
         try {
+            byte[] headerBytes = URL_DECODER.decode(parts[0]);
+            Map<String, Object> header = objectMapper.readValue(headerBytes, new TypeReference<>() {});
+            if (!"HS256".equals(header.get("alg")) || !"JWT".equals(header.get("typ"))) {
+                return null;
+            }
             String signingInput = parts[0] + "." + parts[1];
             byte[] expectedSig = hmacSha256(signingInput);
             byte[] actualSig = URL_DECODER.decode(parts[2]);

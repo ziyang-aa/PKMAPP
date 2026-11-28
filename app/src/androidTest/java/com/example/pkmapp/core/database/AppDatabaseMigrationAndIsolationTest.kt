@@ -92,9 +92,9 @@ class AppDatabaseMigrationAndIsolationTest {
         }
         v1Helper.close()
 
-        // Open with Room v3 + MIGRATION_1_2 + MIGRATION_2_3: runs lossless 1->2->3 migration & full schema validation!
+        // Open with Room v4 + MIGRATION_1_2 + MIGRATION_2_3 + MIGRATION_3_4: runs lossless 1->2->3->4 migration!
         val roomDb = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
         try {
@@ -106,6 +106,7 @@ class AppDatabaseMigrationAndIsolationTest {
             assertEquals(1, roomDb.borrowingDao().getAll(guest).size)
             assertEquals(1, roomDb.savingsGoalDao().getAll(guest).size)
             assertEquals(1, roomDb.categoryDao().getByType(TransactionType.EXPENSE.name, guest).size)
+            assertEquals(0, roomDb.recurringRuleDao().getAllActive(guest).size)
             val studySnap = roomDb.studyDao().loadSnapshot(guest)
             assertEquals(1, studySnap.plans.size)
             assertEquals(1, studySnap.subjects.size)
@@ -172,6 +173,30 @@ class AppDatabaseMigrationAndIsolationTest {
             guestNotebook.finish(1700001800000L, 1801000L, 1, "数据结构一轮")
             db.studyDao().replaceSnapshot(StudyNotebookSqlBridge.toSnapshot(guestNotebook, guest), guest)
 
+            // Seed guest recurring rule to verify v4 guest merge & account isolation
+            db.recurringRuleDao().upsert(
+                RecurringRuleEntity(
+                    id = "guest_rec_1",
+                    ledgerId = "guest_l1",
+                    title = "游客房租",
+                    type = TransactionType.EXPENSE.name,
+                    category = "居住",
+                    amountCents = 200000L,
+                    frequency = "MONTHLY",
+                    dayOfMonth = 1,
+                    dayOfWeek = 1,
+                    monthOfYear = 1,
+                    startDateKey = "2026-11-01",
+                    lastGeneratedDateKey = "",
+                    autoPost = true,
+                    enabled = true,
+                    note = "",
+                    ownerId = guest,
+                    updatedAt = 1700000000000L,
+                    clientRequestId = "req_guest_rec_1"
+                )
+            )
+
             // Register Account A from guest -> detects guest merge candidate
             val regA = authRepo.register("13800138001", "Pass12345", "小芽A", reloadRuntimeStores = false)
             assertTrue(regA is AuthResult.Success)
@@ -184,6 +209,8 @@ class AppDatabaseMigrationAndIsolationTest {
             authRepo.mergeGuestDataTo(successA.account.ownerId, reloadRuntimeStores = false)
             assertEquals(1, db.ledgerDao().getAllTransactions(successA.account.ownerId).size)
             assertEquals(0, db.ledgerDao().getAllTransactions(guest).size)
+            assertEquals(1, db.recurringRuleDao().getAllActive(successA.account.ownerId).size)
+            assertEquals(0, db.recurringRuleDao().getAllActive(guest).size)
 
             // Submit feedback under Account A
             val fbRepo = FeedbackRepository(context, database = db, sessionStore = sessionStore)

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FeedbackService {
+    private static final int MAX_STACK_TRACE_LEN = 8192;
     private final JdbcTemplate jdbcTemplate;
 
     public FeedbackService(JdbcTemplate jdbcTemplate) {
@@ -34,15 +35,14 @@ public class FeedbackService {
         if (content.length() > 500) {
             throw ApiException.badRequest("CONTENT_TOO_LONG", "反馈内容请控制在 500 字以内");
         }
-        String safeCategory = (category == null || category.isBlank()) ? "other" : category.trim();
-        String safeContact = contact == null ? "" : contact.trim();
-        if (safeContact.length() > 64) safeContact = safeContact.substring(0, 64);
-        String safeVersion = (appVersion == null || appVersion.isBlank()) ? "4.0.0" : appVersion.trim();
-        String safePlatform = (platform == null || platform.isBlank()) ? "android" : platform.trim();
+        String safeCategory = clamp((category == null || category.isBlank()) ? "other" : category.trim(), 24);
+        String safeContact = clamp(contact == null ? "" : contact.trim(), 64);
+        String safeVersion = clamp((appVersion == null || appVersion.isBlank()) ? "4.0.0" : appVersion.trim(), 24);
+        String safePlatform = clamp((platform == null || platform.isBlank()) ? "android" : platform.trim(), 16);
         String reqId = (clientRequestId == null || clientRequestId.isBlank())
                 ? "fb_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
                 : clientRequestId.trim();
-        if (reqId.length() > 64) reqId = reqId.substring(0, 64);
+        reqId = clamp(reqId, 64);
 
         long now = System.currentTimeMillis();
         String id = "fb_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -84,10 +84,11 @@ public class FeedbackService {
             String errorCode,
             String stackTrace
     ) {
-        String safeTrace = stackTrace == null ? "" : stackTrace;
-        if (safeTrace.isBlank()) {
+        String safeTrace = stackTrace == null ? "" : stackTrace.trim();
+        if (safeTrace.isEmpty()) {
             throw ApiException.badRequest("EMPTY_STACK_TRACE", "错误堆栈不能为空");
         }
+        safeTrace = clamp(safeTrace, MAX_STACK_TRACE_LEN);
         jdbcTemplate.update(
                 """
                 INSERT INTO ops_client_error_logs (
@@ -95,13 +96,17 @@ public class FeedbackService {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 userId,
-                platform == null || platform.isBlank() ? "android" : platform.trim(),
-                appVersion == null || appVersion.isBlank() ? "4.0.0" : appVersion.trim(),
-                deviceInfo == null ? "" : deviceInfo.trim().substring(0, Math.min(deviceInfo.trim().length(), 128)),
-                errorCode == null ? "" : errorCode.trim().substring(0, Math.min(errorCode.trim().length(), 64)),
+                clamp(platform == null || platform.isBlank() ? "android" : platform.trim(), 16),
+                clamp(appVersion == null || appVersion.isBlank() ? "4.0.0" : appVersion.trim(), 24),
+                clamp(deviceInfo == null ? "" : deviceInfo.trim(), 128),
+                clamp(errorCode == null ? "" : errorCode.trim(), 64),
                 safeTrace,
                 System.currentTimeMillis()
         );
+    }
+
+    private String clamp(String value, int maxLen) {
+        return value.length() > maxLen ? value.substring(0, maxLen) : value;
     }
 
     public Map<String, Object> mapFeedback(java.sql.ResultSet rs) throws java.sql.SQLException {

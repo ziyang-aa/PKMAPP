@@ -126,6 +126,21 @@ class StudyStatsFragment : BaseStudyFragment() {
         scopeWrap.addView(scopeButton, LinearLayout.LayoutParams(-2, -2))
         statsActions.addView(scopeWrap, LinearLayout.LayoutParams(0, -2, 1f))
 
+        val searchBtn = ImageView(ctx()).apply {
+            setImageResource(R.drawable.ic_editorial_search)
+            imageTintList = ColorStateList.valueOf(DEEP)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(9), dp(9), dp(9), dp(9))
+            contentDescription = "检索全部学习手记"
+            background = ripple(ctx(), rounded(ctx(), 0xfffffefa.toInt(), 0x38315e3a, 999), false)
+            setOnClickListener { StudyStatsDialogs.showGlobalSearchSheet(this@StudyStatsFragment) }
+            ForestMotion.bind(this)
+        }
+        statsActions.addView(
+            searchBtn,
+            LinearLayout.LayoutParams(dp(36), dp(36)).apply { marginStart = dp(8) }
+        )
+
         if (initialForRecord != null) {
             val manualBtn = StudySheet.link(ctx(), "补记学习", DEEP) {
                 val sheet = newSheet()

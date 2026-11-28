@@ -300,6 +300,17 @@ app/src/main/java/com/example/pkmapp/
    - 基于 Room + 现有 JSON/SQLite 快照机制，新增一个轻量 WebDAV 同步模块（兼容坚果云 / 自建 NAS），支持手动同步与 `WorkManager` 每日 Wi-Fi 自动备份，零服务器运维成本。
 3. **可选新页采用 Jetpack Compose**：
    - 未来新增低耦合独立页面（如「年度学习与消费回顾」「WebDAV 同步设置」「桌面小组件 Glance」）时，可直接按需引入 Compose，无需改动已有稳定的核心页面。
+4. **公网部署与服务端安全加固（Spring Boot 对外上线前必做）**：
+   - **已完成（测试阶段云端基线，2026-11-27）**：
+     - 阿里云 ECS（Ubuntu 24.04，2C2G + 2G SWAP）已通过 [server/Dockerfile](../server/Dockerfile) 与 [server/docker-compose.yml](../server/docker-compose.yml) 完成 `songguo-server:4.0.0` + `mysql:8.4` 容器化部署（`/opt/songguo`），并完成 18 张业务表初始化与 `/api/v1/health` 连通验证；
+     - 生产随机密钥（`PKM_JWT_SECRET`、`PKM_ADMIN_TOKEN`、MySQL 强密码）已通过服务器 `/opt/songguo/.env`（`chmod 600`）注入，未写入仓库；MySQL `3306` 仅绑定 `127.0.0.1`，服务容器以非 root 运行并开启日志轮转；
+     - 当前测试阶段安全组通过单 IP 白名单放行 `8080`，仅限本人测试使用。
+   - **正式上线前必做安全变更清单**：
+     1. **域名 + HTTPS（TLS）加密**：准备域名（大陆 ECS 需完成 ICP 备案），在 Nginx / Caddy（或 1Panel OpenResty）配置免费 Let's Encrypt 证书自动续签，并强制 HTTP → HTTPS 跳转，确保登录密码、Token 与业务同步报文全程加密；
+     2. **收敛安全组与端口暴露面**：将 `server/docker-compose.yml` 的后端映射改为 `127.0.0.1:8080:8080`（禁止绕过 HTTPS 直连）；阿里云安全组**删除 `8080` 临时测试规则与无用的 `3389`（RDP）规则**，对外仅放行 `80` / `443`（按需收紧 `22`）；
+     3. **防刷限流与按量带宽风控**：在 Nginx 层为 `/api/v1/auth/login`、`register` 等鉴权接口配置 `limit_req` 频率限制与请求体大小上限；在阿里云控制台调低按使用流量带宽峰值（如 `5~10 Mbps`）并开启费用/流量预警；
+     4. **数据库定时自动备份**：在服务器配置每日凌晨 `cron` 任务自动 `mysqldump` 备份 `pkmapp` 数据库（滚动保留 7–30 天，建议同步至阿里云 OSS 异地存档）；
+     5. **客户端强制 HTTPS**：Android 端生产同步地址统一改为 `https://`，并在 Release 构建中关闭明文 HTTP 允许（`usesCleartextTraffic=false`）。
 
 ---
 

@@ -27,10 +27,11 @@
                 android:id="@+id/page_back_button"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:contentDescription="返回主页面"
                 android:scaleType="centerInside"
-                android:src="@drawable/return_home_door" />
+                android:src="@drawable/return_home_door"
+                android:stateListAnimator="@animator/editorial_press_alpha" />
 
             <TextView
                 android:id="@+id/title_charts"
@@ -56,12 +57,13 @@
                 android:id="@+id/chart_expense_tab"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="bottom|center_horizontal"
                 android:orientation="vertical"
-                android:paddingHorizontal="4dp">
+                android:paddingHorizontal="4dp"
+                android:stateListAnimator="@animator/editorial_press_alpha">
 
                 <TextView
                     android:id="@+id/chart_expense_button"
@@ -87,12 +89,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_marginStart="18dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="bottom|center_horizontal"
                 android:orientation="vertical"
-                android:paddingHorizontal="4dp">
+                android:paddingHorizontal="4dp"
+                android:stateListAnimator="@animator/editorial_press_alpha">
 
                 <TextView
                     android:id="@+id/chart_income_button"

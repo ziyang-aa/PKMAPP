@@ -266,6 +266,16 @@ internal object StudyStatsDialogs {
         else -> ""
     }
 
+    fun showGlobalSearchSheet(fragment: StudyStatsFragment) {
+        showRecordsSheet(
+            fragment = fragment,
+            planId = null,
+            source = { fragment.store.notebook().forPlan(null) },
+            range = "全部时间",
+            initialSubject = null
+        )
+    }
+
     fun showRecordsSheet(
         fragment: StudyStatsFragment,
         planId: String?,
@@ -287,19 +297,28 @@ internal object StudyStatsDialogs {
             R.drawable.ic_study_trail
         )
         val initialRecords = recordsForSubject(all, initialSubject)
-        val toolbar = row(ctx)
-        val filter = button(ctx, "${initialSubject?.title ?: "全部科目"} ▾", false).apply { textSize = 12f }
-        toolbar.addView(filter, LinearLayout.LayoutParams(0, -2, 1f))
-        val count = text(ctx, "${initialRecords.size} 次", 11, MUTED).apply { gravity = Gravity.END }
+        val toolbar = row(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
+        val filter = StudySheet.link(ctx, "${initialSubject?.title ?: "全部科目"} ▾", DEEP) {}.apply {
+            textSize = 12.5f
+            setPadding(fragment.dp(12), fragment.dp(6), fragment.dp(12), fragment.dp(6))
+            background = ForestUi.ripple(ctx, rounded(ctx, 0xfffffefa.toInt(), 0x305c4938, 999), false)
+        }
+        toolbar.addView(filter, LinearLayout.LayoutParams(-2, -2))
+        val spacer = View(ctx)
+        toolbar.addView(spacer, LinearLayout.LayoutParams(0, 1, 1f))
+        val count = text(ctx, "${initialRecords.size} 次", 12, MUTED).apply {
+            gravity = Gravity.END
+            fontFeatureSettings = "tnum"
+        }
         toolbar.addView(count, LinearLayout.LayoutParams(-2, -2).apply { marginStart = fragment.dp(12) })
         pane.above.addView(toolbar)
 
         val search = EditText(ctx).apply {
             isSingleLine = true
-            hint = "搜索学习手记"
+            hint = "搜索手记、科目、计划或事项"
             contentDescription = "搜索学习手记"
         }
-        StudySheet.styleField(search)
+        StudySheet.styleQuietInlineField(search)
         ForestUi.add(pane.above, search, 8)
         val empty = fragment.note("没有符合条件的学习记录").apply { visibility = View.GONE }
         ForestUi.add(pane.above, empty, 6)
@@ -309,13 +328,18 @@ internal object StudyStatsDialogs {
         lateinit var entries: RecyclerView
         lateinit var updateList: () -> Unit
 
+        val taskLookup: (String) -> String? = { id -> fragment.store.notebook().task(id)?.title }
+        val planLookup: ((String) -> String)? =
+            if (planId == null) { id -> fragment.store.notebook().plan(id).title } else null
+
         updateList = {
             val query = StudyWorkDialogs.value(search)
             val filtered = StudyRecordListAdapter.buildItems(
                 source = source(),
                 selection = selection,
                 query = query,
-                planTitleLookup = if (planId == null) { id -> fragment.store.notebook().plan(id).title } else null
+                planTitleLookup = planLookup,
+                taskTitleLookup = taskLookup
             )
             recordAdapter.submitList(filtered)
             count.text = "${filtered.size} 次"
@@ -341,7 +365,8 @@ internal object StudyStatsDialogs {
             source = all,
             selection = initialSubject,
             query = "",
-            planTitleLookup = if (planId == null) { id -> fragment.store.notebook().plan(id).title } else null
+            planTitleLookup = planLookup,
+            taskTitleLookup = taskLookup
         )
         recordAdapter.submitList(initialItems)
 

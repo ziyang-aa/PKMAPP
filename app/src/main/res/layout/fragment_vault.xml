@@ -24,10 +24,11 @@
                 android:id="@+id/page_back_button"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:contentDescription="返回主页面"
                 android:scaleType="centerInside"
-                android:src="@drawable/return_home_door" />
+                android:src="@drawable/return_home_door"
+                android:stateListAnimator="@animator/editorial_press_alpha" />
 
             <TextView
                 android:id="@id/title_vault"

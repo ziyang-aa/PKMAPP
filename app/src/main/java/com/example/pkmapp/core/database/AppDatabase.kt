@@ -22,9 +22,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         StudyGardenStateEntity::class,
         TodoItemEntity::class,
         LocalAccountEntity::class,
-        FeedbackRecordEntity::class
+        FeedbackRecordEntity::class,
+        RecurringRuleEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun todoDao(): TodoDao
     abstract fun localAccountDao(): LocalAccountDao
     abstract fun feedbackDao(): FeedbackDao
+    abstract fun recurringRuleDao(): RecurringRuleDao
 
     companion object {
         const val DATABASE_NAME = "pkm_app.db"
@@ -599,6 +601,42 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        @JvmField
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `recurring_rules` (
+                        `id` TEXT NOT NULL,
+                        `ledgerId` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `amountCents` INTEGER NOT NULL,
+                        `frequency` TEXT NOT NULL,
+                        `dayOfMonth` INTEGER NOT NULL,
+                        `dayOfWeek` INTEGER NOT NULL,
+                        `monthOfYear` INTEGER NOT NULL,
+                        `startDateKey` TEXT NOT NULL,
+                        `lastGeneratedDateKey` TEXT NOT NULL,
+                        `autoPost` INTEGER NOT NULL,
+                        `enabled` INTEGER NOT NULL,
+                        `note` TEXT NOT NULL,
+                        `sortOrder` INTEGER NOT NULL,
+                        `ownerId` TEXT NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        `deletedAt` INTEGER NOT NULL,
+                        `syncStatus` INTEGER NOT NULL,
+                        `clientRequestId` TEXT NOT NULL,
+                        PRIMARY KEY(`ownerId`, `id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_rules_ownerId_ledgerId` ON `recurring_rules` (`ownerId`, `ledgerId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_recurring_rules_ownerId_syncStatus` ON `recurring_rules` (`ownerId`, `syncStatus`)")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -610,7 +648,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .allowMainThreadQueries()
                     .build()
                     .also { instance = it }

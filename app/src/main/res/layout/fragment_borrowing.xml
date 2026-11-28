@@ -25,11 +25,12 @@
                 android:id="@+id/borrowing_back_button"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:contentDescription="返回明细"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_arrow_back_forest" />
+                android:src="@drawable/ic_arrow_back_forest"
+                android:stateListAnimator="@animator/editorial_press_alpha" />
 
             <TextView
                 android:layout_width="0dp"

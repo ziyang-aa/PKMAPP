@@ -13,6 +13,7 @@ public enum AppDestination {
     VAULT,
     EXCHANGE,
     BORROWING,
+    RECURRING,
     FEEDBACK,
     STUDY_FOCUS,
     STUDY_TODO,

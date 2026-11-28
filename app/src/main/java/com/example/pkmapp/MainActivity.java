@@ -33,6 +33,7 @@ import com.example.pkmapp.charts.ChartsFragment;
 import com.example.pkmapp.core.account.AuthRepository;
 import com.example.pkmapp.core.account.GuestMergeSummary;
 import com.example.pkmapp.core.database.LocalAccountEntity;
+import com.example.pkmapp.core.work.RecurringTransactionWorker;
 import com.example.pkmapp.core.work.ReminderRescheduleWorker;
 import com.example.pkmapp.core.work.SyncWorker;
 import com.example.pkmapp.data.InMemoryLedgerRepository;
@@ -41,6 +42,8 @@ import com.example.pkmapp.databinding.ActivityMainBinding;
 import com.example.pkmapp.details.DetailsFragment;
 import com.example.pkmapp.exchange.ExchangeFragment;
 import com.example.pkmapp.feedback.FeedbackFragment;
+import com.example.pkmapp.recurring.RecurringFragment;
+import com.example.pkmapp.recurring.RecurringTransactionEngine;
 import com.example.pkmapp.forest.ForestButton;
 import com.example.pkmapp.forest.ForestMotion;
 import com.example.pkmapp.forest.ForestSurface;
@@ -110,7 +113,9 @@ public final class MainActivity extends AppCompatActivity {
                 });
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         InMemoryLedgerRepository.initialize(this);
+        RecurringTransactionEngine.processDueRules(this);
         ReminderRescheduleWorker.enqueuePeriodic(this);
+        RecurringTransactionWorker.enqueuePeriodic(this);
         SyncWorker.enqueuePeriodic(this);
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -345,6 +350,8 @@ public final class MainActivity extends AppCompatActivity {
 
     private void notifyActiveAccountOrProfileChanged() {
         lifeViewModel.reloadForAccountSwitch();
+        RecurringTransactionEngine.processDueRules(this);
+        lifeViewModel.refresh();
         studyViewModel.syncFromStores(this);
         if (drawerController != null) {
             drawerController.refreshIfVisible();
@@ -414,6 +421,8 @@ public final class MainActivity extends AppCompatActivity {
                 return new ExchangeFragment();
             case BORROWING:
                 return new BorrowingFragment();
+            case RECURRING:
+                return new RecurringFragment();
             case FEEDBACK:
                 return new FeedbackFragment();
             case STUDY_FOCUS:

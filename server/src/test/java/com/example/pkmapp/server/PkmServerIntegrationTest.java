@@ -145,9 +145,72 @@ class PkmServerIntegrationTest {
                         "updatedAt": %d,
                         "deletedAt": 0,
                         "clientRequestId": "req_todo_1"
+                      }],
+                      "recurringRules": [{
+                        "id": "rec_rent_1",
+                        "ledgerId": "ledger_main",
+                        "title": "每月房租",
+                        "type": "EXPENSE",
+                        "category": "居住",
+                        "amountCents": 250000,
+                        "frequency": "MONTHLY",
+                        "dayOfMonth": 1,
+                        "dayOfWeek": 1,
+                        "monthOfYear": 1,
+                        "startDateKey": "2026-11-01",
+                        "lastGeneratedDateKey": "2026-11-01",
+                        "autoPost": true,
+                        "enabled": true,
+                        "note": "自动转账",
+                        "sortOrder": 0,
+                        "updatedAt": %d,
+                        "deletedAt": 0,
+                        "clientRequestId": "req_rec_1"
+                      }],
+                      "studyPlans": [{
+                        "id": "plan_408",
+                        "title": "408 冲刺",
+                        "kind": "GRADUATE",
+                        "due": "2026-12-20",
+                        "partner": "SQUIRREL",
+                        "previousPlanId": "plan_prev",
+                        "createdAt": %d,
+                        "archivedAt": 0,
+                        "selectedSubjectId": "sub_ds",
+                        "sessionGoal": 45,
+                        "dailyGoal": 180,
+                        "remindDeadlines": true,
+                        "remindTime": "20:00",
+                        "isCurrent": true,
+                        "sortOrder": 0,
+                        "updatedAt": %d,
+                        "deletedAt": 0,
+                        "clientRequestId": "req_sp_1"
+                      }],
+                      "studyRecords": [{
+                        "id": "sr_1",
+                        "planId": "plan_408",
+                        "subjectId": "sub_ds",
+                        "subjectTitleSnapshot": "数据结构",
+                        "subjectHintSnapshot": "红黑树",
+                        "subjectColorSnapshot": -123456,
+                        "subjectDueSnapshot": "2026-12-10",
+                        "subjectAssessmentSnapshot": "真题",
+                        "durationMillis": 2700000,
+                        "completedAt": %d,
+                        "note": "完成一轮复习",
+                        "manual": false,
+                        "rewardMillis": 2700000,
+                        "editedAt": 0,
+                        "adjusted": false,
+                        "taskId": "task_1",
+                        "sortOrder": 0,
+                        "updatedAt": %d,
+                        "deletedAt": 0,
+                        "clientRequestId": "req_sr_1"
                       }]
                     }
-                    """.formatted(now, now, now, now);
+                    """.formatted(now, now, now, now, now, now, now, now, now);
 
             MvcResult pushRes = mockMvc.perform(post("/api/v1/sync/push")
                             .header("Authorization", "Bearer " + accessToken)
@@ -155,7 +218,7 @@ class PkmServerIntegrationTest {
                             .content(syncPayload))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.ok").value(true))
-                    .andExpect(jsonPath("$.data.acceptedCount").value(3))
+                    .andExpect(jsonPath("$.data.acceptedCount").value(6))
                     .andReturn();
             long serverSeq = objectMapper.readTree(pushRes.getResponse().getContentAsString())
                     .path("data").path("serverSeq").asLong();
@@ -171,7 +234,12 @@ class PkmServerIntegrationTest {
                     .andExpect(jsonPath("$.data.ledgers[0].name").value("日常账本"))
                     .andExpect(jsonPath("$.data.ledgers[0].monthlyBudgetCents").value(300000))
                     .andExpect(jsonPath("$.data.transactions[0].note").value("抹茶拿铁"))
-                    .andExpect(jsonPath("$.data.todos[0].title").value("复习线性代数"));
+                    .andExpect(jsonPath("$.data.todos[0].title").value("复习线性代数"))
+                    .andExpect(jsonPath("$.data.recurringRules[0].title").value("每月房租"))
+                    .andExpect(jsonPath("$.data.recurringRules[0].amountCents").value(250000))
+                    .andExpect(jsonPath("$.data.studyPlans[0].previousPlanId").value("plan_prev"))
+                    .andExpect(jsonPath("$.data.studyRecords[0].subjectColorSnapshot").value(-123456))
+                    .andExpect(jsonPath("$.data.studyRecords[0].subjectHintSnapshot").value("红黑树"));
 
             // Pull since=serverSeq returns empty delta
             mockMvc.perform(get("/api/v1/sync/pull")

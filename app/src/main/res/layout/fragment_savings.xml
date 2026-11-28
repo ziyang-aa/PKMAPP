@@ -15,7 +15,7 @@
         android:padding="0dp">
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="74dp" android:gravity="center_vertical" android:orientation="horizontal">
-            <ImageButton android:id="@+id/page_back_button" android:layout_width="56dp" android:layout_height="56dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="返回主页面" android:scaleType="centerInside" android:src="@drawable/return_home_door" />
+            <ImageButton android:id="@+id/page_back_button" android:layout_width="56dp" android:layout_height="56dp" android:background="@android:color/transparent" android:stateListAnimator="@animator/editorial_press_alpha" android:contentDescription="返回主页面" android:scaleType="centerInside" android:src="@drawable/return_home_door" />
             <TextView android:id="@+id/title_savings" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="serif" android:gravity="end" android:text="攒钱" android:textColor="@color/forest_green" android:textSize="29sp" android:textStyle="bold" />
         </LinearLayout>
 

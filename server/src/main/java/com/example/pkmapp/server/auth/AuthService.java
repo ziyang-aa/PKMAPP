@@ -176,6 +176,7 @@ public class AuthService {
         jdbcTemplate.update("DELETE FROM biz_study_plans WHERE user_id = ?", userId);
         jdbcTemplate.update("DELETE FROM biz_study_garden_state WHERE user_id = ?", userId);
         jdbcTemplate.update("DELETE FROM biz_todo_items WHERE user_id = ?", userId);
+        jdbcTemplate.update("DELETE FROM biz_recurring_rules WHERE user_id = ?", userId);
         jdbcTemplate.update("DELETE FROM ops_feedbacks WHERE user_id = ?", userId);
         jdbcTemplate.update("DELETE FROM sys_users WHERE id = ?", userId);
     }

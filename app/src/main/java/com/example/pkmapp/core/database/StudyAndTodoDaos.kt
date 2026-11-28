@@ -38,6 +38,9 @@ interface StudyDao {
     @Query("SELECT * FROM study_plans WHERE ownerId = :ownerId")
     fun getAllPlansIncludingDeleted(ownerId: String): List<StudyPlanEntity>
 
+    @Query("SELECT * FROM study_subjects WHERE ownerId = :ownerId")
+    fun getAllSubjectsIncludingDeleted(ownerId: String): List<StudySubjectEntity>
+
     @Query("SELECT * FROM study_records WHERE ownerId = :ownerId")
     fun getAllRecordsIncludingDeleted(ownerId: String): List<StudyRecordEntity>
 
@@ -50,20 +53,38 @@ interface StudyDao {
     @Query("SELECT * FROM study_plans WHERE ownerId = :ownerId AND syncStatus = 1")
     fun getPendingPlans(ownerId: String): List<StudyPlanEntity>
 
+    @Query("SELECT * FROM study_subjects WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun getPendingSubjects(ownerId: String): List<StudySubjectEntity>
+
     @Query("SELECT * FROM study_records WHERE ownerId = :ownerId AND syncStatus = 1")
     fun getPendingRecords(ownerId: String): List<StudyRecordEntity>
 
     @Query("SELECT * FROM study_tasks WHERE ownerId = :ownerId AND syncStatus = 1")
     fun getPendingTasks(ownerId: String): List<StudyTaskEntity>
 
+    @Query("SELECT * FROM study_reviews WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun getPendingReviews(ownerId: String): List<StudyReviewEntity>
+
+    @Query("SELECT * FROM study_garden_state WHERE ownerId = :ownerId AND syncStatus = 1 LIMIT 1")
+    fun getPendingGardenState(ownerId: String): StudyGardenStateEntity?
+
     @Query("SELECT COUNT(*) FROM study_plans WHERE ownerId = :ownerId AND syncStatus = 1")
     fun countPendingPlans(ownerId: String): Int
+
+    @Query("SELECT COUNT(*) FROM study_subjects WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun countPendingSubjects(ownerId: String): Int
 
     @Query("SELECT COUNT(*) FROM study_records WHERE ownerId = :ownerId AND syncStatus = 1")
     fun countPendingRecords(ownerId: String): Int
 
     @Query("SELECT COUNT(*) FROM study_tasks WHERE ownerId = :ownerId AND syncStatus = 1")
     fun countPendingTasks(ownerId: String): Int
+
+    @Query("SELECT COUNT(*) FROM study_reviews WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun countPendingReviews(ownerId: String): Int
+
+    @Query("SELECT COUNT(*) FROM study_garden_state WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun countPendingGardenState(ownerId: String): Int
 
     @Query("SELECT COUNT(*) FROM study_records WHERE ownerId = :ownerId AND deletedAt = 0")
     fun countActiveRecords(ownerId: String): Int
@@ -107,11 +128,29 @@ interface StudyDao {
     @Query("UPDATE study_plans SET syncStatus = 0 WHERE ownerId = :ownerId")
     fun markAllPlansSynced(ownerId: String)
 
+    @Query("UPDATE study_plans SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markPlanSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
+    @Query("UPDATE study_subjects SET syncStatus = 0 WHERE ownerId = :ownerId AND planId = :planId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSubjectSyncedIfUnchanged(ownerId: String, planId: String, id: String, expectedUpdatedAt: Long)
+
     @Query("UPDATE study_records SET syncStatus = 0 WHERE ownerId = :ownerId")
     fun markAllRecordsSynced(ownerId: String)
 
+    @Query("UPDATE study_records SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markRecordSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
     @Query("UPDATE study_tasks SET syncStatus = 0 WHERE ownerId = :ownerId")
     fun markAllTasksSynced(ownerId: String)
+
+    @Query("UPDATE study_tasks SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markTaskSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
+    @Query("UPDATE study_reviews SET syncStatus = 0 WHERE ownerId = :ownerId AND recordId = :recordId AND updatedAt = :expectedUpdatedAt")
+    fun markReviewSyncedIfUnchanged(ownerId: String, recordId: String, expectedUpdatedAt: Long)
+
+    @Query("UPDATE study_garden_state SET syncStatus = 0 WHERE ownerId = :ownerId AND updatedAt = :expectedUpdatedAt")
+    fun markGardenStateSyncedIfUnchanged(ownerId: String, expectedUpdatedAt: Long)
 
     @Transaction
     fun loadSnapshot(ownerId: String = AccountScope.GUEST_OWNER_ID): StudyDatabaseSnapshot = StudyDatabaseSnapshot(
@@ -295,6 +334,9 @@ interface TodoDao {
 
     @Query("UPDATE todo_items SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markSynced(ownerId: String, ids: List<String>)
+
+    @Query("UPDATE todo_items SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
 
     @Transaction
     fun replaceAll(entities: List<TodoItemEntity>, ownerId: String = AccountScope.GUEST_OWNER_ID) {

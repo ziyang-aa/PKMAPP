@@ -23,8 +23,8 @@ android {
         }
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "5.0.0"
+        versionCode = 6
+        versionName = "5.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,7 +63,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"http://8.136.157.206:8080\"")
+        }
         release {
+            buildConfigField("String", "DEFAULT_SERVER_BASE_URL", "\"\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -84,6 +88,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     lint {

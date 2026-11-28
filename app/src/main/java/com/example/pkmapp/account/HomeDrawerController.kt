@@ -1,5 +1,6 @@
 package com.example.pkmapp.account
 
+import android.animation.AnimatorInflater
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Outline
@@ -30,7 +31,6 @@ import com.example.pkmapp.profile.AvatarCropSheetController
 import com.example.pkmapp.profile.AvatarStore
 import com.example.pkmapp.profile.CheckInProgress
 import com.example.pkmapp.profile.ProfileIdentityDialogs
-import com.google.android.material.checkbox.MaterialCheckBox
 import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -250,19 +250,7 @@ class HomeDrawerController(
             }
         )
 
-        // 3. Space Navigation
-        addSectionLabel("双空间直达")
-        addMenuRow("生活小屋", rightText = "›") {
-            close()
-            onNavigate(AppDestination.DETAILS)
-        }
-        addHairline()
-        addMenuRow("学习小屋", rightText = "›") {
-            close()
-            onNavigate(AppDestination.STUDY_FOCUS)
-        }
-
-        // 4. Personal & Sync Services
+        // 3. Personal & Sync Services
         addSectionLabel("个人与设置")
         addMenuRow("打卡日历与等级", rightText = "$checkedDays 天 ›") {
             close()
@@ -284,23 +272,35 @@ class HomeDrawerController(
         addHairline()
 
         val rememberEnabled = HomeFragment.isRememberLastCottage(activity)
-        val rememberCheck = ForestUi.flatSwitchRow(
-            activity,
-            "记住上次进入的小屋",
-            null
-        ).apply {
+        val rememberRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
+            minimumHeight = dp(48)
+        }
+        val rememberLabel = TextView(activity).apply {
+            text = "记住上次进入的小屋"
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
-            setPadding(0, dp(10), 0, dp(10))
-            minHeight = dp(48)
-            minimumHeight = dp(48)
+            setTextColor(0xFF243624.toInt())
+        }
+        val rememberSwitch = ForestUi.compactSwitch(activity).apply {
+            contentDescription = "记住上次进入的小屋"
             isChecked = rememberEnabled
             setOnCheckedChangeListener { _, isChecked ->
                 HomeFragment.setRememberLastCottage(activity, isChecked)
             }
         }
+        rememberRow.addView(
+            rememberLabel,
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        )
+        rememberRow.addView(
+            rememberSwitch,
+            LinearLayout.LayoutParams(dp(54), dp(30))
+        )
         content.addView(
-            rememberCheck,
+            rememberRow,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         )
         addHairline()
@@ -321,7 +321,7 @@ class HomeDrawerController(
         }
         footer.addView(
             TextView(activity).apply {
-                text = "小松果 v4.0"
+                text = "小松果 v${com.example.pkmapp.BuildConfig.VERSION_NAME}"
                 textSize = 11f
                 setTextColor(0xFF847462.toInt())
             },
@@ -423,6 +423,8 @@ class HomeDrawerController(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, vPad, 0, vPad)
+            background = null
+            stateListAnimator = AnimatorInflater.loadStateListAnimator(activity, R.animator.editorial_press_alpha)
             isClickable = true
             isFocusable = true
             setOnClickListener { onClick() }

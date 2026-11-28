@@ -71,6 +71,7 @@ interface LifeDataSource {
     fun getBorrowingRecordsForLedger(ledgerId: String): List<BorrowingRecord>
     fun addBorrowingRecord(record: BorrowingRecord)
     fun deleteBorrowingsForLedger(ledgerId: String)
+    fun deleteRecurringRulesForLedger(ledgerId: String) {}
     fun clearBorrowings()
 
     fun getSavingsGoals(): List<SavingsGoal>
@@ -99,6 +100,7 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
     private val localAccountDao = AppDatabase.getInstance(appContext).localAccountDao()
     private val assetStore = AssetStore(appContext)
     private val borrowingStore = BorrowingRecordStore(appContext)
+    private val recurringRuleStore = com.example.pkmapp.recurring.RecurringRuleStore(appContext)
     private val savingsStore = SavingsGoalStore(appContext)
     private val categoryStore = CategoryStore(appContext)
 
@@ -130,6 +132,9 @@ internal class AndroidLifeDataSource(context: Context) : LifeDataSource {
 
     override fun deleteBorrowingsForLedger(ledgerId: String) =
         borrowingStore.deleteForLedger(ledgerId)
+
+    override fun deleteRecurringRulesForLedger(ledgerId: String) =
+        recurringRuleStore.deleteForLedger(ledgerId)
 
     override fun clearBorrowings() = borrowingStore.clear()
 
@@ -262,6 +267,7 @@ class LifeSharedViewModel(
             throw IllegalStateException("至少保留一本账本")
         }
         dataSource.deleteBorrowingsForLedger(ledgerId)
+        dataSource.deleteRecurringRulesForLedger(ledgerId)
         dataSource.deleteAssetsForLedger(ledgerId)
         dataSource.repository.deleteLedger(ledgerId)
         refresh()

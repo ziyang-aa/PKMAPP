@@ -35,9 +35,10 @@
             android:id="@+id/borrowing_calendar_close"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@android:color/transparent"
             android:contentDescription="关闭日期选择"
             android:gravity="center"
+            android:stateListAnimator="@animator/editorial_press_alpha"
             android:text="×"
             android:textColor="@color/wood_brown"
             android:textSize="30sp" />

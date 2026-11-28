@@ -52,6 +52,16 @@ interface FeedbackDao {
     @Query("UPDATE feedback_records SET syncStatus = :syncStatus, status = :status, updatedAt = :updatedAt WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markSynced(ownerId: String, ids: List<String>, status: String, syncStatus: Int, updatedAt: Long)
 
+    @Query("UPDATE feedback_records SET syncStatus = :syncStatus, status = :status, updatedAt = :newUpdatedAt WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(
+        ownerId: String,
+        id: String,
+        expectedUpdatedAt: Long,
+        status: String,
+        syncStatus: Int,
+        newUpdatedAt: Long
+    )
+
     @Query("UPDATE feedback_records SET ownerId = :targetOwnerId, syncStatus = 1, updatedAt = :updatedAt WHERE ownerId = :sourceOwnerId")
     fun reassignOwner(sourceOwnerId: String, targetOwnerId: String, updatedAt: Long)
 

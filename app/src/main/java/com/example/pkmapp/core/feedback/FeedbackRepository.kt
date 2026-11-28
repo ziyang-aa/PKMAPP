@@ -72,7 +72,7 @@ class FeedbackRepository @JvmOverloads constructor(
         category: Category,
         rawContent: String,
         rawContact: String,
-        appVersion: String = "4.0.0"
+        appVersion: String = com.example.pkmapp.BuildConfig.VERSION_NAME
     ): SubmitResult {
         val content = rawContent.trim()
         if (content.length < 5) {

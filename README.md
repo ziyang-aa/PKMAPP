@@ -1,6 +1,6 @@
 # 小松果（PKMAPP）
 
-> **当前版本：`v5.0.0`** · 个人「生活记账 + 学习专注」双空间 Android 应用与云同步服务端
+> **当前版本：`v5.1.0`** · 个人「生活记账 + 学习专注」双空间 Android 应用与云同步服务端
 
 **小松果**是一款以暖纸手账与手绘森林绘本为视觉基调的个人生活与学习管理应用，面向大学生、备考人群及日常自律记录者，将**记账预算、攒钱借还、专注计时、学习计划、独立待办与小林地养成**融于统一克制的界面体验中。
 
@@ -45,9 +45,9 @@
 | **Android 语言与构建** | Java 11 + Kotlin 2.2.10 混编、AGP 9.1.1、KSP、ViewBinding、Release R8 代码与资源压缩 |
 | **界面与自绘组件** | 原生 View 体系 + 14 个自绘 `Canvas` 视图（日历、时钟进度条、统计图表、热力图、成长花园、草稿纸等）+ 悬浮毛玻璃底栏 + 统一暖瓷白抽屉与弹窗 |
 | **架构与状态管理** | 双空间 MVVM（`ViewModel` + `StateFlow` + `Coroutines`）、`RecyclerView ListAdapter + DiffUtil` |
-| **本地存储与安全** | Jetpack Room（SQLite `v3`，多账号 `ownerId` 复合主键隔离 + 自动化无损迁移 `v1→v2→v3`）、Preferences DataStore、PBKDF2 密码哈希、Android Keystore AES-256-GCM 会话加密 |
-| **后台任务与音频** | `Foreground Service`（锁屏计时保活）、`WorkManager`（提醒重排 + 5 秒防抖后台静默云同步）、`AudioTrack` 实时环境音合成 |
-| **云同步服务端（`server/`）** | Spring Boot 3.5.11 + MySQL 8.4 + Spring JDBC、HS256 JWT + BCrypt + 刷新令牌轮换、12 张业务表 LWW/幂等增量推拉同步、启动自动表结构补列 |
+| **本地存储与安全** | Jetpack Room（SQLite `v4`，多账号 `ownerId` 复合主键隔离 + 自动化无损迁移 `v1→v2→v3→v4`）、Preferences DataStore、PBKDF2 密码哈希、Android Keystore AES-256-GCM 会话加密 |
+| **后台任务与音频** | `Foreground Service`（锁屏计时保活）、`WorkManager`（周期账单入账 + 提醒重排 + 5 秒防抖后台静默云同步）、`AudioTrack` 实时环境音合成 |
+| **云同步服务端（`server/`）** | Spring Boot 3.5.11 + MySQL 8.4 + Spring JDBC、Docker Compose 容器化部署、HS256 JWT + BCrypt + 401 自动刷新令牌轮换、13 张业务表 LWW/幂等增量推拉同步、启动自动表结构补列与防刷限流 |
 
 ---
 
@@ -142,6 +142,16 @@ Release 构建已默认开启 R8 代码混淆与资源压缩（`isMinifyEnabled 
 ---
 
 ## 版本演进
+
+### `v5.1.0`（对比 `v5.0.0`）
+- **新增**：
+  - **双空间全局搜索与多维筛选**：生活小屋交易明细支持跨月/本月、关键词、收支类型、动态分类及渐进展开金额区间筛选与实时汇总；学习足迹支持全部计划与全部时间学习手记快速检索。
+  - **周期性固定账单 / 订阅自动入账**：Room 升级至 `v4`（无损迁移 `MIGRATION_3_4`），新增周期账单规则管理、确定性幂等自动入账引擎（`RecurringTransactionEngine`）、`WorkManager` 定时调度与端云双向同步（`biz_recurring_rules`）。
+  - **端云 401 AccessToken 自动无感续期**：同步引擎在 Push / Feedback / Pull 任一环节遇到 `401` 时自动调用 `/api/v1/auth/refresh` 轮换加密保存新令牌并重试；RefreshToken 过期时完整保留本地待同步数据并提示重登。
+  - **阿里云 ECS 容器化部署与自动备份**：新增 `server/Dockerfile`、`server/docker-compose.yml` 与 `.env.example`，补齐服务端 JWT 强校验、常量时间管理员令牌、防刷限流与安全响应头，并在云端配置每日 `03:30` MySQL 自动压缩备份。
+- **修改与优化**：
+  - **13 张业务表弱网防丢与换机全量恢复**：补齐按 `updatedAt` 精确销账、Pull 断网不跳游标、登录后先拉后加载与首屏零配置直连默认测试云端。
+  - **按压反馈与个人侧边栏统一**：全站去除无边界灰圆阴影，版本号动态读取 `BuildConfig.VERSION_NAME`。
 
 ### `v5.0.0`（对比 `v4.0.0`）
 - **新增**：

@@ -1,6 +1,8 @@
 package com.example.pkmapp.server.sync;
 
+import com.example.pkmapp.server.common.ApiException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -15,10 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SyncService {
+    private static final int MAX_ITEMS_PER_ARRAY = 2000;
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public SyncService(JdbcTemplate jdbcTemplate) {
+    public SyncService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -26,6 +31,7 @@ public class SyncService {
         if (payload == null || !payload.isObject()) {
             return Map.of("serverSeq", currentMaxSeq(userId), "acceptedCount", 0);
         }
+        validateArraySizes(payload);
         long now = System.currentTimeMillis();
         long seq = allocateServerSeq();
         int accepted = 0;
@@ -42,6 +48,7 @@ public class SyncService {
         accepted += upsertStudyReviews(userId, payload.path("studyReviews"), seq, now);
         accepted += upsertStudyGardenState(userId, payload.path("studyGardenState"), seq, now);
         accepted += upsertTodos(userId, payload.path("todos"), seq, now);
+        accepted += upsertRecurringRules(userId, payload.path("recurringRules"), seq, now);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("serverSeq", seq);
@@ -65,6 +72,7 @@ public class SyncService {
         List<Map<String, Object>> studyReviews = queryStudyReviews(userId, safeSince, maxSeq);
         Map<String, Object> gardenState = queryStudyGardenState(userId, safeSince, maxSeq);
         List<Map<String, Object>> todos = queryTodos(userId, safeSince, maxSeq);
+        List<Map<String, Object>> recurringRules = queryRecurringRules(userId, safeSince, maxSeq);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("nextCursor", maxSeq[0]);
@@ -82,6 +90,7 @@ public class SyncService {
             data.put("studyGardenState", gardenState);
         }
         data.put("todos", todos);
+        data.put("recurringRules", recurringRules);
         return data;
     }
 
@@ -103,11 +112,19 @@ public class SyncService {
                     COALESCE((SELECT MAX(server_seq) FROM biz_transactions WHERE user_id = ?), 0),
                     COALESCE((SELECT MAX(server_seq) FROM biz_borrowing_records WHERE user_id = ?), 0),
                     COALESCE((SELECT MAX(server_seq) FROM biz_savings_goals WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_custom_categories WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_study_plans WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_study_subjects WHERE user_id = ?), 0),
                     COALESCE((SELECT MAX(server_seq) FROM biz_study_records WHERE user_id = ?), 0),
-                    COALESCE((SELECT MAX(server_seq) FROM biz_todo_items WHERE user_id = ?), 0)
+                    COALESCE((SELECT MAX(server_seq) FROM biz_study_tasks WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_study_reviews WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_study_garden_state WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_todo_items WHERE user_id = ?), 0),
+                    COALESCE((SELECT MAX(server_seq) FROM biz_recurring_rules WHERE user_id = ?), 0)
                 )
                 """,
                 Long.class,
+                userId, userId, userId, userId, userId, userId, userId,
                 userId, userId, userId, userId, userId, userId
         );
         return val != null ? val : 0L;
@@ -334,6 +351,7 @@ public class SyncService {
                         kind = IF(VALUES(updated_at) >= updated_at, VALUES(kind), kind),
                         due = IF(VALUES(updated_at) >= updated_at, VALUES(due), due),
                         partner = IF(VALUES(updated_at) >= updated_at, VALUES(partner), partner),
+                        previous_plan_id = IF(VALUES(updated_at) >= updated_at, VALUES(previous_plan_id), previous_plan_id),
                         archived_at = IF(VALUES(updated_at) >= updated_at, VALUES(archived_at), archived_at),
                         selected_subject_id = IF(VALUES(updated_at) >= updated_at, VALUES(selected_subject_id), selected_subject_id),
                         session_goal = IF(VALUES(updated_at) >= updated_at, VALUES(session_goal), session_goal),
@@ -417,6 +435,10 @@ public class SyncService {
                         plan_id = IF(VALUES(updated_at) >= updated_at, VALUES(plan_id), plan_id),
                         subject_id = IF(VALUES(updated_at) >= updated_at, VALUES(subject_id), subject_id),
                         subject_title_snapshot = IF(VALUES(updated_at) >= updated_at, VALUES(subject_title_snapshot), subject_title_snapshot),
+                        subject_hint_snapshot = IF(VALUES(updated_at) >= updated_at, VALUES(subject_hint_snapshot), subject_hint_snapshot),
+                        subject_color_snapshot = IF(VALUES(updated_at) >= updated_at, VALUES(subject_color_snapshot), subject_color_snapshot),
+                        subject_due_snapshot = IF(VALUES(updated_at) >= updated_at, VALUES(subject_due_snapshot), subject_due_snapshot),
+                        subject_assessment_snapshot = IF(VALUES(updated_at) >= updated_at, VALUES(subject_assessment_snapshot), subject_assessment_snapshot),
                         duration_millis = IF(VALUES(updated_at) >= updated_at, VALUES(duration_millis), duration_millis),
                         completed_at = IF(VALUES(updated_at) >= updated_at, VALUES(completed_at), completed_at),
                         note = IF(VALUES(updated_at) >= updated_at, VALUES(note), note),
@@ -425,6 +447,7 @@ public class SyncService {
                         edited_at = IF(VALUES(updated_at) >= updated_at, VALUES(edited_at), edited_at),
                         adjusted = IF(VALUES(updated_at) >= updated_at, VALUES(adjusted), adjusted),
                         task_id = IF(VALUES(updated_at) >= updated_at, VALUES(task_id), task_id),
+                        sort_order = IF(VALUES(updated_at) >= updated_at, VALUES(sort_order), sort_order),
                         client_request_id = IF(VALUES(updated_at) >= updated_at, VALUES(client_request_id), client_request_id),
                         deleted_at = IF(VALUES(updated_at) >= updated_at, VALUES(deleted_at), deleted_at),
                         server_seq = IF(VALUES(updated_at) >= updated_at, VALUES(server_seq), server_seq),
@@ -520,9 +543,7 @@ public class SyncService {
     private int upsertStudyGardenState(String userId, JsonNode n, long seq, long now) {
         if (!n.isObject()) return 0;
         long updatedAt = longVal(n, "updatedAt", now);
-        String rewardedJson = n.has("rewardedDaysJson") && !n.path("rewardedDaysJson").asText("").isBlank()
-                ? n.path("rewardedDaysJson").asText("[]")
-                : "[]";
+        String rewardedJson = sanitizeJsonArray(n.path("rewardedDaysJson").asText("[]"));
         jdbcTemplate.update(
                 """
                 INSERT INTO biz_study_garden_state (
@@ -721,6 +742,7 @@ public class SyncService {
                     m.put("kind", rs.getString("kind"));
                     m.put("due", rs.getString("due"));
                     m.put("partner", rs.getString("partner"));
+                    m.put("previousPlanId", rs.getString("previous_plan_id"));
                     m.put("createdAt", rs.getLong("created_at"));
                     m.put("archivedAt", rs.getLong("archived_at"));
                     m.put("selectedSubjectId", rs.getString("selected_subject_id"));
@@ -730,6 +752,7 @@ public class SyncService {
                     m.put("remindTime", rs.getString("remind_time"));
                     m.put("isCurrent", rs.getInt("is_current") == 1);
                     m.put("sortOrder", rs.getInt("sort_order"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
                     m.put("updatedAt", rs.getLong("updated_at"));
                     m.put("deletedAt", rs.getLong("deleted_at"));
                     m.put("serverSeq", s);
@@ -754,6 +777,7 @@ public class SyncService {
                     m.put("assessment", rs.getString("assessment"));
                     m.put("color", rs.getInt("color"));
                     m.put("sortOrder", rs.getInt("sort_order"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
                     m.put("updatedAt", rs.getLong("updated_at"));
                     m.put("deletedAt", rs.getLong("deleted_at"));
                     m.put("serverSeq", s);
@@ -774,11 +798,20 @@ public class SyncService {
                     m.put("planId", rs.getString("plan_id"));
                     m.put("subjectId", rs.getString("subject_id"));
                     m.put("subjectTitleSnapshot", rs.getString("subject_title_snapshot"));
+                    m.put("subjectHintSnapshot", rs.getString("subject_hint_snapshot"));
+                    m.put("subjectColorSnapshot", rs.getInt("subject_color_snapshot"));
+                    m.put("subjectDueSnapshot", rs.getString("subject_due_snapshot"));
+                    m.put("subjectAssessmentSnapshot", rs.getString("subject_assessment_snapshot"));
                     m.put("durationMillis", rs.getLong("duration_millis"));
                     m.put("completedAt", rs.getLong("completed_at"));
                     m.put("note", rs.getString("note"));
                     m.put("manual", rs.getInt("manual") == 1);
                     m.put("rewardMillis", rs.getLong("reward_millis"));
+                    m.put("editedAt", rs.getLong("edited_at"));
+                    m.put("adjusted", rs.getInt("adjusted") == 1);
+                    m.put("taskId", rs.getString("task_id"));
+                    m.put("sortOrder", rs.getInt("sort_order"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
                     m.put("updatedAt", rs.getLong("updated_at"));
                     m.put("deletedAt", rs.getLong("deleted_at"));
                     m.put("serverSeq", s);
@@ -807,6 +840,7 @@ public class SyncService {
                     m.put("doneAt", rs.getLong("done_at"));
                     m.put("isNext", rs.getInt("is_next") == 1);
                     m.put("priority", rs.getLong("priority"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
                     m.put("updatedAt", rs.getLong("updated_at"));
                     m.put("deletedAt", rs.getLong("deleted_at"));
                     m.put("serverSeq", s);
@@ -827,6 +861,7 @@ public class SyncService {
                     m.put("prompt", rs.getString("prompt"));
                     m.put("day", rs.getString("day"));
                     m.put("completedAt", rs.getLong("completed_at"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
                     m.put("updatedAt", rs.getLong("updated_at"));
                     m.put("deletedAt", rs.getLong("deleted_at"));
                     m.put("serverSeq", s);
@@ -885,6 +920,128 @@ public class SyncService {
                 },
                 userId, since
         );
+    }
+
+    private int upsertRecurringRules(String userId, JsonNode arr, long seq, long now) {
+        if (!arr.isArray()) return 0;
+        int count = 0;
+        for (JsonNode n : arr) {
+            String id = text(n, "id", "");
+            if (id.isEmpty()) continue;
+            long updatedAt = longVal(n, "updatedAt", now);
+            String reqId = resolveReqId(n, "rec", id, updatedAt);
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO biz_recurring_rules (
+                        user_id, id, ledger_id, title, type, category, amount_cents, frequency,
+                        day_of_month, day_of_week, month_of_year, start_date_key, last_generated_date_key,
+                        auto_post, enabled, note, sort_order, client_request_id, updated_at, deleted_at, server_seq
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        ledger_id = IF(VALUES(updated_at) >= updated_at, VALUES(ledger_id), ledger_id),
+                        title = IF(VALUES(updated_at) >= updated_at, VALUES(title), title),
+                        type = IF(VALUES(updated_at) >= updated_at, VALUES(type), type),
+                        category = IF(VALUES(updated_at) >= updated_at, VALUES(category), category),
+                        amount_cents = IF(VALUES(updated_at) >= updated_at, VALUES(amount_cents), amount_cents),
+                        frequency = IF(VALUES(updated_at) >= updated_at, VALUES(frequency), frequency),
+                        day_of_month = IF(VALUES(updated_at) >= updated_at, VALUES(day_of_month), day_of_month),
+                        day_of_week = IF(VALUES(updated_at) >= updated_at, VALUES(day_of_week), day_of_week),
+                        month_of_year = IF(VALUES(updated_at) >= updated_at, VALUES(month_of_year), month_of_year),
+                        start_date_key = IF(VALUES(updated_at) >= updated_at, VALUES(start_date_key), start_date_key),
+                        last_generated_date_key = IF(VALUES(updated_at) >= updated_at, VALUES(last_generated_date_key), last_generated_date_key),
+                        auto_post = IF(VALUES(updated_at) >= updated_at, VALUES(auto_post), auto_post),
+                        enabled = IF(VALUES(updated_at) >= updated_at, VALUES(enabled), enabled),
+                        note = IF(VALUES(updated_at) >= updated_at, VALUES(note), note),
+                        sort_order = IF(VALUES(updated_at) >= updated_at, VALUES(sort_order), sort_order),
+                        client_request_id = IF(VALUES(updated_at) >= updated_at, VALUES(client_request_id), client_request_id),
+                        deleted_at = IF(VALUES(updated_at) >= updated_at, VALUES(deleted_at), deleted_at),
+                        server_seq = IF(VALUES(updated_at) >= updated_at, VALUES(server_seq), server_seq),
+                        updated_at = GREATEST(updated_at, VALUES(updated_at))
+                    """,
+                    userId,
+                    id,
+                    text(n, "ledgerId", "default"),
+                    text(n, "title", ""),
+                    text(n, "type", "EXPENSE"),
+                    text(n, "category", "餐饮"),
+                    Math.max(1L, longVal(n, "amountCents", 1L)),
+                    text(n, "frequency", "MONTHLY"),
+                    intVal(n, "dayOfMonth", 1),
+                    intVal(n, "dayOfWeek", 1),
+                    intVal(n, "monthOfYear", 1),
+                    text(n, "startDateKey", ""),
+                    text(n, "lastGeneratedDateKey", ""),
+                    boolInt(n, "autoPost", true),
+                    boolInt(n, "enabled", true),
+                    text(n, "note", ""),
+                    intVal(n, "sortOrder", 0),
+                    reqId,
+                    updatedAt,
+                    longVal(n, "deletedAt", 0L),
+                    seq
+            );
+            count++;
+        }
+        return count;
+    }
+
+    private List<Map<String, Object>> queryRecurringRules(String userId, long since, long[] maxSeq) {
+        return jdbcTemplate.query(
+                "SELECT * FROM biz_recurring_rules WHERE user_id = ? AND server_seq > ? ORDER BY server_seq ASC",
+                (rs, i) -> {
+                    long s = rs.getLong("server_seq");
+                    if (s > maxSeq[0]) maxSeq[0] = s;
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", rs.getString("id"));
+                    m.put("ledgerId", rs.getString("ledger_id"));
+                    m.put("title", rs.getString("title"));
+                    m.put("type", rs.getString("type"));
+                    m.put("category", rs.getString("category"));
+                    m.put("amountCents", rs.getLong("amount_cents"));
+                    m.put("frequency", rs.getString("frequency"));
+                    m.put("dayOfMonth", rs.getInt("day_of_month"));
+                    m.put("dayOfWeek", rs.getInt("day_of_week"));
+                    m.put("monthOfYear", rs.getInt("month_of_year"));
+                    m.put("startDateKey", rs.getString("start_date_key"));
+                    m.put("lastGeneratedDateKey", rs.getString("last_generated_date_key"));
+                    m.put("autoPost", rs.getInt("auto_post") == 1);
+                    m.put("enabled", rs.getInt("enabled") == 1);
+                    m.put("note", rs.getString("note"));
+                    m.put("sortOrder", rs.getInt("sort_order"));
+                    m.put("clientRequestId", rs.getString("client_request_id"));
+                    m.put("updatedAt", rs.getLong("updated_at"));
+                    m.put("deletedAt", rs.getLong("deleted_at"));
+                    m.put("serverSeq", s);
+                    return m;
+                },
+                userId, since
+        );
+    }
+
+    private void validateArraySizes(JsonNode payload) {
+        String[] arrayFields = {
+            "ledgers", "transactions", "borrowings", "savingsGoals", "customCategories",
+            "studyPlans", "studySubjects", "studyRecords", "studyTasks", "studyReviews",
+            "todos", "recurringRules"
+        };
+        for (String field : arrayFields) {
+            JsonNode arr = payload.path(field);
+            if (arr.isArray() && arr.size() > MAX_ITEMS_PER_ARRAY) {
+                throw ApiException.badRequest("SYNC_BATCH_TOO_LARGE", "单次同步批次条目过多，请分批上传");
+            }
+        }
+    }
+
+    private String sanitizeJsonArray(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "[]";
+        }
+        try {
+            JsonNode parsed = objectMapper.readTree(raw);
+            return parsed != null && parsed.isArray() ? objectMapper.writeValueAsString(parsed) : "[]";
+        } catch (Exception ex) {
+            return "[]";
+        }
     }
 
     private String resolveReqId(JsonNode node, String prefix, String id, long updatedAt) {

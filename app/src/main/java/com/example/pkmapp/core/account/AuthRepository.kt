@@ -10,6 +10,9 @@ import com.example.pkmapp.core.datastore.AppPreferencesSnapshot
 import com.example.pkmapp.core.security.CryptoSessionStore
 import com.example.pkmapp.core.security.PasswordHasher
 import com.example.pkmapp.core.sync.SyncApiClient
+import com.example.pkmapp.core.sync.SyncOutcome
+import com.example.pkmapp.core.sync.SyncRepository
+import com.example.pkmapp.core.work.SyncWorker
 import com.example.pkmapp.data.InMemoryLedgerRepository
 import com.example.pkmapp.profile.AvatarStore
 import com.example.pkmapp.study.StudyStore
@@ -138,7 +141,13 @@ class AuthRepository @JvmOverloads constructor(
         val fromGuest = sessionStore.currentSession().isGuest
         val guestSummary = if (fromGuest) inspectGuestMergeCandidate() else null
 
-        activateAccount(entity, accessToken, refreshToken, reloadRuntimeStores)
+        activateAccount(
+            account = entity,
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            reloadRuntimeStores = reloadRuntimeStores,
+            pullBeforeSeed = false
+        )
         return AuthResult.Success(entity, guestSummary?.takeIf { it.hasMergeableData })
     }
 
@@ -212,7 +221,13 @@ class AuthRepository @JvmOverloads constructor(
 
         val fromGuest = sessionStore.currentSession().isGuest
         val guestSummary = if (fromGuest) inspectGuestMergeCandidate() else null
-        activateAccount(targetAccount, accessToken, refreshToken, reloadRuntimeStores)
+        activateAccount(
+            account = targetAccount,
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            reloadRuntimeStores = reloadRuntimeStores,
+            pullBeforeSeed = true
+        )
         return AuthResult.Success(targetAccount, guestSummary?.takeIf { it.hasMergeableData })
     }
 
@@ -342,7 +357,25 @@ class AuthRepository @JvmOverloads constructor(
                 }
             }
 
-            // 2. Borrowings
+            // 2. Borrowings & Recurring rules
+            val recurringDao = database.recurringRuleDao()
+            val guestRecurring = recurringDao.getAllActive(guest)
+            if (guestRecurring.isNotEmpty()) {
+                val targetRecurringIds = recurringDao.getAllActive(targetOwnerId).map { it.id }.toHashSet()
+                val movedRecurring = guestRecurring.map { r ->
+                    val newId = if (targetRecurringIds.contains(r.id)) "g_${r.id}" else r.id
+                    r.copy(
+                        id = newId,
+                        ownerId = targetOwnerId,
+                        updatedAt = now,
+                        syncStatus = SyncStatus.PENDING_PUSH,
+                        clientRequestId = AccountScope.newRequestId()
+                    )
+                }
+                recurringDao.upsertAll(movedRecurring)
+            }
+
+            // 2b. Borrowings
             val borrowingDao = database.borrowingDao()
             val guestBorrowings = borrowingDao.getAll(guest)
             if (guestBorrowings.isNotEmpty()) {
@@ -531,6 +564,7 @@ class AuthRepository @JvmOverloads constructor(
         database.ledgerDao().deleteAllTransactions(ownerId)
         database.ledgerDao().deleteAllLedgers(ownerId)
         database.borrowingDao().clear(ownerId)
+        database.recurringRuleDao().clear(ownerId)
         database.savingsGoalDao().clear(ownerId)
         database.categoryDao().clear(ownerId)
         database.studyDao().deleteAllForOwner(ownerId)
@@ -541,7 +575,8 @@ class AuthRepository @JvmOverloads constructor(
         account: LocalAccountEntity,
         accessToken: String,
         refreshToken: String,
-        reloadRuntimeStores: Boolean
+        reloadRuntimeStores: Boolean,
+        pullBeforeSeed: Boolean = false
     ) {
         if (account.isGuest) {
             sessionStore.switchToGuest()
@@ -549,8 +584,49 @@ class AuthRepository @JvmOverloads constructor(
             sessionStore.saveSession(account.ownerId, accessToken, refreshToken)
         }
         syncPreferencesFromAccount(account)
+
+        val hasCloudSession = !account.isGuest &&
+            sessionStore.currentServerBaseUrl().isNotBlank() &&
+            accessToken.isNotBlank() &&
+            !accessToken.startsWith("offline_session_")
+
+        if (hasCloudSession && pullBeforeSeed) {
+            // Pull cloud data BEFORE seeding local default ledger/study notebook so a fresh
+            // device reuses the user's cloud default ledger instead of creating a duplicate one.
+            val outcome = runInitialCloudSync()
+            if (reloadRuntimeStores) {
+                reloadAllStores()
+            }
+            if (outcome is SyncOutcome.Failed) {
+                SyncWorker.scheduleDebouncedSync(appContext)
+            }
+            return
+        }
+
         if (reloadRuntimeStores) {
             reloadAllStores()
+        }
+
+        if (hasCloudSession) {
+            // Newly registered cloud account: push initial seeded defaults immediately so
+            // the user lands on Home in a clean synced state.
+            val outcome = runInitialCloudSync()
+            if (outcome is SyncOutcome.Failed) {
+                SyncWorker.scheduleDebouncedSync(appContext)
+            }
+        }
+    }
+
+    private fun runInitialCloudSync(): SyncOutcome {
+        return try {
+            SyncRepository(
+                context = appContext,
+                database = database,
+                sessionStore = sessionStore,
+                reloadRuntimeStores = false
+            ).syncNow()
+        } catch (_: Exception) {
+            SyncOutcome.Failed(0, "初次同步暂不可用，稍后将自动重试")
         }
     }
 

@@ -55,6 +55,7 @@ public final class InMemoryLedgerRepository {
 
     public void reloadFromPersistence() {
         LedgerPersistence storage;
+        boolean hadPersistedLedgers = false;
         synchronized (this) {
             storage = persistence;
             if (storage == null) {
@@ -68,9 +69,14 @@ public final class InMemoryLedgerRepository {
             LedgerCodec.State restored = storage.load();
             if (restored != null && !restored.getLedgers().isEmpty()) {
                 restore(restored);
+                hadPersistedLedgers = true;
             }
         }
-        persist();
+        // Only persist when seeding a brand-new default ledger; re-persisting freshly loaded
+        // synced ledgers would needlessly mark them PENDING_PUSH again.
+        if (!hadPersistedLedgers) {
+            persist();
+        }
         notifyListeners();
     }
 
@@ -87,8 +93,12 @@ public final class InMemoryLedgerRepository {
             return;
         }
         this.persistence = Objects.requireNonNull(persistence, "账本存储不能为空");
-        restore(persistence.load());
-        persist();
+        LedgerCodec.State restored = persistence.load();
+        if (restored != null && !restored.getLedgers().isEmpty()) {
+            restore(restored);
+        } else {
+            persist();
+        }
     }
 
     public synchronized List<Ledger> getLedgers() {
@@ -163,6 +173,32 @@ public final class InMemoryLedgerRepository {
         persist();
         notifyListeners();
         return transaction;
+    }
+
+    /**
+     * Inserts a transaction with a deterministic ID (used by recurring auto-posting for idempotency).
+     * Returns true if inserted, false if the ledger does not exist or an identical ID already exists.
+     */
+    public boolean addTransactionWithId(String transactionId, String ledgerId, TransactionType type,
+            long amountInCents, String category, String note, long occurredAtMillis) {
+        String id = requireId(transactionId);
+        String targetLedgerId = requireId(ledgerId);
+        synchronized (this) {
+            if (!ledgers.containsKey(targetLedgerId)) {
+                return false;
+            }
+            for (Transaction existing : transactions) {
+                if (id.equals(existing.getId())) {
+                    return false;
+                }
+            }
+            Transaction created = new Transaction(id, targetLedgerId, type, amountInCents,
+                    category, note, occurredAtMillis);
+            transactions.add(created);
+        }
+        persist();
+        notifyListeners();
+        return true;
     }
 
     public Transaction updateTransaction(String transactionId, TransactionType type,

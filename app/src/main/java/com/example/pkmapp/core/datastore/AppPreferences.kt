@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.example.pkmapp.BuildConfig
 import com.example.pkmapp.core.database.PkmStorageBootstrap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,15 +43,16 @@ data class AppPreferencesSnapshot(
 
 class AppPreferences internal constructor(
     private val dataStore: DataStore<Preferences>,
-    private val ioScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val ioScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val defaultServerBaseUrl: String = ""
 ) {
     @Volatile
     private var cached: AppPreferencesSnapshot = runBlocking(Dispatchers.IO) {
-        mapPreferences(dataStore.data.first())
+        mapPreferences(dataStore.data.first(), defaultServerBaseUrl)
     }
 
     val snapshotFlow: Flow<AppPreferencesSnapshot> = dataStore.data.map { prefs ->
-        mapPreferences(prefs).also { cached = it }
+        mapPreferences(prefs, defaultServerBaseUrl).also { cached = it }
     }
 
     val current: AppPreferencesSnapshot
@@ -165,11 +167,9 @@ class AppPreferences internal constructor(
         cached = cached.copy(serverBaseUrl = clean)
         runBlocking(Dispatchers.IO) {
             dataStore.edit { prefs ->
-                if (clean.isEmpty()) {
-                    prefs.remove(KEY_SERVER_BASE_URL)
-                } else {
-                    prefs[KEY_SERVER_BASE_URL] = clean
-                }
+                // Explicitly store empty string so a user clearing the URL stays offline
+                // rather than falling back to defaultServerBaseUrl.
+                prefs[KEY_SERVER_BASE_URL] = clean
             }
         }
     }
@@ -197,13 +197,11 @@ class AppPreferences internal constructor(
                 } else {
                     prefs[KEY_ENCRYPTED_REFRESH_TOKEN] = migrated.encryptedRefreshToken
                 }
-                if (migrated.serverBaseUrl.isEmpty()) {
-                    prefs.remove(KEY_SERVER_BASE_URL)
-                } else {
+                if (migrated.serverBaseUrl.isNotEmpty()) {
                     prefs[KEY_SERVER_BASE_URL] = migrated.serverBaseUrl
                 }
             }
-            cached = mapPreferences(dataStore.data.first())
+            cached = mapPreferences(dataStore.data.first(), defaultServerBaseUrl)
         }
     }
 
@@ -236,7 +234,10 @@ class AppPreferences internal constructor(
                         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
                         produceFile = { appContext.preferencesDataStoreFile(DATASTORE_FILE_NAME) }
                     )
-                    AppPreferences(store).also { instance = it }
+                    AppPreferences(
+                        dataStore = store,
+                        defaultServerBaseUrl = BuildConfig.DEFAULT_SERVER_BASE_URL
+                    ).also { instance = it }
                 }
             }
         }
@@ -247,7 +248,10 @@ class AppPreferences internal constructor(
             return getRawInstance(context)
         }
 
-        internal fun mapPreferences(prefs: Preferences): AppPreferencesSnapshot =
+        internal fun mapPreferences(
+            prefs: Preferences,
+            defaultServerBaseUrl: String = ""
+        ): AppPreferencesSnapshot =
             AppPreferencesSnapshot(
                 nickname = prefs[KEY_NICKNAME] ?: AppPreferencesSnapshot.DEFAULT_NICKNAME,
                 checkedDates = HashSet(prefs[KEY_CHECKED_DATES] ?: emptySet()),
@@ -263,7 +267,7 @@ class AppPreferences internal constructor(
                     ?: AppPreferencesSnapshot.DEFAULT_OWNER_ID,
                 encryptedAccessToken = prefs[KEY_ENCRYPTED_ACCESS_TOKEN] ?: "",
                 encryptedRefreshToken = prefs[KEY_ENCRYPTED_REFRESH_TOKEN] ?: "",
-                serverBaseUrl = prefs[KEY_SERVER_BASE_URL] ?: ""
+                serverBaseUrl = prefs[KEY_SERVER_BASE_URL] ?: defaultServerBaseUrl
             )
     }
 }

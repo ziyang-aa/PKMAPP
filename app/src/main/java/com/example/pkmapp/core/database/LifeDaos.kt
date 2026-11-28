@@ -72,8 +72,14 @@ interface LedgerDao {
     @Query("UPDATE ledgers SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markLedgersSynced(ownerId: String, ids: List<String>)
 
+    @Query("UPDATE ledgers SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markLedgerSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
     @Query("UPDATE transactions SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markTransactionsSynced(ownerId: String, ids: List<String>)
+
+    @Query("UPDATE transactions SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markTransactionSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
 
     @Transaction
     fun saveLedgerAndTransactionState(
@@ -281,6 +287,9 @@ interface BorrowingDao {
     @Query("UPDATE borrowing_records SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markSynced(ownerId: String, ids: List<String>)
 
+    @Query("UPDATE borrowing_records SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
     @Transaction
     fun deleteForLedger(ledgerId: String, ownerId: String = AccountScope.GUEST_OWNER_ID) {
         softDeleteForLedger(ledgerId, ownerId)
@@ -343,6 +352,9 @@ interface SavingsGoalDao {
     @Query("UPDATE savings_goals SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markSynced(ownerId: String, ids: List<String>)
 
+    @Query("UPDATE savings_goals SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
+
     @Transaction
     fun replaceAll(entities: List<SavingsGoalEntity>, ownerId: String = AccountScope.GUEST_OWNER_ID) {
         val now = System.currentTimeMillis()
@@ -388,6 +400,9 @@ interface CategoryDao {
     @Query("SELECT * FROM custom_categories WHERE ownerId = :ownerId AND deletedAt = 0 ORDER BY sortOrder ASC, id ASC")
     fun getAll(ownerId: String = AccountScope.GUEST_OWNER_ID): List<CustomCategoryEntity>
 
+    @Query("SELECT * FROM custom_categories WHERE ownerId = :ownerId")
+    fun getAllIncludingDeleted(ownerId: String): List<CustomCategoryEntity>
+
     @Query("SELECT * FROM custom_categories WHERE ownerId = :ownerId AND type = :type AND name = :name LIMIT 1")
     fun find(type: String, name: String, ownerId: String = AccountScope.GUEST_OWNER_ID): CustomCategoryEntity?
 
@@ -414,4 +429,52 @@ interface CategoryDao {
 
     @Query("UPDATE custom_categories SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
     fun markSynced(ownerId: String, ids: List<Long>)
+
+    @Query("UPDATE custom_categories SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(ownerId: String, id: Long, expectedUpdatedAt: Long)
+}
+
+@Dao
+interface RecurringRuleDao {
+    @Query("SELECT * FROM recurring_rules WHERE ownerId = :ownerId AND deletedAt = 0 ORDER BY sortOrder ASC, updatedAt DESC")
+    fun getAllActive(ownerId: String = AccountScope.GUEST_OWNER_ID): List<RecurringRuleEntity>
+
+    @Query("SELECT * FROM recurring_rules WHERE ownerId = :ownerId AND ledgerId = :ledgerId AND deletedAt = 0 ORDER BY sortOrder ASC, updatedAt DESC")
+    fun getForLedger(ledgerId: String, ownerId: String = AccountScope.GUEST_OWNER_ID): List<RecurringRuleEntity>
+
+    @Query("SELECT * FROM recurring_rules WHERE ownerId = :ownerId AND id = :id LIMIT 1")
+    fun findById(id: String, ownerId: String = AccountScope.GUEST_OWNER_ID): RecurringRuleEntity?
+
+    @Query("SELECT * FROM recurring_rules WHERE ownerId = :ownerId")
+    fun getAllIncludingDeleted(ownerId: String = AccountScope.GUEST_OWNER_ID): List<RecurringRuleEntity>
+
+    @Query("SELECT * FROM recurring_rules WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun getPending(ownerId: String): List<RecurringRuleEntity>
+
+    @Query("SELECT COUNT(*) FROM recurring_rules WHERE ownerId = :ownerId AND syncStatus = 1")
+    fun countPending(ownerId: String): Int
+
+    @Query("SELECT COUNT(*) FROM recurring_rules WHERE ownerId = :ownerId AND deletedAt = 0")
+    fun countActive(ownerId: String): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsert(entity: RecurringRuleEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsertAll(entities: List<RecurringRuleEntity>)
+
+    @Query("UPDATE recurring_rules SET deletedAt = :now, updatedAt = :now, syncStatus = 1 WHERE ownerId = :ownerId AND id = :id AND deletedAt = 0")
+    fun softDelete(id: String, ownerId: String = AccountScope.GUEST_OWNER_ID, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE recurring_rules SET deletedAt = :now, updatedAt = :now, syncStatus = 1 WHERE ownerId = :ownerId AND ledgerId = :ledgerId AND deletedAt = 0")
+    fun softDeleteForLedger(ledgerId: String, ownerId: String = AccountScope.GUEST_OWNER_ID, now: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM recurring_rules WHERE ownerId = :ownerId")
+    fun clear(ownerId: String = AccountScope.GUEST_OWNER_ID)
+
+    @Query("UPDATE recurring_rules SET syncStatus = 0 WHERE ownerId = :ownerId AND id IN (:ids)")
+    fun markSynced(ownerId: String, ids: List<String>)
+
+    @Query("UPDATE recurring_rules SET syncStatus = 0 WHERE ownerId = :ownerId AND id = :id AND updatedAt = :expectedUpdatedAt")
+    fun markSyncedIfUnchanged(ownerId: String, id: String, expectedUpdatedAt: Long)
 }

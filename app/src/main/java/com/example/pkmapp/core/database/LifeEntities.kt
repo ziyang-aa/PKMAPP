@@ -114,3 +114,35 @@ data class CustomCategoryEntity(
     val syncStatus: Int = SyncStatus.PENDING_PUSH,
     val clientRequestId: String = ""
 )
+
+@Entity(
+    tableName = "recurring_rules",
+    primaryKeys = ["ownerId", "id"],
+    indices = [
+        Index(value = ["ownerId", "ledgerId"]),
+        Index(value = ["ownerId", "syncStatus"])
+    ]
+)
+data class RecurringRuleEntity(
+    val id: String,
+    val ledgerId: String,
+    val title: String,
+    val type: String,
+    val category: String,
+    val amountCents: Long,
+    val frequency: String,
+    val dayOfMonth: Int,
+    val dayOfWeek: Int,
+    val monthOfYear: Int,
+    val startDateKey: String,
+    val lastGeneratedDateKey: String,
+    val autoPost: Boolean,
+    val enabled: Boolean,
+    val note: String,
+    val sortOrder: Int = 0,
+    val ownerId: String = AccountScope.GUEST_OWNER_ID,
+    val updatedAt: Long = 0L,
+    val deletedAt: Long = 0L,
+    val syncStatus: Int = SyncStatus.PENDING_PUSH,
+    val clientRequestId: String = ""
+)

@@ -23,10 +23,11 @@
                 android:id="@+id/page_back_button"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:contentDescription="返回主页面"
                 android:scaleType="centerInside"
-                android:src="@drawable/return_home_door" />
+                android:src="@drawable/return_home_door"
+                android:stateListAnimator="@animator/editorial_press_alpha" />
 
             <TextView
                 android:id="@+id/title_details"
@@ -362,9 +363,40 @@
             android:orientation="horizontal">
 
             <LinearLayout
+                android:id="@+id/details_recurring_tool_button"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_details_tool_button"
+                android:clickable="true"
+                android:contentDescription="周期账单工具"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="6dp">
+
+                <ImageView
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
+                    android:contentDescription=""
+                    android:src="@drawable/ic_editorial_repeat" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:singleLine="true"
+                    android:text="周期账单"
+                    android:textColor="@color/ink"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/details_fx_tool_button"
                 android:layout_width="0dp"
                 android:layout_height="46dp"
+                android:layout_marginStart="@dimen/space_8"
                 android:layout_weight="1"
                 android:background="@drawable/bg_details_tool_button"
                 android:clickable="true"
@@ -372,21 +404,22 @@
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:paddingHorizontal="@dimen/space_12">
+                android:paddingHorizontal="6dp">
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
                     android:contentDescription=""
                     android:src="@drawable/ic_exchange_rate" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="5dp"
+                    android:singleLine="true"
                     android:text="汇率换算"
                     android:textColor="@color/ink"
-                    android:textSize="13sp"
+                    android:textSize="12.5sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -402,21 +435,22 @@
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:paddingHorizontal="@dimen/space_12">
+                android:paddingHorizontal="6dp">
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
                     android:contentDescription=""
                     android:src="@drawable/ic_borrowing_ledger" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="5dp"
+                    android:singleLine="true"
                     android:text="借钱统计"
                     android:textColor="@color/ink"
-                    android:textSize="13sp"
+                    android:textSize="12.5sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
@@ -437,12 +471,34 @@
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <LinearLayout
+                android:id="@+id/details_search_button"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="按日期归档"
-                android:textColor="@color/wood_brown"
-                android:textSize="12sp" />
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:contentDescription="搜索或筛选交易记录"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp"
+                android:stateListAnimator="@animator/editorial_press_alpha">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:contentDescription=""
+                    android:src="@drawable/ic_editorial_search" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="搜索筛选"
+                    android:textColor="@color/forest_green"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout

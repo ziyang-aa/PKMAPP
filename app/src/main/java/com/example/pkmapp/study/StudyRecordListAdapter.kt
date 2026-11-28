@@ -140,26 +140,29 @@ internal class StudyRecordListAdapter(
             source: List<StudyNotebook.Record>,
             selection: StudySubject?,
             query: String,
-            planTitleLookup: ((String) -> String)?
+            planTitleLookup: ((String) -> String)?,
+            taskTitleLookup: ((String) -> String?)? = null
         ): List<StudyRecordListItem> {
-            val normalizedQuery = query.trim().lowercase(Locale.ROOT)
             val dateFmt = SimpleDateFormat("yyyy/MM/dd · HH:mm", Locale.CHINA)
             val result = ArrayList<StudyRecordListItem>(source.size)
             for (record in source) {
-                if (selection != null && record.subject != selection) continue
-                if (normalizedQuery.isNotEmpty() &&
-                    !record.note.lowercase(Locale.ROOT).contains(normalizedQuery)
-                ) {
+                val planTitle = planTitleLookup?.invoke(record.planId)
+                val taskTitle = if (record.taskId.isNotEmpty()) taskTitleLookup?.invoke(record.taskId) else null
+                if (!StudyRecordSearchFilter.matches(record, selection, query, planTitle, taskTitle)) {
                     continue
                 }
                 var subtitle = dateFmt.format(Date(record.completedAt))
-                if (planTitleLookup != null) {
-                    subtitle += " · ${planTitleLookup(record.planId)}"
+                if (planTitle != null) {
+                    subtitle += " · $planTitle"
                 }
                 subtitle += when {
                     record.manual -> " · 手动补记"
                     record.adjusted -> " · 时长已修正"
                     else -> ""
+                }
+                if (record.note.isNotEmpty()) {
+                    val snippet = if (record.note.length > 18) record.note.take(18) + "…" else record.note
+                    subtitle += " · $snippet"
                 }
                 result.add(
                     StudyRecordListItem(

@@ -25,11 +25,12 @@
                 android:id="@+id/exchange_back_button"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 android:contentDescription="返回明细"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_arrow_back_forest" />
+                android:src="@drawable/ic_arrow_back_forest"
+                android:stateListAnimator="@animator/editorial_press_alpha" />
 
             <TextView
                 android:layout_width="0dp"
@@ -112,14 +113,15 @@
                     android:id="@+id/exchange_base_selector"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:background="@android:color/transparent"
                     android:clickable="true"
                     android:contentDescription="选择原币种"
                     android:focusable="true"
                     android:orientation="vertical"
                     android:paddingTop="4dp"
                     android:paddingEnd="12dp"
-                    android:paddingBottom="4dp">
+                    android:paddingBottom="4dp"
+                    android:stateListAnimator="@animator/editorial_press_alpha">
 
                     <TextView
                         android:id="@+id/exchange_base_button"
@@ -202,14 +204,15 @@
                     android:id="@+id/exchange_quote_selector"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:background="@android:color/transparent"
                     android:clickable="true"
                     android:contentDescription="选择目标币种"
                     android:focusable="true"
                     android:orientation="vertical"
                     android:paddingTop="4dp"
                     android:paddingEnd="12dp"
-                    android:paddingBottom="4dp">
+                    android:paddingBottom="4dp"
+                    android:stateListAnimator="@animator/editorial_press_alpha">
 
                     <TextView
                         android:id="@+id/exchange_quote_button"

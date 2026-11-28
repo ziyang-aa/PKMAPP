@@ -70,6 +70,9 @@ public final class DetailsFragment extends Fragment {
                 view -> ((MainActivity) requireActivity()).showDestination(AppDestination.HOME));
         binding.detailsLedgerSwitchButton.setOnClickListener(view -> showLedgerChooser());
         binding.detailsBudgetSection.setOnClickListener(view -> showBudgetSheet());
+        binding.detailsSearchButton.setOnClickListener(view -> showSearchSheet());
+        binding.detailsRecurringToolButton.setOnClickListener(view ->
+                ((MainActivity) requireActivity()).openLifeTool(AppDestination.RECURRING, AppDestination.DETAILS));
         binding.detailsFxToolButton.setOnClickListener(view ->
                 ((MainActivity) requireActivity()).showDestination(AppDestination.EXCHANGE));
         binding.detailsBorrowingToolButton.setOnClickListener(view ->
@@ -409,14 +412,44 @@ public final class DetailsFragment extends Fragment {
         sheet.show();
     }
 
+    private void showSearchSheet() {
+        LifeSnapshot snapshot = viewModel.getCurrentSnapshot();
+        BottomSheetDialog sheet = createManagedSheet();
+        TransactionSearchSheet.show(
+                requireContext(),
+                sheet,
+                snapshot.getCurrentLedger().getName(),
+                selectedMonth,
+                () -> viewModel.getCurrentSnapshot().getTransactions(),
+                transaction -> {
+                    ((MainActivity) requireActivity()).showEditTransaction(transaction);
+                    return kotlin.Unit.INSTANCE;
+                },
+                (transaction, onDeleted) -> {
+                    confirmDeleteTransaction(transaction, onDeleted::invoke);
+                    return kotlin.Unit.INSTANCE;
+                }
+        );
+    }
+
     private void confirmDeleteTransaction(com.example.pkmapp.data.Transaction transaction) {
+        confirmDeleteTransaction(transaction, null);
+    }
+
+    private void confirmDeleteTransaction(com.example.pkmapp.data.Transaction transaction,
+            @Nullable Runnable onDeleted) {
         String summary = transaction.getCategory() + " · "
                 + MoneyParser.formatCents(transaction.getAmountInCents());
         new ForestDialogBuilder(requireContext())
                 .setTitle("删除这笔记录？")
                 .setMessage(summary + "\n删除后本月收入、支出、预算与结余会立即更新。")
                 .setNegativeButton("保留记录", null)
-                .setPositiveButton("确认删除", (d, w) -> viewModel.deleteTransaction(transaction.getId()))
+                .setPositiveButton("确认删除", (d, w) -> {
+                    viewModel.deleteTransaction(transaction.getId());
+                    if (onDeleted != null) {
+                        onDeleted.run();
+                    }
+                })
                 .show();
     }
 
